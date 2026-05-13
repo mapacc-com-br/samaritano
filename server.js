@@ -5,64 +5,94 @@ const sqlite3 = require('sqlite3').verbose();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, 'data');
-const DB_PATH = process.env.DB_PATH || path.join(DATA_DIR, 'cc_sama.sqlite');
 
-fs.mkdirSync(DATA_DIR, { recursive: true });
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+
+// IMPORTANT: this line makes EVERY file inside /public work online
+app.use(express.static(path.join(__dirname, 'public')));
+
+const DB_PATH = process.env.DB_PATH || path.join(__dirname, 'mapa_cc.db');
 const db = new sqlite3.Database(DB_PATH);
 
 db.serialize(() => {
-  db.run(`CREATE TABLE IF NOT EXISTS day_data (
-    date TEXT PRIMARY KEY,
+  db.run(`CREATE TABLE IF NOT EXISTS plantoes (
+    data TEXT PRIMARY KEY,
     payload TEXT NOT NULL,
-    updated_at TEXT NOT NULL
+    updatedAt TEXT NOT NULL
   )`);
 });
 
-app.use(express.json({ limit: '10mb' }));
-app.use(express.static(__dirname));
+function emptyPlantao(data) {
+  return { data, items: [], anesthetists: [], catalog: [], updatedAt: null };
+}
 
-app.get('/', (_req, res) => {
-  res.sendFile(path.join(__dirname, 'Celv1_sqlite.html'));
+app.get('/api/health', (req, res) => {
+  res.json({ ok: true, db: DB_PATH, now: new Date().toISOString() });
 });
 
-app.get('/api/health', (_req, res) => {
-  res.json({ ok: true, db: DB_PATH });
-});
-
-app.get('/api/day/:date', (req, res) => {
-  const date = req.params.date;
-  db.get('SELECT payload FROM day_data WHERE date = ?', [date], (err, row) => {
+app.get('/api/status', (req, res) => {
+  db.all('SELECT data, updatedAt, payload FROM plantoes ORDER BY data DESC', [], (err, rows) => {
     if (err) return res.status(500).json({ error: err.message });
-    if (!row) return res.json({ date, items: [], anesthetists: [] });
+    let cirurgias = 0;
+    let anestesistas = 0;
+    const datas = [];
+    for (const r of rows || []) {
+      try {
+        const p = JSON.parse(r.payload || '{}');
+        cirurgias += Array.isArray(p.items) ? p.items.length : 0;
+        anestesistas += Array.isArray(p.anesthetists) ? p.anesthetists.length : 0;
+        datas.push({ data: r.data, updatedAt: r.updatedAt, cirurgias: (p.items || []).length, anestesistas: (p.anesthetists || []).length });
+      } catch {}
+    }
+    res.json({ ok: true, database: DB_PATH, plantoes: rows.length, cirurgias, anestesistas, datas });
+  });
+});
+
+app.get('/api/plantao/:data', (req, res) => {
+  const data = req.params.data;
+  db.get('SELECT payload FROM plantoes WHERE data = ?', [data], (err, row) => {
+    if (err) return res.status(500).json({ error: err.message });
+    if (!row) return res.json(emptyPlantao(data));
     try {
       const payload = JSON.parse(row.payload);
-      res.json({ date, items: payload.items || [], anesthetists: payload.anesthetists || [] });
-    } catch {
-      res.status(500).json({ error: 'Payload inválido no banco' });
+      return res.json({ ...emptyPlantao(data), ...payload });
+    } catch (e) {
+      return res.status(500).json({ error: 'Payload inválido no banco', details: e.message });
     }
   });
 });
 
-app.put('/api/day/:date', (req, res) => {
-  const date = req.params.date;
+app.put('/api/plantao/:data', (req, res) => {
+  const data = req.params.data;
   const payload = {
+    data,
     items: Array.isArray(req.body.items) ? req.body.items : [],
-    anesthetists: Array.isArray(req.body.anesthetists) ? req.body.anesthetists : []
+    anesthetists: Array.isArray(req.body.anesthetists) ? req.body.anesthetists : [],
+    catalog: Array.isArray(req.body.catalog) ? req.body.catalog : [],
+    updatedAt: new Date().toISOString()
   };
   db.run(
-    `INSERT INTO day_data(date, payload, updated_at)
-     VALUES (?, ?, datetime('now'))
-     ON CONFLICT(date) DO UPDATE SET payload = excluded.payload, updated_at = datetime('now')`,
-    [date, JSON.stringify(payload)],
-    function (err) {
+    `INSERT INTO plantoes (data, payload, updatedAt) VALUES (?, ?, ?)
+     ON CONFLICT(data) DO UPDATE SET payload=excluded.payload, updatedAt=excluded.updatedAt`,
+    [data, JSON.stringify(payload), payload.updatedAt],
+    (err) => {
       if (err) return res.status(500).json({ error: err.message });
-      res.json({ ok: true, date, items: payload.items.length, anesthetists: payload.anesthetists.length });
+      res.json({ ok: true, ...payload });
     }
   );
 });
 
+app.post('/api/plantao/:data', (req, res) => {
+  req.method = 'PUT';
+  app._router.handle(req, res);
+});
+
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
 app.listen(PORT, () => {
-  console.log(`CC Sama SQLite rodando em http://localhost:${PORT}`);
+  console.log(`CC Sama rodando na porta ${PORT}`);
   console.log(`Banco SQLite: ${DB_PATH}`);
 });
