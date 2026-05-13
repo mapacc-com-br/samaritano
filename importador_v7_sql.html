@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Importador v7 SQL direto — Mapa CC</title>
+  <style>
+    :root{--azul:#4f67c8;--verde:#2fa866;--vermelho:#d94b5b;--cinza:#f3f5fb;--texto:#24283b;--borda:#d9deef;--amarelo:#fff6d7;--roxo:#7c3aed}
+    *{box-sizing:border-box} body{margin:0;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#eef1f8;color:var(--texto)}
+    header{padding:18px 24px;background:white;border-bottom:1px solid var(--borda);display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;position:sticky;top:0;z-index:10}
+    h1{font-size:22px;margin:0}.sub{color:#667;font-size:13px;margin-top:4px} main{max-width:1340px;margin:0 auto;padding:20px}.grid{display:grid;grid-template-columns:370px 1fr;gap:18px;align-items:start}.card{background:white;border:1px solid var(--borda);border-radius:16px;padding:16px;box-shadow:0 6px 20px rgba(35,45,90,.06)}
+    label{display:block;font-weight:700;font-size:13px;margin-bottom:6px} input,select,textarea,button{font:inherit} input,select,textarea{width:100%;border:1px solid var(--borda);border-radius:10px;padding:10px;background:white;color:var(--texto)} textarea{min-height:170px;resize:vertical;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13px;line-height:1.4}.field{margin-bottom:14px}.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+    button{border:0;border-radius:10px;padding:10px 13px;font-weight:800;cursor:pointer;color:white;background:var(--azul);transition:.12s}button:hover{filter:brightness(.95);transform:translateY(-1px)}button.secondary{background:#66708f}button.green{background:var(--verde)}button.red{background:var(--vermelho)}button.purple{background:var(--roxo)}button.light{background:#eef1ff;color:#334;border:1px solid var(--borda)}.mini{font-size:12px;padding:7px 9px;border-radius:8px}.hint{font-size:12px;color:#667;line-height:1.35}.status{margin-top:10px;padding:10px;border-radius:10px;background:#f6f8ff;border:1px solid var(--borda);font-size:13px;white-space:pre-wrap}.status.ok{background:#ecfff5;border-color:#bce8ce}.status.warn{background:var(--amarelo);border-color:#ead58a}
+    .tableWrap{overflow:auto;border:1px solid var(--borda);border-radius:14px;background:white;max-height:calc(100vh - 250px)} table{width:100%;border-collapse:collapse;min-width:900px} th{position:sticky;top:0;background:#f8f9ff;z-index:5;border-bottom:1px solid var(--borda);font-size:12px;text-align:left;padding:9px;color:#445} td{border-bottom:1px solid #edf0f7;padding:6px;vertical-align:top} td input,td select{padding:8px;border-radius:8px;font-size:13px}.cirurgiaInput{min-width:280px}.topbar{display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:12px}.badge{display:inline-flex;align-items:center;gap:6px;background:#f3f5fb;border:1px solid var(--borda);border-radius:999px;padding:7px 10px;font-size:12px;font-weight:800;color:#445}.dropzone{border:2px dashed #b9c2e8;border-radius:14px;padding:14px;background:#f8f9ff;text-align:center;margin-bottom:12px}.previewImg{max-width:100%;max-height:180px;border-radius:10px;margin-top:10px;display:none}.sample{background:#f8f9ff;border:1px solid var(--borda);padding:10px;border-radius:10px;font-size:12px;color:#445;line-height:1.4}.tabs{display:flex;gap:8px;margin-bottom:12px}.tab{background:#eef1ff;color:#334;border:1px solid var(--borda)}.tab.active{background:var(--azul);color:white}.hidden{display:none!important}.miniTitle{font-weight:900;margin:8px 0 5px}.anesInput{min-width:210px}.destBox{display:grid;grid-template-columns:1fr auto;gap:8px}.pageList{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}.pagePill{background:#eef1ff;color:#334;border:1px solid var(--borda);border-radius:999px;padding:6px 9px;font-size:12px;font-weight:800;cursor:pointer}.pagePill:hover{filter:brightness(.96)}
+    @media(max-width:900px){.grid{grid-template-columns:1fr}.tableWrap{max-height:none}}
+  </style>
+</head>
+<body>
+<header>
+  <div><h1>Importador v7 SQL direto — Cirurgias + Anestesistas</h1><div class="sub">Cole as listas extraídas das fotos, revise e grave direto no SQLite por data. Esta versão adiciona TODAS as cirurgias enviadas, sem dedupe/merge.</div></div>
+  <div class="row"><span class="badge" id="contadorBadge">0 cirurgias · 0 anestesistas</span><button class="green" onclick="importarParaMapa()">Gravar no SQLite e abrir mapa</button></div>
+</header>
+<main><div class="grid">
+<section class="card">
+  <div class="field">
+    <label for="paginaDestino">Página destino</label>
+    <div class="destBox">
+      <input id="paginaDestino" list="listaPaginasDestino" placeholder="Ex: Mapa_CC_assistido_v15.html" />
+      <button class="light mini" onclick="abrirSeletorPasta()" title="Escolher a pasta e listar páginas HTML">Listar pasta</button>
+    </div>
+    <datalist id="listaPaginasDestino"></datalist>
+    <input id="folderPicker" type="file" webkitdirectory multiple class="hidden" onchange="listarArquivosDaPasta(event)" />
+    <div id="paginasEncontradas" class="pageList"></div>
+    <div class="hint">
+      Digite qualquer página HTML da mesma pasta. Se o navegador permitir, clique em “Listar pasta” e escolha a pasta para detectar os arquivos .html juntos do importador.
+    </div>
+  </div>
+  <div class="field"><label for="dataMapa">Data do mapa</label><input id="dataMapa" type="date" /></div>
+  <div class="tabs"><button id="tabCir" class="tab active" onclick="mudarAba('cirurgias')">Cirurgias</button><button id="tabAnes" class="tab" onclick="mudarAba('anestesistas')">Anestesistas</button></div>
+  <div id="painelCirurgias">
+    <div class="field"><label>Foto do mapa cirúrgico</label><div class="dropzone"><input id="fotoInput" type="file" accept="image/*" /><div class="hint">A foto fica só para conferência visual. A lista processada pelo ChatGPT entra abaixo.</div><img id="previewImg" class="previewImg" /></div></div>
+    <div class="field"><label for="entradaTexto">Cole aqui a lista/JSON de cirurgias</label><textarea id="entradaTexto" placeholder="07:00 | Oeste 03 | Nefrectomia | 270 | SMA | obs opcional"></textarea></div>
+    <div class="row"><button onclick="processarEntradaCirurgias()">Processar cirurgias</button><button class="light" onclick="carregarExemploCirurgias()">Exemplo</button></div>
+    <div class="field" style="margin-top:14px"><label>Formato recomendado</label><div class="sample">07:00 | Oeste 03 | Nome da cirurgia | 270 | SMA | obs opcional</div></div>
+  </div>
+  <div id="painelAnestesistas" class="hidden">
+    <div class="field"><label>Foto da escala de anestesistas</label><div class="dropzone"><input id="fotoEscalaInput" type="file" accept="image/*" /><div class="hint">Use a foto para conferência. Depois cole a lista processada pelo ChatGPT abaixo.</div><img id="previewEscalaImg" class="previewImg" /></div></div>
+    <div class="field"><label for="entradaAnestesistas">Cole aqui a lista/JSON de anestesistas</label><textarea id="entradaAnestesistas" placeholder="André | 07:00 | 19:00 | coordenador\nFulano | 07:00 | 13:00 | manhã"></textarea></div>
+    <div class="row"><button class="purple" onclick="processarEntradaAnestesistas()">Processar anestesistas</button><button class="light" onclick="carregarExemploAnestesistas()">Exemplo</button></div>
+    <div class="field" style="margin-top:14px"><label>Formato recomendado</label><div class="sample">Nome | início | fim | obs opcional<br>Dr. Fulano | 07:00 | 19:00 | plantão</div></div>
+  </div>
+  <div class="row" style="margin-top:12px"><button class="secondary" onclick="limparTudo()">Limpar tudo</button><button class="light" onclick="validarTudo()">Validar tudo</button></div>
+  <div id="status" class="status">Pronto para receber as listas.</div>
+</section>
+<section class="card">
+  <div class="topbar"><div><strong id="tituloTabela">Lista revisável — cirurgias</strong><div class="hint">Edite qualquer célula antes de importar. Nada é enviado sem você clicar no botão.</div></div><div class="row" id="acoesTabelaCir"><button class="light mini" onclick="adicionarLinhaCirurgia()">+ Caso</button><button class="light mini" onclick="validarCirurgias()">Validar</button><button class="red mini" onclick="removerSelecionadosCirurgias()">Excluir marcados</button></div><div class="row hidden" id="acoesTabelaAnes"><button class="light mini" onclick="adicionarLinhaAnestesista()">+ Anestesista</button><button class="light mini" onclick="validarAnestesistas()">Validar</button><button class="red mini" onclick="removerSelecionadosAnestesistas()">Excluir marcados</button></div></div>
+  <div id="tabelaCirurgias" class="tableWrap"><table><thead><tr><th style="width:36px">✓</th><th style="width:90px">Início</th><th style="width:130px">Sala</th><th>Cirurgia</th><th style="width:100px">Duração</th><th style="width:150px">Serviço</th><th style="width:180px">Obs</th><th style="width:105px">Ações</th></tr></thead><tbody id="tbodyCasos"></tbody></table></div>
+  <div id="tabelaAnestesistas" class="tableWrap hidden"><table style="min-width:760px"><thead><tr><th style="width:36px">✓</th><th>Nome</th><th style="width:110px">Início</th><th style="width:110px">Fim</th><th style="width:220px">Obs/status</th><th style="width:105px">Ações</th></tr></thead><tbody id="tbodyAnestesistas"></tbody></table></div>
+</section>
+</div></main>
+<script>
+const CONFIG_PAGINAS=["Mapa_CC_assistido_v36_sql_only_importa_tudo.html","Mapa_CC_assistido_v34_db_estavel_importa_tudo_sem_dedupe.html","Mapa_CC_assistido_v29_db_estavel.html","index.html"];
+const STORAGE_KEY="CCSAMA_IMPORTACAO_CIRURGIAS"; // legado, não usado no fluxo v6
+const STORAGE_KEY_ANEST="CCSAMA_IMPORTACAO_ANESTESISTAS"; // legado, não usado no fluxo v6
+const STORAGE_KEY_HISTORICO="CCSAMA_IMPORTACAO_HISTORICO"; // legado, não usado no fluxo v6
+let casos=[]; let anestesistas=[]; let abaAtual="cirurgias";
+function init(){preencherPaginas();definirDataHoje();renderTudo();configurarFoto("fotoInput","previewImg");configurarFoto("fotoEscalaInput","previewEscalaImg")}
+function preencherPaginas(){
+  const input=document.getElementById("paginaDestino");
+  const lista=document.getElementById("listaPaginasDestino");
+  lista.innerHTML="";
+  CONFIG_PAGINAS.forEach(p=>adicionarPaginaDestino(p));
+  input.value=CONFIG_PAGINAS[0]||"";
+}
+function adicionarPaginaDestino(p){
+  if(!p)return;
+  p=String(p).trim();
+  const lista=document.getElementById("listaPaginasDestino");
+  const exists=[...lista.children].some(o=>o.value===p);
+  if(!exists){
+    const opt=document.createElement("option");
+    opt.value=p;
+    lista.appendChild(opt);
+  }
+}
+function selecionarPaginaDestino(p){
+  document.getElementById("paginaDestino").value=p;
+  setStatus("Página destino selecionada: "+p,"ok");
+}
+function abrirSeletorPasta(){
+  const picker=document.getElementById("folderPicker");
+  if(!picker){
+    setStatus("Seu navegador não mostrou o seletor de pasta. Digite a página destino manualmente.","warn");
+    return;
+  }
+  picker.click();
+}
+function listarArquivosDaPasta(event){
+  const files=[...(event.target.files||[])];
+  const htmls=files
+    .filter(f=>/\.html?$/i.test(f.name))
+    .map(f=>f.webkitRelativePath?f.webkitRelativePath.split("/").slice(1).join("/"):f.name)
+    .filter(Boolean)
+    .sort((a,b)=>a.localeCompare(b));
+  const box=document.getElementById("paginasEncontradas");
+  box.innerHTML="";
+  if(!htmls.length){
+    setStatus("Não encontrei arquivos .html nessa pasta. Você pode digitar a página destino manualmente.","warn");
+    return;
+  }
+  htmls.forEach(p=>{
+    adicionarPaginaDestino(p);
+    const pill=document.createElement("span");
+    pill.className="pagePill";
+    pill.textContent=p;
+    pill.onclick=()=>selecionarPaginaDestino(p);
+    box.appendChild(pill);
+  });
+  const preferida=htmls.find(p=>/v15/i.test(p))||htmls[0];
+  selecionarPaginaDestino(preferida);
+  setStatus("Páginas HTML encontradas: "+htmls.length+". Clique em uma delas para escolher o destino.","ok");
+}
+function definirDataHoje(){const d=new Date();document.getElementById("dataMapa").value=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`}
+function configurarFoto(inputId,imgId){const input=document.getElementById(inputId),img=document.getElementById(imgId);input.addEventListener("change",()=>{const file=input.files&&input.files[0];if(!file)return;img.src=URL.createObjectURL(file);img.style.display="block";setStatus("Foto carregada para conferência visual. Cole a lista processada no campo correspondente.","ok")})}
+function mudarAba(aba){abaAtual=aba;document.getElementById("tabCir").classList.toggle("active",aba==="cirurgias");document.getElementById("tabAnes").classList.toggle("active",aba==="anestesistas");document.getElementById("painelCirurgias").classList.toggle("hidden",aba!=="cirurgias");document.getElementById("painelAnestesistas").classList.toggle("hidden",aba!=="anestesistas");document.getElementById("tabelaCirurgias").classList.toggle("hidden",aba!=="cirurgias");document.getElementById("tabelaAnestesistas").classList.toggle("hidden",aba!=="anestesistas");document.getElementById("acoesTabelaCir").classList.toggle("hidden",aba!=="cirurgias");document.getElementById("acoesTabelaAnes").classList.toggle("hidden",aba!=="anestesistas");document.getElementById("tituloTabela").textContent=aba==="cirurgias"?"Lista revisável — cirurgias":"Lista revisável — anestesistas"}
+function setStatus(msg,tipo){const el=document.getElementById("status");el.textContent=msg;el.className="status"+(tipo?" "+tipo:"")}
+function normalizarCaso(c){return{inicio:String(c.inicio||c.hora||c.horario||"").trim(),sala:String(c.sala||c.salaCirurgica||c.local||"").trim(),cirurgia:String(c.cirurgia||c.procedimento||c.nome||"").trim(),duracao:Number(c.duracao||c["duração"]||c.tempo||c.duracaoPrevista||0)||"",servico:String(c.servico||c["serviço"]||c.anestesia||c.sma||"").trim(),observacoes:String(c.observacoes||c["observações"]||c.obs||"").trim()}}
+function normalizarAnestesista(a){return{id:a.id||uid(),nome:String(a.nome||a.name||a.anestesista||"").trim(),inicio:String(a.inicio||a.start||a.entrada||"07:00").trim(),fim:String(a.fim||a.end||a.saida||"19:00").trim(),observacoes:String(a.observacoes||a.obs||a.status||"").trim()}}
+function uid(){return Math.random().toString(36).slice(2,10)}
+function processarJsonOuTexto(txt,parseTexto,normalizar){const jsonStart=txt.indexOf("[");const jsonEnd=txt.lastIndexOf("]");if(jsonStart!==-1&&jsonEnd!==-1&&jsonEnd>jsonStart){return JSON.parse(txt.slice(jsonStart,jsonEnd+1)).map(normalizar)}return parseTexto(txt)}
+function processarEntradaCirurgias(){const txt=document.getElementById("entradaTexto").value.trim();if(!txt)return setStatus("Cole uma lista ou JSON de cirurgias antes de processar.","warn");try{casos=processarJsonOuTexto(txt,parseTextoCirurgias,normalizarCaso).filter(c=>c.inicio||c.sala||c.cirurgia);renderTabelaCirurgias();validarCirurgias();setStatus(`Cirurgias processadas: ${casos.length}. Revise antes de importar.`,"ok")}catch(e){setStatus("Não consegui processar cirurgias. Use: hora | sala | cirurgia | duração | serviço | obs", "warn")}}
+function parseTextoCirurgias(txt){return txt.split(/\n+/).map(l=>l.trim()).filter(l=>l&&!l.toLowerCase().startsWith("data:")).map(linha=>{const p=linha.split("|").map(x=>x.trim());if(p.length>=4)return normalizarCaso({inicio:p[0],sala:p[1],cirurgia:p[2],duracao:p[3],servico:p[4]||"",observacoes:p.slice(5).join(" | ")});const hora=(linha.match(/\b\d{1,2}:\d{2}\b/)||[""])[0];const dur=(linha.match(/\b(\d{2,3})\s*(min|m)?\b(?!.*\b\d{2,3}\b)/i)||[""])[1]||"";return normalizarCaso({inicio:hora,cirurgia:linha.replace(hora,"").trim(),duracao:dur})})}
+function processarEntradaAnestesistas(){const txt=document.getElementById("entradaAnestesistas").value.trim();if(!txt)return setStatus("Cole uma lista ou JSON de anestesistas antes de processar.","warn");try{anestesistas=processarJsonOuTexto(txt,parseTextoAnestesistas,normalizarAnestesista).filter(a=>a.nome);renderTabelaAnestesistas();validarAnestesistas();setStatus(`Anestesistas processados: ${anestesistas.length}. Revise antes de importar.`,"ok")}catch(e){setStatus("Não consegui processar anestesistas. Use: nome | início | fim | obs", "warn")}}
+function parseTextoAnestesistas(txt){return txt.split(/\n+/).map(l=>l.trim()).filter(Boolean).map(linha=>{const p=linha.split("|").map(x=>x.trim());if(p.length>=3)return normalizarAnestesista({nome:p[0],inicio:p[1],fim:p[2],observacoes:p.slice(3).join(" | ")});const horas=[...linha.matchAll(/\b\d{1,2}:\d{2}\b/g)].map(m=>m[0]);let nome=linha;horas.forEach(h=>nome=nome.replace(h,""));return normalizarAnestesista({nome:nome.replace(/[-–—]/g," ").trim(),inicio:horas[0]||"07:00",fim:horas[1]||"19:00"})})}
+function renderTudo(){renderTabelaCirurgias();renderTabelaAnestesistas();atualizarContador()}
+function renderTabelaCirurgias(){const tbody=document.getElementById("tbodyCasos");tbody.innerHTML="";casos.forEach((c,i)=>{const tr=document.createElement("tr");tr.innerHTML=`<td><input type="checkbox" data-i="${i}" class="chkCir"></td><td><input value="${escapeHtml(c.inicio)}" onchange="updateCaso(${i},'inicio',this.value)" placeholder="07:00"></td><td><input value="${escapeHtml(c.sala)}" onchange="updateCaso(${i},'sala',this.value)" placeholder="Oeste 03"></td><td><input class="cirurgiaInput" value="${escapeHtml(c.cirurgia)}" onchange="updateCaso(${i},'cirurgia',this.value)" placeholder="Nome da cirurgia"></td><td><input type="number" value="${escapeHtml(c.duracao)}" onchange="updateCaso(${i},'duracao',this.value)" placeholder="120"></td><td><select onchange="updateCaso(${i},'servico',this.value)">${opcoesServico(c.servico)}</select></td><td><input value="${escapeHtml(c.observacoes)}" onchange="updateCaso(${i},'observacoes',this.value)" placeholder="Obs"></td><td><button class="light mini" onclick="duplicarLinhaCirurgia(${i})">Duplicar</button><button class="red mini" onclick="excluirLinhaCirurgia(${i})">X</button></td>`;tbody.appendChild(tr)});atualizarContador()}
+function renderTabelaAnestesistas(){const tbody=document.getElementById("tbodyAnestesistas");tbody.innerHTML="";anestesistas.forEach((a,i)=>{const tr=document.createElement("tr");tr.innerHTML=`<td><input type="checkbox" data-i="${i}" class="chkAnes"></td><td><input class="anesInput" value="${escapeHtml(a.nome)}" onchange="updateAnestesista(${i},'nome',this.value)" placeholder="Nome"></td><td><input value="${escapeHtml(a.inicio)}" onchange="updateAnestesista(${i},'inicio',this.value)" placeholder="07:00"></td><td><input value="${escapeHtml(a.fim)}" onchange="updateAnestesista(${i},'fim',this.value)" placeholder="19:00"></td><td><input value="${escapeHtml(a.observacoes)}" onchange="updateAnestesista(${i},'observacoes',this.value)" placeholder="Obs/status"></td><td><button class="light mini" onclick="duplicarLinhaAnestesista(${i})">Duplicar</button><button class="red mini" onclick="excluirLinhaAnestesista(${i})">X</button></td>`;tbody.appendChild(tr)});atualizarContador()}
+function atualizarContador(){document.getElementById("contadorBadge").textContent=`${casos.length} cirurgia${casos.length===1?"":"s"} · ${anestesistas.length} anestesista${anestesistas.length===1?"":"s"}`}
+function opcoesServico(valor){const opts=["","SMA","Anestesista particular","Externo","Banco de sangue","Reserva","SMA + Banco de sangue"];if(valor&&!opts.includes(valor))opts.push(valor);return opts.map(o=>`<option value="${escapeHtml(o)}" ${o===valor?"selected":""}>${o||"—"}</option>`).join("")}
+function updateCaso(i,campo,valor){if(!casos[i])return;casos[i][campo]=campo==="duracao"?(Number(valor)||""):valor} function updateAnestesista(i,campo,valor){if(!anestesistas[i])return;anestesistas[i][campo]=valor}
+function adicionarLinhaCirurgia(){casos.push({inicio:"",sala:"",cirurgia:"",duracao:"",servico:"",observacoes:""});renderTabelaCirurgias()} function duplicarLinhaCirurgia(i){casos.splice(i+1,0,{...casos[i]});renderTabelaCirurgias()} function excluirLinhaCirurgia(i){casos.splice(i,1);renderTabelaCirurgias();validarCirurgias()} function removerSelecionadosCirurgias(){const ids=[...document.querySelectorAll(".chkCir:checked")].map(ch=>Number(ch.dataset.i));casos=casos.filter((_,i)=>!ids.includes(i));renderTabelaCirurgias();validarCirurgias()}
+function adicionarLinhaAnestesista(){anestesistas.push({id:uid(),nome:"",inicio:"07:00",fim:"19:00",observacoes:""});renderTabelaAnestesistas()} function duplicarLinhaAnestesista(i){anestesistas.splice(i+1,0,{...anestesistas[i],id:uid()});renderTabelaAnestesistas()} function excluirLinhaAnestesista(i){anestesistas.splice(i,1);renderTabelaAnestesistas();validarAnestesistas()} function removerSelecionadosAnestesistas(){const ids=[...document.querySelectorAll(".chkAnes:checked")].map(ch=>Number(ch.dataset.i));anestesistas=anestesistas.filter((_,i)=>!ids.includes(i));renderTabelaAnestesistas();validarAnestesistas()}
+function validarCirurgias(){const avisos=[];casos.forEach((c,i)=>{const n=i+1;if(!c.inicio)avisos.push(`Cirurgia ${n}: sem início.`);if(!c.sala)avisos.push(`Cirurgia ${n}: sem sala.`);if(!c.cirurgia)avisos.push(`Cirurgia ${n}: sem nome.`);if(!c.duracao)avisos.push(`Cirurgia ${n}: sem duração.`)});if(!casos.length){setStatus("Nenhuma cirurgia na tabela.","warn");return false}if(avisos.length){setStatus("Atenção nas cirurgias:\n"+avisos.join("\n"),"warn");return false}setStatus(`Cirurgias OK: ${casos.length}.`,"ok");return true}
+function validarAnestesistas(){const avisos=[];const nomes={};anestesistas.forEach((a,i)=>{const n=i+1;if(!a.nome)avisos.push(`Anestesista ${n}: sem nome.`);if(!a.inicio)avisos.push(`Anestesista ${n}: sem início.`);if(!a.fim)avisos.push(`Anestesista ${n}: sem fim.`);const k=a.nome.toLowerCase();if(k){nomes[k]=(nomes[k]||0)+1;if(nomes[k]>1)avisos.push(`Anestesista duplicado: ${a.nome}.`)}});if(!anestesistas.length){setStatus("Nenhum anestesista na tabela.","warn");return false}if(avisos.length){setStatus("Atenção nos anestesistas:\n"+avisos.join("\n"),"warn");return false}setStatus(`Anestesistas OK: ${anestesistas.length}.`,"ok");return true}
+function validarTudo(){const okCir=casos.length?validarCirurgias():true;const okAn=anestesistas.length?validarAnestesistas():true;if(okCir&&okAn)setStatus(`Tudo OK: ${casos.length} cirurgia(s) e ${anestesistas.length} anestesista(s) prontos.`,"ok");return okCir&&okAn}
+function parseTimeToMin(text){
+  if(!text)return null;
+  const p=String(text).trim().split(':');
+  const h=Number(p[0]); const m=Number(p[1]||0);
+  if(Number.isNaN(h)||Number.isNaN(m))return null;
+  return h*60+m;
+}
+function minToTime(min){min=Math.round(min);return String(Math.floor(min/60)).padStart(2,'0')+':'+String(min%60).padStart(2,'0')}
+function normalizeTextMatch(text){return String(text||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9 ]/g,' ').replace(/\s+/g,' ').trim()}
+function compactMatch(text){return normalizeTextMatch(text).replace(/\b(direito|direita|esquerdo|esquerda|lado|bilateral|unilateral)\b/g,'').replace(/\s+/g,' ').trim()}
+function tokenSimilarity(a,b){
+  a=compactMatch(a); b=compactMatch(b);
+  if(!a||!b)return 0; if(a===b)return 1;
+  const A=new Set(a.split(' ').filter(w=>w.length>2));
+  const B=new Set(b.split(' ').filter(w=>w.length>2));
+  if(!A.size||!B.size)return 0;
+  let inter=0; A.forEach(w=>{if(B.has(w))inter++});
+  return inter/Math.max(A.size,B.size);
+}
+function roomIndexByTextV6(text){
+  text=String(text||'').trim().toLowerCase();
+  if(!text||text.includes('não escal')||text.includes('nao escal')||text.includes('sem sala'))return 0;
+  if(text.includes('cdi'))return 21;
+  if(text.includes('hemo')||text.includes('radio')||text.includes('rádio'))return 22;
+  const n=Number((text.match(/\d+/)||[])[0]);
+  if(!Number.isNaN(n)&&n>=1&&n<=10){
+    if(text.includes('lane'))return 10+n;
+    return n; // Sala/Oeste = Oeste
+  }
+  return 0;
+}
+function serviceIsExternal(servico){
+  const s=normalizeTextMatch(servico);
+  return s.includes('particular')||s.includes('externo')||s.includes('banco de sangue')||s.includes('reserva');
+}
+function importedCaseToDbItem(c){
+  const inicio=parseTimeToMin(c.inicio)||7*60;
+  const dur=Number(c.duracao)||90;
+  const external=serviceIsExternal(c.servico);
+  return {
+    id:uid(), type:'surgery', name:String(c.cirurgia||'Cirurgia importada').trim(),
+    row:roomIndexByTextV6(c.sala), start:inicio, end:inicio+dur,
+    anesthetist:'', obs:c.observacoes?String(c.observacoes):'',
+    status:external?'externo':'pendente', external
+  };
+}
+function findBestMatchV6(items,newItem){
+  let best=null;
+  (items||[]).filter(it=>it.status!=='finalizado').forEach(it=>{
+    const sim=tokenSimilarity(it.name,newItem.name);
+    const dt=Math.abs((it.start||0)-(newItem.start||0));
+    const sameRoom=Number(it.row)===Number(newItem.row);
+    const virtualToReal=Number(it.row)===0&&Number(newItem.row)!==0;
+    let eligible=false;
+    if(sameRoom&&sim>=.88&&dt<=45)eligible=true;
+    if(!eligible&&virtualToReal&&sim>=.76&&dt<=240)eligible=true;
+    if(!eligible&&sim>=.88&&dt<=180)eligible=true;
+    if(!eligible)return;
+    const score=sim*100 - dt*.25 + (sameRoom?20:0) + (virtualToReal?30:0) + (it.anesthetist?8:0);
+    if(!best||score>best.score)best={item:it,score,virtualToReal};
+  });
+  return best;
+}
+function applyUpdateV6(oldItem,newItem){
+  const oldAnes=oldItem.anesthetist||'';
+  const oldRow=Number(oldItem.row);
+  oldItem.name=newItem.name;
+  oldItem.row=newItem.row;
+  oldItem.start=newItem.start;
+  oldItem.end=newItem.end;
+  oldItem.external=newItem.external;
+  oldItem.obs=newItem.obs||oldItem.obs||'';
+  if(newItem.external){oldItem.status='externo'; oldItem.anesthetist='';}
+  else if(oldAnes){oldItem.status='escalado'; oldItem.anesthetist=oldAnes;}
+  else oldItem.status='pendente';
+  if(oldRow===0&&Number(newItem.row)!==0){
+    const marker='Importador v6: migrada automaticamente de Cirurgias não escaladas para sala real.';
+    if(!String(oldItem.obs||'').includes('migrada automaticamente'))oldItem.obs=oldItem.obs?oldItem.obs+' | '+marker:marker;
+  }
+}
+function appendImportedIntoDb(current, payload){
+  const items=Array.isArray(current.items)?current.items:[];
+  let anesthetists=Array.isArray(current.anesthetists)?current.anesthetists:[];
+  const incomingCases=(payload.casos||[]).map(importedCaseToDbItem);
+
+  // v7: regra principal — adicionar TUDO que o importador mandou.
+  // Não procura duplicata, não atualiza cirurgia antiga, não finaliza ausentes e não apaga nada.
+  incomingCases.forEach(newItem=>{
+    newItem.id=uid();
+    newItem.importedBy='importador_v7_sql_direto';
+    newItem.importedAt=new Date().toISOString();
+    items.push(newItem);
+  });
+
+  // Anestesistas: por segurança operacional, mantém uma escala por nome e atualiza horário se vier de novo.
+  // Isso evita duplicar anestesista na escala, mas NÃO mexe nas cirurgias.
+  const byName=new Map();
+  anesthetists.forEach(a=>{if(a&&a.name)byName.set(normalizeTextMatch(a.name),a)});
+  let anesAdded=0, anesUpdated=0;
+  (payload.anestesistas||[]).forEach(a=>{
+    const obj={
+      id:a.id||uid(),
+      name:a.nome||a.name||a.anestesista||'',
+      start:parseTimeToMin(a.inicio||a.start||a.entrada)||7*60,
+      end:parseTimeToMin(a.fim||a.end||a.saida)||19*60,
+      obs:a.observacoes||a.obs||a.status||''
+    };
+    if(!obj.name)return;
+    const key=normalizeTextMatch(obj.name);
+    if(byName.has(key)){Object.assign(byName.get(key),obj); anesUpdated++;}
+    else{byName.set(key,obj); anesAdded++;}
+  });
+  anesthetists=[...byName.values()];
+
+  return {
+    data:payload.dataMapa,
+    items,
+    anesthetists,
+    catalog:current.catalog||[],
+    updatedAt:new Date().toISOString(),
+    _merge:{
+      received:incomingCases.length,
+      added:incomingCases.length,
+      updated:0,
+      migrated:0,
+      finished:0,
+      anesAdded,
+      anesUpdated
+    }
+  };
+}
+async function importarParaMapa(){
+  atualizarTabelas();
+  if(!casos.length&&!anestesistas.length)return setStatus('Adicione cirurgias ou anestesistas antes de importar.','warn');
+  validarTudo();
+  const destino=(document.getElementById('paginaDestino').value||'').trim()||'Mapa_CC_assistido_v29_db_estavel.html';
+  adicionarPaginaDestino(destino);
+  const data=document.getElementById('dataMapa').value;
+  const payload={origem:'importador_v7_sql_direto.html',versao:'importador_v7_sql_direto',criadoEm:new Date().toISOString(),dataMapa:data,destino,casos:casos.map(normalizarCaso),anestesistas:anestesistas.map(normalizarAnestesista)};
+  try{
+    setStatus('Lendo plantão atual do SQLite para adicionar tudo, sem dedupe/merge...','warn');
+    let current={items:[],anesthetists:[],catalog:[]};
+    const get=await fetch('/api/plantao/'+encodeURIComponent(data)+'?t='+Date.now(),{cache:'no-store'});
+    if(get.ok)current=await get.json();
+    const merged=appendImportedIntoDb(current||{},payload);
+    const put=await fetch('/api/plantao/'+encodeURIComponent(data),{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(merged)});
+    if(!put.ok)throw new Error(await put.text());
+    const check=await fetch('/api/plantao/'+encodeURIComponent(data)+'?t='+Date.now(),{cache:'no-store'});
+    const saved=check.ok?await check.json():{};
+    setStatus(`Importação mesclada e gravada no SQLite.\nData: ${data}\nCirurgias no banco: ${(saved.items||[]).length}\nAnestesistas no banco: ${(saved.anesthetists||[]).length}\nNovas: ${merged._merge.added} · Atualizadas: ${merged._merge.updated} · Migradas de não escaladas: ${merged._merge.migrated} · Finalizadas: ${merged._merge.finished}\nAbrindo ${destino}...`,'ok');
+    setTimeout(()=>window.open(`${destino}?data=${encodeURIComponent(data)}`,'_blank'),500);
+  }catch(e){
+    console.error(e);
+    setStatus('Erro ao gravar direto no SQLite. Nada foi salvo em localStorage.\n\n'+e.message,'warn');
+  }
+}
+function atualizarTabelas(){casos=[...document.querySelectorAll("#tbodyCasos tr")].map(tr=>{const inputs=tr.querySelectorAll("input");const select=tr.querySelector("select");return normalizarCaso({inicio:inputs[1].value,sala:inputs[2].value,cirurgia:inputs[3].value,duracao:inputs[4].value,servico:select.value,observacoes:inputs[5].value})});anestesistas=[...document.querySelectorAll("#tbodyAnestesistas tr")].map(tr=>{const inputs=tr.querySelectorAll("input");return normalizarAnestesista({nome:inputs[1].value,inicio:inputs[2].value,fim:inputs[3].value,observacoes:inputs[4].value})})}
+function salvarHistorico(payload){/* v6: sem histórico localStorage */}
+function carregarExemploCirurgias(){document.getElementById("entradaTexto").value=`06:00 | Oeste 08 | Ressecção Endoscópica da Próstata | 90 | SMA\n06:00 | Oeste 07 | Desbridamento Cirúrgico | 90 | Reserva\n06:30 | Oeste 01 | Cirurgia de coluna por via endoscópica | 120 | SMA\n07:00 | Sala 06 | Diástase dos Retos Abdominais | 120 | SMA\n07:00 | Oeste 04 | Colo vesical - Ressecção endoscópica | 120 | Anestesista particular`;processarEntradaCirurgias()}
+function carregarExemploAnestesistas(){document.getElementById("entradaAnestesistas").value=`André | 07:00 | 19:00 | coordenação\nDra. Silva | 07:00 | 13:00 | manhã\nDr. Souza | 13:00 | 19:00 | tarde\nDra. Lima | 07:00 | 19:00 | plantão`;processarEntradaAnestesistas()}
+function limparTudo(){if(!confirm("Limpar listas atuais do importador?"))return;casos=[];anestesistas=[];document.getElementById("entradaTexto").value="";document.getElementById("entradaAnestesistas").value="";document.getElementById("fotoInput").value="";document.getElementById("fotoEscalaInput").value="";document.getElementById("previewImg").style.display="none";document.getElementById("previewEscalaImg").style.display="none";renderTudo();setStatus("Listas limpas.")}
+function escapeHtml(str){return String(str??"").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;").replaceAll("'","&#039;")}
+init();
+</script>
+</body>
+</html>
