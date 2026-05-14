@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" />
-<title>CC Sama Bolso v3 — Editor</title>
+<title>CC Sama Bolso v4 — Editor</title>
 <style>
 :root{
   --bg:#f2f5fb;--card:#fff;--text:#172033;--muted:#667085;--border:#dbe3ef;
@@ -23,14 +23,14 @@ button.secondary{background:#64748b}button.green{background:var(--green)}button.
 /* board */
 .mapWrap{background:#fff;border:1px solid var(--border);border-radius:18px;overflow:hidden;box-shadow:0 8px 24px rgba(15,23,42,.07)}
 .mapToolbar{padding:10px;border-bottom:1px solid var(--border);display:flex;gap:8px;align-items:center;flex-wrap:wrap;background:#fff}.mapToolbar button{padding:9px 11px;font-size:13px}.scrollHint{font-size:11px;color:var(--muted);padding:0 10px 8px}.boardScroll{overflow:auto;max-height:calc(100vh - 230px);background:#f8fafc;touch-action:pan-x pan-y}.board{position:relative;min-width:1480px;background:white}.grid{display:grid;position:relative;z-index:0}.corner,.time,.room,.cell{border-right:1px solid #e5edf6;border-bottom:1px solid #e5edf6}.corner{position:sticky;left:0;top:0;z-index:15;background:#e2e8f0;height:38px}.time{position:sticky;top:0;z-index:12;height:38px;background:#e2e8f0;color:#1e3a8a;font-size:12px;font-weight:900;display:flex;align-items:center;justify-content:center}.room{position:sticky;left:0;z-index:10;background:#f8fafc;font-size:11px;font-weight:900;color:#334155;display:flex;align-items:center;justify-content:center;text-align:center;padding:4px}.room.virtual{background:#fefce8;color:#854d0e}.cell{background:#fff}.cell.virtual{background:#fffbeb}.cell.major{background:linear-gradient(to right,rgba(37,99,235,.12) 0,rgba(37,99,235,.12) 2px,transparent 2px)}
-.block{position:absolute;height:var(--blockH);border-radius:13px;color:white;background:linear-gradient(135deg,#38bdf8,#2563eb);box-shadow:0 8px 16px rgba(15,23,42,.28);display:flex;align-items:center;justify-content:center;text-align:center;padding:0 20px 0 8px;font-size:12px;font-weight:900;line-height:1.05;z-index:5;touch-action:none;user-select:none;cursor:grab}.block.virtual{background:linear-gradient(135deg,#f59e0b,#d97706)}.block.external{background:linear-gradient(135deg,#a78bfa,#7c3aed)}.block.done{background:linear-gradient(135deg,#94a3b8,#64748b);opacity:.72}.block.selected{outline:3px solid #facc15}.blockName{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}.resizeHandle{position:absolute;right:3px;top:6px;width:12px;height:26px;border-radius:8px;background:rgba(255,255,255,.5)}.anesBadge{position:absolute;top:-15px;left:50%;transform:translateX(-50%);background:#16a34a;color:white;border-radius:8px;padding:3px 9px;font-size:10px;font-weight:950;white-space:nowrap;box-shadow:0 3px 8px rgba(0,0,0,.25);max-width:150px;overflow:hidden;text-overflow:ellipsis}.ghost{opacity:.65}
+.block{position:absolute;height:var(--blockH);border-radius:13px;color:white;background:linear-gradient(135deg,#38bdf8,#2563eb);box-shadow:0 8px 16px rgba(15,23,42,.28);display:flex;align-items:center;justify-content:center;text-align:center;padding:0 20px 0 8px;font-size:12px;font-weight:900;line-height:1.05;z-index:5;touch-action:none;user-select:none;cursor:pointer;transition:transform .12s ease, box-shadow .12s ease}.block.editReady{transform:scale(1.025);box-shadow:0 12px 24px rgba(15,23,42,.36);cursor:grabbing}.block.virtual{background:linear-gradient(135deg,#f59e0b,#d97706)}.block.external{background:linear-gradient(135deg,#a78bfa,#7c3aed)}.block.done{background:linear-gradient(135deg,#94a3b8,#64748b);opacity:.72}.block.selected{outline:3px solid #facc15}.blockName{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}.resizeHandle{position:absolute;right:3px;top:6px;width:12px;height:26px;border-radius:8px;background:rgba(255,255,255,.5)}.anesBadge{position:absolute;top:-15px;left:50%;transform:translateX(-50%);background:#16a34a;color:white;border-radius:8px;padding:3px 9px;font-size:10px;font-weight:950;white-space:nowrap;box-shadow:0 3px 8px rgba(0,0,0,.25);max-width:150px;overflow:hidden;text-overflow:ellipsis}.ghost{opacity:.65}
 .modalBg{display:none;position:fixed;inset:0;background:rgba(15,23,42,.62);z-index:100;align-items:flex-end;justify-content:center}.modal{background:white;width:100%;max-height:88vh;overflow:auto;border-radius:24px 24px 0 0;padding:16px;box-shadow:0 -20px 60px rgba(0,0,0,.35)}.modal h2{margin:0 0 9px;font-size:20px}.formGrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.formGrid label{font-size:12px;font-weight:800;color:#334155}.formGrid .full{grid-column:1/-1}.modalActions{display:flex;gap:8px;flex-wrap:wrap;margin-top:13px}.modalActions button{flex:1}.anesChoice{border:1px solid var(--border);border-radius:15px;padding:12px;background:#f8fafc;margin-bottom:8px;font-weight:900}.anesChoice small{display:block;color:var(--muted);font-weight:600;margin-top:3px}@media(min-width:760px){.page{max-width:1120px;margin:0 auto}.modalBg{align-items:center}.modal{border-radius:24px;max-width:640px}.formGrid{grid-template-columns:1fr 1fr}.boardScroll{max-height:calc(100vh - 210px)}}
 </style>
 </head>
 <body>
 <header>
-  <h1>CC Sama Bolso v3 — Editor</h1>
-  <div class="sub">SQL via Node/Express com fallback local. Arraste para mudar horário/sala; puxe a alça direita para duração.</div>
+  <h1>CC Sama Bolso v4 — Editor</h1>
+  <div class="sub">SQL via Node/Express com fallback local. Toque para selecionar. Pressione e segure o bloco para arrastar/mudar sala; pressione e segure a alça branca para alterar duração.</div>
   <div class="topline">
     <input type="date" id="dateInput" />
     <button id="btnLoad" class="light">Carregar</button>
@@ -70,7 +70,7 @@ button.secondary{background:#64748b}button.green{background:var(--green)}button.
       <button id="btnSave2" class="green">Salvar</button>
       <span class="pill" id="selectedPill">Nada selecionado</span>
     </div>
-    <div class="scrollHint">No celular: arraste o bloco para mudar sala/horário. Arraste a barrinha branca da direita para alterar duração.</div>
+    <div class="scrollHint">No celular: toque para selecionar. Para editar posição/tamanho, pressione e segure o bloco por alguns instantes; solte quando ele “destravar”.</div>
     <div class="boardScroll" id="boardScroll"><div class="board" id="board"></div></div>
   </div>
 </section>
@@ -98,7 +98,8 @@ button.secondary{background:#64748b}button.green{background:var(--green)}button.
 'use strict';
 const ROOMS=["Cirurgias não escaladas",...Array.from({length:10},(_,i)=>`Oeste ${String(i+1).padStart(2,'0')}`),...Array.from({length:10},(_,i)=>`Lane ${String(i+1).padStart(2,'0')}`),"CDI","Hemo"];
 const START_H=6, END_H=19, HOUR_W=74, ROOM_W=92, ROW_H=54, BLOCK_H=38;
-let date=todayISO(), items=[], anesthetists=[], selectedId=null, saveTimer=null, dragState=null;
+let date=todayISO(), items=[], anesthetists=[], selectedId=null, saveTimer=null, dragState=null, pressState=null, suppressClickUntil=0;
+const LONG_PRESS_MS=450, MOVE_TOL=9, VIRTUAL_GAP=8;
 const $=id=>document.getElementById(id);
 function todayISO(){const d=new Date();d.setMinutes(d.getMinutes()-d.getTimezoneOffset());return d.toISOString().slice(0,10)}
 function uid(){return Math.random().toString(36).slice(2,10)+Date.now().toString(36).slice(-4)}
@@ -121,19 +122,82 @@ function scheduleSave(){clearTimeout(saveTimer); saveTimer=setTimeout(save,900)}
 function normalizeAll(){items.forEach(it=>{it.id=it.id||uid(); it.type='surgery'; it.name=it.name||it.cirurgia||'Nova cirurgia'; it.row=clamp(Number(it.row)||0,0,ROOMS.length-1); if(typeof it.start==='string')it.start=parseTime(it.start)||7*60; if(typeof it.end==='string')it.end=parseTime(it.end)||it.start+90; it.start=Number(it.start)||7*60; it.end=Number(it.end)||it.start+90; if(it.end<=it.start)it.end=it.start+90; it.status=it.status||'pendente'; it.external=!!it.external; it.anesthetist=it.anesthetist||''}); anesthetists.forEach(a=>{a.id=a.id||uid(); a.name=a.name||a.nome||'Anestesista'; if(typeof a.start==='string')a.start=parseTime(a.start)||7*60; if(typeof a.end==='string')a.end=parseTime(a.end)||19*60; a.start=Number(a.start)||7*60; a.end=Number(a.end)||19*60})}
 function renderAll(){renderSummary(); renderBoard(); renderList(); renderAnes(); renderSelectedPill()}
 function renderSummary(){const pend=items.filter(i=>!i.anesthetist&&!i.external&&i.status!=='finalizado').length; const virt=items.filter(i=>Number(i.row)===0&&i.status!=='finalizado').length; $('summaryChips').innerHTML=`<span class="pill">${items.length} cirurgias</span><span class="pill green">${anesthetists.length} anestesistas</span><span class="pill red">${pend} sem anestesista</span><span class="pill purple">${virt} não escaladas</span>`}
-function renderBoard(){const board=$('board'); board.innerHTML=''; const cols=END_H-START_H+1; const width=ROOM_W+cols*HOUR_W, height=38+ROOMS.length*ROW_H; board.style.width=width+'px'; board.style.height=height+'px';
-  const grid=document.createElement('div'); grid.className='grid'; grid.style.gridTemplateColumns=`${ROOM_W}px repeat(${cols}, ${HOUR_W}px)`; grid.style.gridTemplateRows=`38px repeat(${ROOMS.length}, ${ROW_H}px)`; grid.style.width=width+'px'; grid.style.height=height+'px'; board.appendChild(grid);
+function buildVirtualLayout(){
+  const virtualItems=items.filter(it=>Number(it.row)===0).slice().sort((a,b)=>a.start-b.start||b.end-a.end||String(a.name).localeCompare(String(b.name)));
+  const laneEnds=[], laneMap={};
+  virtualItems.forEach(it=>{
+    let lane=laneEnds.findIndex(end=>it.start>=end);
+    if(lane<0){lane=laneEnds.length; laneEnds.push(-Infinity)}
+    laneMap[it.id]=lane;
+    laneEnds[lane]=it.end;
+  });
+  const lanes=Math.max(1,laneEnds.length);
+  return {laneMap, lanes, virtualRowH:Math.max(ROW_H, 16 + lanes*(BLOCK_H+VIRTUAL_GAP))};
+}
+function rowToYDynamic(r, layout){
+  r=Number(r)||0;
+  if(r===0){
+    const lane=(layout&&layout.laneMap&&layout.laneMap[arguments[2]])||0;
+    return 38 + 8 + lane*(BLOCK_H+VIRTUAL_GAP);
+  }
+  const vH=layout?layout.virtualRowH:ROW_H;
+  return 38 + vH + (r-1)*ROW_H + 8;
+}
+function rowFromPointerY(y, layout){
+  const rel=y-38;
+  if(rel < (layout?layout.virtualRowH:ROW_H)) return 0;
+  return clamp(1+Math.floor((rel-(layout?layout.virtualRowH:ROW_H))/ROW_H),0,ROOMS.length-1);
+}
+function renderBoard(){const board=$('board'); board.innerHTML=''; const cols=END_H-START_H+1; const layout=buildVirtualLayout(); const width=ROOM_W+cols*HOUR_W, height=38+layout.virtualRowH+(ROOMS.length-1)*ROW_H; board.style.width=width+'px'; board.style.height=height+'px';
+  const grid=document.createElement('div'); grid.className='grid'; grid.style.gridTemplateColumns=`${ROOM_W}px repeat(${cols}, ${HOUR_W}px)`; grid.style.gridTemplateRows=`38px ${layout.virtualRowH}px repeat(${ROOMS.length-1}, ${ROW_H}px)`; grid.style.width=width+'px'; grid.style.height=height+'px'; board.appendChild(grid);
   const corner=document.createElement('div'); corner.className='corner'; grid.appendChild(corner); for(let h=START_H;h<=END_H;h++){const t=document.createElement('div');t.className='time';t.textContent=h+'h';grid.appendChild(t)}
   ROOMS.forEach((r,ri)=>{const room=document.createElement('div');room.className='room '+(ri===0?'virtual':'');room.textContent=r;grid.appendChild(room); for(let h=START_H;h<=END_H;h++){const c=document.createElement('div');c.className='cell '+(ri===0?'virtual ':'')+([7,10,13,16].includes(h)?'major':'');grid.appendChild(c)}});
-  items.forEach(it=>{const b=document.createElement('div'); b.className='block '+(it.row===0?'virtual ':'')+(it.external?'external ':'')+(it.status==='finalizado'?'done ':'')+(it.id===selectedId?'selected ':''); b.dataset.id=it.id; b.style.left=minToX(it.start)+'px'; b.style.top=rowToY(it.row)+'px'; b.style.width=Math.max(52,((it.end-it.start)/60)*HOUR_W)+'px';
+  items.forEach(it=>{const b=document.createElement('div'); b.className='block '+(it.row===0?'virtual ':'')+(it.external?'external ':'')+(it.status==='finalizado'?'done ':'')+(it.id===selectedId?'selected ':''); b.dataset.id=it.id; b.style.left=minToX(it.start)+'px'; b.style.top=rowToYDynamic(it.row, layout, it.id)+'px'; b.style.width=Math.max(52,((it.end-it.start)/60)*HOUR_W)+'px';
     const name=document.createElement('div'); name.className='blockName'; name.textContent=it.name; b.appendChild(name);
     if(it.anesthetist&&!it.external){const badge=document.createElement('div'); badge.className='anesBadge'; badge.textContent=it.anesthetist; b.appendChild(badge)}
     const handle=document.createElement('div'); handle.className='resizeHandle'; handle.dataset.resize='1'; b.appendChild(handle);
-    b.addEventListener('pointerdown',onBlockDown); b.addEventListener('click',ev=>{ev.stopPropagation(); selectedId=it.id; renderAll()}); b.addEventListener('dblclick',ev=>{ev.stopPropagation(); openSurgeryModal(it.id)}); board.appendChild(b)});
+    b.addEventListener('pointerdown',onBlockDown); b.addEventListener('click',ev=>{ev.stopPropagation(); if(Date.now()<suppressClickUntil)return; selectedId=it.id; renderAll()}); b.addEventListener('dblclick',ev=>{ev.stopPropagation(); openSurgeryModal(it.id)}); board.appendChild(b)});
   board.onclick=()=>{selectedId=null; renderAll()}; }
-function onBlockDown(ev){ev.preventDefault(); ev.stopPropagation(); const id=ev.currentTarget.dataset.id; const it=items.find(x=>x.id===id); if(!it)return; selectedId=id; const rect=$('board').getBoundingClientRect(); dragState={id,mode:ev.target.dataset.resize?'resize':'move',startX:ev.clientX,startY:ev.clientY,origStart:it.start,origEnd:it.end,origRow:it.row,rect}; ev.currentTarget.setPointerCapture(ev.pointerId); document.addEventListener('pointermove',onPointerMove); document.addEventListener('pointerup',onPointerUp,{once:true}); renderSelectedPill()}
-function onPointerMove(ev){if(!dragState)return; const it=items.find(x=>x.id===dragState.id); if(!it)return; if(dragState.mode==='resize'){const dx=ev.clientX-dragState.startX; let dur=(dragState.origEnd-dragState.origStart)+Math.round((dx/HOUR_W)*4)*15; dur=clamp(dur,15,(END_H*60)-it.start); it.end=it.start+dur} else {const dx=ev.clientX-dragState.startX, dy=ev.clientY-dragState.startY; const dur=dragState.origEnd-dragState.origStart; let ns=dragState.origStart+Math.round((dx/HOUR_W)*4)*15; ns=clamp(ns,START_H*60,END_H*60-dur); let nr=dragState.origRow+Math.round(dy/ROW_H); nr=clamp(nr,0,ROOMS.length-1); it.start=ns; it.end=ns+dur; it.row=nr} renderBoard(); renderSelectedPill()}
-function onPointerUp(){document.removeEventListener('pointermove',onPointerMove); dragState=null; renderAll(); scheduleSave()}
+function onBlockDown(ev){
+  ev.stopPropagation();
+  const id=ev.currentTarget.dataset.id; const it=items.find(x=>x.id===id); if(!it)return;
+  selectedId=id; renderSelectedPill();
+  clearPressState();
+  pressState={id,mode:ev.target.dataset.resize?'resize':'move',startX:ev.clientX,startY:ev.clientY,pointerId:ev.pointerId,target:ev.currentTarget,timer:null,unlocked:false};
+  pressState.timer=setTimeout(()=>startLongPressEdit(ev),LONG_PRESS_MS);
+  document.addEventListener('pointermove',onPointerMove,{passive:false});
+  document.addEventListener('pointerup',onPointerUp,{once:true});
+}
+function startLongPressEdit(ev){
+  if(!pressState)return;
+  const it=items.find(x=>x.id===pressState.id); if(!it){clearPressState();return}
+  pressState.unlocked=true; suppressClickUntil=Date.now()+700;
+  const rect=$('board').getBoundingClientRect();
+  dragState={id:pressState.id,mode:pressState.mode,startX:pressState.startX,startY:pressState.startY,origStart:it.start,origEnd:it.end,origRow:it.row,rect};
+  try{pressState.target.setPointerCapture(pressState.pointerId)}catch(e){}
+  pressState.target.classList.add('editReady');
+  if(navigator.vibrate) navigator.vibrate(18);
+}
+function clearPressState(){
+  if(pressState){clearTimeout(pressState.timer); if(pressState.target)pressState.target.classList.remove('editReady')}
+  pressState=null;
+}
+function onPointerMove(ev){
+  if(pressState&&!dragState){
+    const moved=Math.hypot(ev.clientX-pressState.startX, ev.clientY-pressState.startY);
+    if(moved>MOVE_TOL){clearPressState(); document.removeEventListener('pointermove',onPointerMove)}
+    return;
+  }
+  if(!dragState)return;
+  ev.preventDefault();
+  const it=items.find(x=>x.id===dragState.id); if(!it)return; if(dragState.mode==='resize'){const dx=ev.clientX-dragState.startX; let dur=(dragState.origEnd-dragState.origStart)+Math.round((dx/HOUR_W)*4)*15; dur=clamp(dur,15,(END_H*60)-it.start); it.end=it.start+dur} else {const dx=ev.clientX-dragState.startX; const dur=dragState.origEnd-dragState.origStart; let ns=dragState.origStart+Math.round((dx/HOUR_W)*4)*15; ns=clamp(ns,START_H*60,END_H*60-dur); const layout=buildVirtualLayout(); const nr=rowFromPointerY(ev.clientY-dragState.rect.top, layout); it.start=ns; it.end=ns+dur; it.row=nr} renderBoard(); renderSelectedPill()}
+function onPointerUp(){
+  document.removeEventListener('pointermove',onPointerMove);
+  const edited=!!dragState;
+  dragState=null; clearPressState();
+  renderAll();
+  if(edited) scheduleSave();
+}
 function renderSelectedPill(){const it=items.find(x=>x.id===selectedId); $('selectedPill').textContent=it?`${fmt(it.start)}-${fmt(it.end)} · ${roomName(it.row)}`:'Nada selecionado'}
 function renderList(){const box=$('surgeryList'); if(!items.length){box.innerHTML='<div class="card hint">Nenhuma cirurgia.</div>';return} box.innerHTML=items.slice().sort((a,b)=>a.start-b.start||a.row-b.row).map(it=>`<div class="listItem"><div class="listTitle">${esc(it.name)}</div><div class="listMeta">${fmt(it.start)}-${fmt(it.end)} · ${esc(roomName(it.row))} · ${it.end-it.start} min · ${it.external?'Externo':(it.anesthetist?'Anes: '+esc(it.anesthetist):'Sem anestesista')} ${it.status==='finalizado'?'· Finalizada':''}</div><div class="listActions"><button class="light" data-edit="${it.id}">Editar</button><button class="purple" data-assign="${it.id}">Escalar</button><button class="secondary" data-unassign="${it.id}">Desescalar</button><button class="green" data-finish="${it.id}">Finalizar</button><button class="red" data-del="${it.id}">Deletar</button></div></div>`).join(''); box.querySelectorAll('[data-edit]').forEach(b=>b.onclick=()=>openSurgeryModal(b.dataset.edit)); box.querySelectorAll('[data-assign]').forEach(b=>b.onclick=()=>openAssignModal(b.dataset.assign)); box.querySelectorAll('[data-unassign]').forEach(b=>b.onclick=()=>unassignSurgery(b.dataset.unassign)); box.querySelectorAll('[data-finish]').forEach(b=>b.onclick=()=>finishSurgery(b.dataset.finish)); box.querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>deleteSurgery(b.dataset.del))}
 function renderAnes(){const box=$('anesList'); if(!anesthetists.length){box.innerHTML='<div class="card hint">Nenhum anestesista cadastrado.</div>';return} box.innerHTML=anesthetists.map(a=>`<div class="listItem"><div class="listTitle">${esc(a.name)}</div><div class="listMeta">${fmt(a.start)}-${fmt(a.end)} ${a.obs?'· '+esc(a.obs):''}</div><div class="listActions"><button class="light" data-edan="${a.id}">Editar</button><button class="red" data-delan="${a.id}">Remover</button></div></div>`).join(''); box.querySelectorAll('[data-edan]').forEach(b=>b.onclick=()=>openAnesModal(b.dataset.edan)); box.querySelectorAll('[data-delan]').forEach(b=>b.onclick=()=>deleteAnes(b.dataset.delan))}
