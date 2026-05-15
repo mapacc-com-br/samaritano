@@ -1,23 +1,21 @@
-// server.js — CC Sama Bolso v4 com SQLite no Railway
-
 const express = require("express");
-const cors = require("cors");
 const path = require("path");
 const sqlite3 = require("sqlite3").verbose();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-app.use(cors());
-app.use(express.json({ limit: "20mb" }));
+app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true }));
 
-const dbPath = path.join(__dirname, "cc_sama.sqlite");
-const db = new sqlite3.Database(dbPath);
+// Serve arquivos estáticos: index.html, css, js etc
+app.use(express.static(__dirname));
+
+const db = new sqlite3.Database(path.join(__dirname, "database.sqlite"));
 
 db.serialize(() => {
   db.run(`
-    CREATE TABLE IF NOT EXISTS day_state (
+    CREATE TABLE IF NOT EXISTS states (
       date TEXT PRIMARY KEY,
       data TEXT NOT NULL,
       updated_at TEXT DEFAULT CURRENT_TIMESTAMP
@@ -25,19 +23,25 @@ db.serialize(() => {
   `);
 });
 
-app.get("/api/health", (req, res) => {
-  res.json({
-    ok: true,
-    version: "v4-sqlite",
-    db: "cc_sama.sqlite"
-  });
+// Página principal
+app.get("/", (req, res) => {
+  res.sendFile(path.join(__dirname, "index.html"));
 });
 
-// Compatibilidade: várias possibilidades que o v4 pode chamar
-app.get(["/api/state/:date", "/api/day/:date", "/api/data/:date"], (req, res) => {
+app.get("/index.html", (req, res) => {
+  res.sendFile(path.join(__dirname, "index.html"));
+});
+
+// Teste da API
+app.get("/api/health", (req, res) => {
+  res.json({ ok: true, message: "API funcionando" });
+});
+
+// Carregar estado do dia
+app.get("/api/state/:date", (req, res) => {
   const date = req.params.date;
 
-  db.get("SELECT data FROM day_state WHERE date = ?", [date], (err, row) => {
+  db.get("SELECT data FROM states WHERE date = ?", [date], (err, row) => {
     if (err) {
       return res.status(500).json({ ok: false, error: err.message });
     }
@@ -46,70 +50,80 @@ app.get(["/api/state/:date", "/api/day/:date", "/api/data/:date"], (req, res) =>
       return res.json({ ok: true, date, data: null });
     }
 
-    try {
-      res.json({ ok: true, date, data: JSON.parse(row.data) });
-    } catch {
-      res.json({ ok: true, date, data: row.data });
-    }
+    res.json({
+      ok: true,
+      date,
+      data: JSON.parse(row.data)
+    });
   });
 });
 
-app.post(["/api/state/:date", "/api/day/:date", "/api/data/:date"], (req, res) => {
+// Salvar estado do dia
+app.post("/api/state/:date", (req, res) => {
   const date = req.params.date;
-  const payload = req.body;
+  const data = JSON.stringify(req.body || {});
 
   db.run(
     `
-    INSERT INTO day_state (date, data, updated_at)
+    INSERT INTO states (date, data, updated_at)
     VALUES (?, ?, CURRENT_TIMESTAMP)
     ON CONFLICT(date) DO UPDATE SET
       data = excluded.data,
       updated_at = CURRENT_TIMESTAMP
     `,
-    [date, JSON.stringify(payload)],
+    [date, data],
     function (err) {
       if (err) {
         return res.status(500).json({ ok: false, error: err.message });
       }
 
-      res.json({ ok: true, date, saved: true });
+      res.json({ ok: true, date });
     }
   );
 });
 
-app.delete(["/api/state/:date", "/api/day/:date", "/api/data/:date"], (req, res) => {
-  const date = req.params.date;
+// Compatibilidade: se seu HTML chamar /api/state sem data
+app.get("/api/state", (req, res) => {
+  const date = req.query.date || "default";
 
-  db.run("DELETE FROM day_state WHERE date = ?", [date], function (err) {
-    if (err) {
-      return res.status(500).json({ ok: false, error: err.message });
-    }
+  db.get("SELECT data FROM states WHERE date = ?", [date], (err, row) => {
+    if (err) return res.status(500).json({ ok: false, error: err.message });
 
-    res.json({ ok: true, date, deleted: true });
+    res.json({
+      ok: true,
+      date,
+      data: row ? JSON.parse(row.data) : null
+    });
   });
 });
 
-// Servir arquivos estáticos
-app.use(express.static(__dirname));
+app.post("/api/state", (req, res) => {
+  const date = req.query.date || req.body.date || "default";
+  const payload = req.body.data ?? req.body;
+  const data = JSON.stringify(payload);
 
-// Abrir index.html
-app.get("/", (req, res) => {
-  res.sendFile(path.join(__dirname, "index.html"));
+  db.run(
+    `
+    INSERT INTO states (date, data, updated_at)
+    VALUES (?, ?, CURRENT_TIMESTAMP)
+    ON CONFLICT(date) DO UPDATE SET
+      data = excluded.data,
+      updated_at = CURRENT_TIMESTAMP
+    `,
+    [date, data],
+    function (err) {
+      if (err) return res.status(500).json({ ok: false, error: err.message });
+
+      res.json({ ok: true, date });
+    }
+  );
 });
 
-// Fallback
-app.use((req, res) => {
-  if (req.path.startsWith("/api/")) {
-    return res.status(404).json({
-      ok: false,
-      error: "API não encontrada",
-      path: req.path
-    });
-  }
-
+// Qualquer outra rota abre o index
+app.get("*", (req, res) => {
   res.sendFile(path.join(__dirname, "index.html"));
 });
 
 app.listen(PORT, () => {
-  console.log("Servidor rodando na porta " + PORT);
+  console.log(`Servidor rodando na porta ${PORT}`);
 });
