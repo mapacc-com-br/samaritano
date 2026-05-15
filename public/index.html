@@ -1,563 +1,377 @@
 <!doctype html>
 <html lang="pt-BR">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>SQLite Railway Pro</title>
-  <style>
-    * { box-sizing: border-box; }
-    body {
-      margin: 0;
-      padding: 20px;
-      font-family: Arial, Helvetica, sans-serif;
-      background: #f4f6fb;
-      color: #111827;
-    }
-    .wrap { max-width: 1150px; margin: 0 auto; }
-    .card {
-      background: white;
-      border: 1px solid #e5e7eb;
-      border-radius: 16px;
-      padding: 18px;
-      margin-bottom: 16px;
-      box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
-    }
-    h1, h2, h3 { margin: 0 0 10px; }
-    p { color: #4b5563; }
-    .status {
-      padding: 10px;
-      border-radius: 10px;
-      background: #f9fafb;
-      border: 1px solid #e5e7eb;
-      margin-top: 12px;
-      white-space: pre-wrap;
-      font-size: 14px;
-    }
-    .status.ok { background: #ecfdf5; border-color: #a7f3d0; color: #065f46; }
-    .status.err { background: #fef2f2; border-color: #fecaca; color: #991b1b; }
-    form {
-      display: grid;
-      grid-template-columns: 1fr 130px 150px 120px;
-      gap: 10px;
-      align-items: end;
-    }
-    label {
-      display: block;
-      font-size: 13px;
-      color: #6b7280;
-      margin-bottom: 5px;
-    }
-    input {
-      width: 100%;
-      padding: 12px;
-      border: 1px solid #d1d5db;
-      border-radius: 10px;
-      font-size: 15px;
-    }
-    button {
-      border: 0;
-      background: #2563eb;
-      color: white;
-      padding: 12px 14px;
-      border-radius: 10px;
-      cursor: pointer;
-      font-weight: 700;
-      font-size: 14px;
-    }
-    button:hover { background: #1d4ed8; }
-    button.gray { background: #4b5563; }
-    button.gray:hover { background: #374151; }
-    button.red { background: #dc2626; }
-    button.red:hover { background: #b91c1c; }
-    button.small { padding: 8px 10px; font-size: 12px; }
-    .toolbar {
-      display: flex;
-      justify-content: space-between;
-      gap: 10px;
-      align-items: center;
-      flex-wrap: wrap;
-    }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 8px;
-      overflow: hidden;
-      border-radius: 12px;
-    }
-    th, td {
-      border-bottom: 1px solid #e5e7eb;
-      text-align: left;
-      padding: 10px;
-      vertical-align: middle;
-    }
-    th {
-      background: #f9fafb;
-      font-size: 13px;
-      color: #374151;
-    }
-    .actions { display: flex; gap: 8px; flex-wrap: wrap; }
-    .muted { color: #6b7280; }
-    .empty {
-      padding: 16px;
-      text-align: center;
-      color: #6b7280;
-      background: #f9fafb;
-      border-radius: 12px;
-      border: 1px dashed #d1d5db;
-    }
-    code {
-      background: #eef2ff;
-      padding: 2px 6px;
-      border-radius: 6px;
-    }
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Sistema de Cirurgias</title>
 
-    .db-summary {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-      gap: 10px;
-      margin: 12px 0;
-    }
-    .db-stat {
-      background: #f9fafb;
-      border: 1px solid #e5e7eb;
-      border-radius: 12px;
-      padding: 12px;
-    }
-    .db-stat strong {
-      display: block;
-      font-size: 22px;
-      margin-bottom: 4px;
-    }
-    .table-card {
-      border: 1px solid #e5e7eb;
-      border-radius: 14px;
-      margin-top: 16px;
-      overflow: hidden;
-      background: #ffffff;
-    }
-    .table-head {
-      padding: 14px;
-      background: #f9fafb;
-      border-bottom: 1px solid #e5e7eb;
-      display: flex;
-      justify-content: space-between;
-      gap: 10px;
-      align-items: center;
-      flex-wrap: wrap;
-    }
-    .pill {
-      display: inline-flex;
-      align-items: center;
-      gap: 5px;
-      background: #eef2ff;
-      color: #3730a3;
-      padding: 5px 9px;
-      border-radius: 999px;
-      font-size: 12px;
-      font-weight: 700;
-    }
-    .table-section {
-      padding: 14px;
-    }
-    .scroll {
-      overflow-x: auto;
-      border: 1px solid #e5e7eb;
-      border-radius: 12px;
-    }
-    .schema-table th {
-      background: #eef2ff;
-    }
-    .data-table th {
-      background: #ecfdf5;
-    }
-    .null {
-      color: #9ca3af;
-      font-style: italic;
-    }
-    details {
-      margin-top: 14px;
-    }
-    summary {
-      cursor: pointer;
-      color: #2563eb;
-      font-weight: 700;
-      margin-bottom: 8px;
-    }
-    pre {
-      background: #111827;
-      color: #d1d5db;
-      padding: 14px;
-      border-radius: 12px;
-      overflow-x: auto;
-      font-size: 13px;
-      white-space: pre-wrap;
-    }
-    @media (max-width: 760px) {
-      body { padding: 12px; }
-      form { grid-template-columns: 1fr; }
-      .actions { flex-direction: column; }
-      button { width: 100%; }
-      th, td { font-size: 13px; padding: 8px; }
-    }
-  </style>
+<style>
+
+*{
+  box-sizing:border-box;
+}
+
+body{
+  margin:0;
+  padding:20px;
+  background:#f4f6fb;
+  font-family:Arial,Helvetica,sans-serif;
+  color:#111827;
+}
+
+.wrap{
+  max-width:1400px;
+  margin:0 auto;
+}
+
+.card{
+  background:white;
+  border-radius:16px;
+  border:1px solid #e5e7eb;
+  padding:18px;
+  margin-bottom:16px;
+}
+
+.grid{
+  display:grid;
+  grid-template-columns:
+    100px
+    1fr
+    100px
+    120px
+    130px
+    180px
+    100px
+    90px;
+  gap:10px;
+}
+
+label{
+  display:block;
+  font-size:12px;
+  margin-bottom:4px;
+  color:#6b7280;
+}
+
+input,select{
+  width:100%;
+  padding:10px;
+  border-radius:10px;
+  border:1px solid #d1d5db;
+}
+
+button{
+  border:0;
+  background:#2563eb;
+  color:white;
+  padding:10px 14px;
+  border-radius:10px;
+  cursor:pointer;
+  font-weight:bold;
+}
+
+button.red{
+  background:#dc2626;
+}
+
+table{
+  width:100%;
+  border-collapse:collapse;
+}
+
+th,td{
+  border-bottom:1px solid #e5e7eb;
+  padding:10px;
+  text-align:left;
+}
+
+th{
+  background:#f9fafb;
+}
+
+.status{
+  margin-top:10px;
+  padding:10px;
+  border-radius:10px;
+  background:#f9fafb;
+}
+
+pre{
+  background:#111827;
+  color:#d1d5db;
+  padding:14px;
+  border-radius:12px;
+  overflow:auto;
+}
+
+</style>
 </head>
+
 <body>
-  <div class="wrap">
-    <div class="card">
-      <h1>SQLite Railway Pro</h1>
-      <p>
-        Cadastro simples com banco real em arquivo <code>database.db</code>.
-        Dá para adicionar, editar, deletar e inspecionar todas as tabelas.
-      </p>
-      <button class="gray" onclick="testarApi()">Testar API /api/health</button>
-      <div id="apiStatus" class="status">Ainda não testado.</div>
-    </div>
 
-    <div class="card">
-      <h2 id="tituloForm">Adicionar pessoa</h2>
-      <form id="formPessoa">
-        <div>
-          <label>Nome</label>
-          <input id="nome" autocomplete="off" placeholder="Ex: André" required />
-        </div>
-        <div>
-          <label>Idade</label>
-          <input id="idade" type="number" min="0" max="130" placeholder="Ex: 35" required />
-        </div>
-        <button type="submit" id="btnSalvar">Inserir</button>
-        <button type="button" class="gray" onclick="cancelarEdicao()">Cancelar</button>
-      </form>
-      <div id="formStatus" class="status">Pronto.</div>
-    </div>
+<div class="wrap">
 
-    <div class="card">
-      <div class="toolbar">
-        <h2>Pessoas cadastradas</h2>
-        <button class="gray small" onclick="carregarTudo()">Atualizar tudo</button>
-      </div>
-      <div id="lista"></div>
-    </div>
+<div class="card">
 
-    <div class="card">
-      <div class="toolbar">
-        <div>
-          <h2>DB Inspector visual</h2>
-          <p class="muted" style="margin: 0;">Mostra tabelas, colunas e dados do SQLite em formato legível.</p>
-        </div>
-        <button class="gray small" onclick="carregarInspector()">Atualizar inspector</button>
-      </div>
-      <div id="inspectorVisual">Carregando...</div>
-    </div>
-  </div>
+<h1>Sistema de Cirurgias</h1>
 
-  <script>
-    let editandoId = null;
-    const $ = (id) => document.getElementById(id);
+<div class="grid">
 
-    function setStatus(id, msg, tipo) {
-      const el = $(id);
-      el.textContent = msg;
-      el.className = "status" + (tipo ? " " + tipo : "");
-    }
+<div>
+<label>Horário</label>
+<input id="horario_inicio" placeholder="07:30"/>
+</div>
 
-    async function requestJson(url, options = {}) {
-      const resp = await fetch(url, {
-        headers: { "Content-Type": "application/json" },
-        cache: "no-store",
-        ...options
-      });
+<div>
+<label>Cirurgia</label>
+<input id="nome_cirurgia"/>
+</div>
 
-      const text = await resp.text();
-      let data;
+<div>
+<label>Duração</label>
+<input id="duracao" placeholder="02:00"/>
+</div>
 
-      try {
-        data = text ? JSON.parse(text) : {};
-      } catch {
-        throw new Error("A resposta não foi JSON. Resposta recebida: " + text.slice(0, 180));
-      }
+<div>
+<label>Sala</label>
+<input id="sala"/>
+</div>
 
-      if (!resp.ok) throw new Error(data.error || "Erro HTTP " + resp.status);
-      return data;
-    }
+<div>
+<label>Serviço</label>
+<select id="servico">
+<option>SMA</option>
+<option>Particular</option>
+</select>
+</div>
 
-    async function testarApi() {
-      try {
-        const data = await requestJson("/api/health");
-        setStatus("apiStatus", JSON.stringify(data, null, 2), "ok");
-      } catch (err) {
-        setStatus("apiStatus", err.message, "err");
-      }
-    }
+<div>
+<label>Anestesista</label>
+<input id="anestesista_escalado"/>
+</div>
 
-    async function carregarPessoas() {
-      const pessoas = await requestJson("/api/pessoas");
+<div>
+<label>Iniciais</label>
+<input id="iniciais_paciente"/>
+</div>
 
-      if (!pessoas.length) {
-        $("lista").innerHTML = '<div class="empty">Nenhuma pessoa cadastrada ainda.</div>';
-        return;
-      }
+<div>
+<label>Idade</label>
+<input id="idade_paciente" type="number"/>
+</div>
 
-      $("lista").innerHTML = `
-        <table>
-          <thead>
-            <tr>
-              <th>ID</th>
-              <th>Nome</th>
-              <th>Idade</th>
-              <th>Criado em</th>
-              <th>Atualizado em</th>
-              <th>Ações</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${pessoas.map(p => `
-              <tr>
-                <td>${p.id}</td>
-                <td>${escapeHtml(p.nome)}</td>
-                <td>${p.idade}</td>
-                <td>${p.criado_em || ""}</td>
-                <td>${p.atualizado_em || ""}</td>
-                <td>
-                  <div class="actions">
-                    <button class="small" onclick="editar(${p.id}, '${escapeAttr(p.nome)}', ${p.idade})">Editar</button>
-                    <button class="small red" onclick="deletar(${p.id})">Deletar</button>
-                  </div>
-                </td>
-              </tr>
-            `).join("")}
-          </tbody>
-        </table>
-      `;
-    }
+</div>
 
-    async function carregarInspector() {
-      try {
-        const data = await requestJson("/api/db-inspector");
-        renderInspector(data);
-      } catch (err) {
-        $("inspectorVisual").innerHTML = `<div class="status err">${escapeHtml(err.message)}</div>`;
-      }
-    }
+<div style="margin-top:14px;">
+<button onclick="salvar()">
+Salvar cirurgia
+</button>
+</div>
 
-    function renderInspector(data) {
-      const tables = data.tables || {};
-      const tableNames = Object.keys(tables);
-      const totalRows = tableNames.reduce((sum, name) => sum + Number(tables[name].row_count || 0), 0);
-      const totalColumns = tableNames.reduce((sum, name) => sum + ((tables[name].columns || []).length), 0);
+<div
+  class="status"
+  id="status"
+>
+Pronto.
+</div>
 
-      let html = `
-        <div class="db-summary">
-          <div class="db-stat">
-            <strong>${tableNames.length}</strong>
-            <span>Tabelas</span>
-          </div>
-          <div class="db-stat">
-            <strong>${totalRows}</strong>
-            <span>Linhas totais</span>
-          </div>
-          <div class="db-stat">
-            <strong>${totalColumns}</strong>
-            <span>Colunas totais</span>
-          </div>
-        </div>
+</div>
 
-        <p class="muted"><b>Arquivo do banco:</b> ${escapeHtml(data.database_file || "database.db")}</p>
-      `;
+<div class="card">
 
-      if (!tableNames.length) {
-        html += '<div class="empty">Nenhuma tabela encontrada.</div>';
-        $("inspectorVisual").innerHTML = html;
-        return;
-      }
+<h2>Cirurgias cadastradas</h2>
 
-      for (const tableName of tableNames) {
-        const table = tables[tableName];
-        const columns = table.columns || [];
-        const rows = table.rows || [];
+<div id="lista"></div>
 
-        html += `
-          <div class="table-card">
-            <div class="table-head">
-              <div>
-                <h3 style="margin:0;">Tabela: ${escapeHtml(tableName)}</h3>
-                <span class="muted">${columns.length} colunas · ${rows.length} linhas</span>
-              </div>
-              <span class="pill">${rows.length} registros</span>
-            </div>
+</div>
 
-            <div class="table-section">
-              <h3>Estrutura da tabela</h3>
-              ${renderSchemaTable(columns)}
-            </div>
+<div class="card">
 
-            <div class="table-section">
-              <h3>Dados inseridos</h3>
-              ${renderDataTable(columns, rows)}
-            </div>
+<h2>DB Inspector</h2>
 
-            <div class="table-section">
-              <details>
-                <summary>Ver JSON bruto desta tabela</summary>
-                <pre>${escapeHtml(JSON.stringify(table, null, 2))}</pre>
-              </details>
-            </div>
-          </div>
-        `;
-      }
+<pre id="inspector">
+Carregando...
+</pre>
 
-      $("inspectorVisual").innerHTML = html;
-    }
+</div>
 
-    function renderSchemaTable(columns) {
-      if (!columns.length) return '<div class="empty">Sem colunas.</div>';
+</div>
 
-      return `
-        <div class="scroll">
-          <table class="schema-table">
-            <thead>
-              <tr>
-                <th>Ordem</th>
-                <th>Nome da coluna</th>
-                <th>Tipo</th>
-                <th>Obrigatório?</th>
-                <th>Chave primária?</th>
-                <th>Valor padrão</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${columns.map(c => `
-                <tr>
-                  <td>${c.cid}</td>
-                  <td><b>${escapeHtml(c.name)}</b></td>
-                  <td>${escapeHtml(c.type || "")}</td>
-                  <td>${c.notnull ? "Sim" : "Não"}</td>
-                  <td>${c.pk ? "Sim" : "Não"}</td>
-                  <td>${formatValue(c.dflt_value)}</td>
-                </tr>
-              `).join("")}
-            </tbody>
-          </table>
-        </div>
-      `;
-    }
+<script>
 
-    function renderDataTable(columns, rows) {
-      if (!rows.length) return '<div class="empty">Essa tabela ainda não tem dados.</div>';
+async function api(url, options={}) {
 
-      const columnNames = columns.length ? columns.map(c => c.name) : Object.keys(rows[0]);
+  const r = await fetch(url,{
+    headers:{
+      "Content-Type":"application/json"
+    },
+    ...options
+  });
 
-      return `
-        <div class="scroll">
-          <table class="data-table">
-            <thead>
-              <tr>
-                ${columnNames.map(name => `<th>${escapeHtml(name)}</th>`).join("")}
-              </tr>
-            </thead>
-            <tbody>
-              ${rows.map(row => `
-                <tr>
-                  ${columnNames.map(name => `<td>${formatValue(row[name])}</td>`).join("")}
-                </tr>
-              `).join("")}
-            </tbody>
-          </table>
-        </div>
-      `;
-    }
+  const data = await r.json();
 
-    function formatValue(value) {
-      if (value === null || value === undefined) return '<span class="null">NULL</span>';
-      if (value === "") return '<span class="null">vazio</span>';
-      return escapeHtml(value);
-    }
+  if(!r.ok){
+    throw new Error(
+      data.error || "Erro"
+    );
+  }
 
-    async function carregarTudo() {
-      try {
-        await carregarPessoas();
-        await carregarInspector();
-      } catch (err) {
-        setStatus("formStatus", err.message, "err");
-      }
-    }
+  return data;
 
-    $("formPessoa").addEventListener("submit", async (e) => {
-      e.preventDefault();
+}
 
-      const nome = $("nome").value.trim();
-      const idade = Number($("idade").value);
+function status(msg){
+  document
+    .getElementById("status")
+    .innerText = msg;
+}
 
-      try {
-        if (editandoId) {
-          await requestJson("/api/pessoas/" + editandoId, {
-            method: "PUT",
-            body: JSON.stringify({ nome, idade })
-          });
-          setStatus("formStatus", "Registro atualizado.", "ok");
-        } else {
-          await requestJson("/api/pessoas", {
-            method: "POST",
-            body: JSON.stringify({ nome, idade })
-          });
-          setStatus("formStatus", "Registro inserido no database.db.", "ok");
-        }
+async function salvar(){
 
-        cancelarEdicao();
-        await carregarTudo();
-      } catch (err) {
-        setStatus("formStatus", err.message, "err");
-      }
+  try{
+
+    const body = {
+
+      horario_inicio:
+        document
+          .getElementById("horario_inicio")
+          .value,
+
+      nome_cirurgia:
+        document
+          .getElementById("nome_cirurgia")
+          .value,
+
+      duracao:
+        document
+          .getElementById("duracao")
+          .value,
+
+      sala:
+        document
+          .getElementById("sala")
+          .value,
+
+      servico:
+        document
+          .getElementById("servico")
+          .value,
+
+      anestesista_escalado:
+        document
+          .getElementById("anestesista_escalado")
+          .value,
+
+      iniciais_paciente:
+        document
+          .getElementById("iniciais_paciente")
+          .value,
+
+      idade_paciente:
+        Number(
+          document
+            .getElementById("idade_paciente")
+            .value
+        )
+
+    };
+
+    await api("/api/cirurgias",{
+      method:"POST",
+      body:JSON.stringify(body)
     });
 
-    function editar(id, nome, idade) {
-      editandoId = id;
-      $("nome").value = nome;
-      $("idade").value = idade;
-      $("tituloForm").textContent = "Editando pessoa ID " + id;
-      $("btnSalvar").textContent = "Salvar";
-      setStatus("formStatus", "Editando ID " + id + ".", "");
-      $("nome").focus();
-    }
+    status("Cirurgia salva.");
 
-    function cancelarEdicao() {
-      editandoId = null;
-      $("nome").value = "";
-      $("idade").value = "";
-      $("tituloForm").textContent = "Adicionar pessoa";
-      $("btnSalvar").textContent = "Inserir";
-    }
+    carregar();
 
-    async function deletar(id) {
-      if (!confirm("Deletar o registro ID " + id + "?")) return;
+  }catch(err){
 
-      try {
-        await requestJson("/api/pessoas/" + id, { method: "DELETE" });
-        setStatus("formStatus", "Registro deletado.", "ok");
-        await carregarTudo();
-      } catch (err) {
-        setStatus("formStatus", err.message, "err");
-      }
-    }
+    status(err.message);
 
-    function escapeHtml(value) {
-      return String(value)
-        .replaceAll("&", "&amp;")
-        .replaceAll("<", "&lt;")
-        .replaceAll(">", "&gt;")
-        .replaceAll('"', "&quot;")
-        .replaceAll("'", "&#039;");
-    }
+  }
 
-    function escapeAttr(value) {
-      return String(value)
-        .replaceAll("\\", "\\\\")
-        .replaceAll("'", "\\'")
-        .replaceAll("\n", " ")
-        .replaceAll("\r", " ");
-    }
+}
 
-    testarApi();
-    carregarTudo();
-  </script>
+async function carregar(){
+
+  try{
+
+    const rows =
+      await api("/api/cirurgias");
+
+    document
+      .getElementById("lista")
+      .innerHTML = `
+
+      <table>
+
+      <thead>
+
+      <tr>
+        <th>Hora</th>
+        <th>Cirurgia</th>
+        <th>Duração</th>
+        <th>Sala</th>
+        <th>Serviço</th>
+        <th>Anestesista</th>
+        <th>Paciente</th>
+        <th>Idade</th>
+      </tr>
+
+      </thead>
+
+      <tbody>
+
+      ${rows.map(r=>`
+
+      <tr>
+
+      <td>${r.horario_inicio}</td>
+
+      <td>${r.nome_cirurgia}</td>
+
+      <td>${r.duracao}</td>
+
+      <td>${r.sala}</td>
+
+      <td>${r.servico}</td>
+
+      <td>${r.anestesista_escalado || ""}</td>
+
+      <td>${r.iniciais_paciente}</td>
+
+      <td>${r.idade_paciente}</td>
+
+      </tr>
+
+      `).join("")}
+
+      </tbody>
+
+      </table>
+
+      `;
+
+    const db =
+      await api("/api/db-inspector");
+
+    document
+      .getElementById("inspector")
+      .innerText =
+        JSON.stringify(db,null,2);
+
+  }catch(err){
+
+    status(err.message);
+
+  }
+
+}
+
+carregar();
+
+</script>
+
 </body>
 </html>

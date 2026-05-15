@@ -1,7 +1,6 @@
 {
-  "name": "sqlite-railway-pro",
+  "name": "sistema-cirurgias",
   "version": "1.0.0",
-  "description": "CRUD simples com Node, Express, SQLite e DB Inspector para Railway",
   "main": "server.js",
   "type": "commonjs",
   "scripts": {
