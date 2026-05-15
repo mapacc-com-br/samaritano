@@ -1,6 +1,6 @@
 {
-  "name": "sistema-cirurgias",
-  "version": "1.0.0",
+  "name": "mapa-cirurgias-dias",
+  "version": "1.1.0",
   "main": "server.js",
   "type": "commonjs",
   "scripts": {

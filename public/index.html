@@ -3,14 +3,10 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Sistema de Cirurgias</title>
+<title>Mapa de Cirurgias por Dia</title>
 
 <style>
-
-*{
-  box-sizing:border-box;
-}
-
+*{box-sizing:border-box}
 body{
   margin:0;
   padding:20px;
@@ -18,48 +14,37 @@ body{
   font-family:Arial,Helvetica,sans-serif;
   color:#111827;
 }
-
-.wrap{
-  max-width:1400px;
-  margin:0 auto;
-}
-
+.wrap{max-width:1450px;margin:0 auto}
 .card{
   background:white;
-  border-radius:16px;
   border:1px solid #e5e7eb;
+  border-radius:16px;
   padding:18px;
   margin-bottom:16px;
+  box-shadow:0 8px 22px rgba(15,23,42,.05);
 }
-
-.grid{
-  display:grid;
-  grid-template-columns:
-    100px
-    1fr
-    100px
-    120px
-    130px
-    180px
-    100px
-    90px;
-  gap:10px;
+.topbar{
+  display:flex;
+  justify-content:space-between;
+  align-items:end;
+  gap:12px;
+  flex-wrap:wrap;
 }
-
+h1,h2,h3{margin:0 0 10px}
+p{color:#6b7280}
 label{
   display:block;
+  color:#6b7280;
   font-size:12px;
   margin-bottom:4px;
-  color:#6b7280;
 }
-
 input,select{
   width:100%;
-  padding:10px;
-  border-radius:10px;
   border:1px solid #d1d5db;
+  border-radius:10px;
+  padding:10px;
+  font-size:14px;
 }
-
 button{
   border:0;
   background:#2563eb;
@@ -67,310 +52,547 @@ button{
   padding:10px 14px;
   border-radius:10px;
   cursor:pointer;
-  font-weight:bold;
+  font-weight:700;
 }
-
-button.red{
-  background:#dc2626;
+button:hover{background:#1d4ed8}
+button.gray{background:#4b5563}
+button.gray:hover{background:#374151}
+button.red{background:#dc2626}
+button.red:hover{background:#b91c1c}
+button.small{padding:7px 10px;font-size:12px}
+.grid-cirurgia{
+  display:grid;
+  grid-template-columns:100px 1.5fr 100px 130px 130px 180px 100px 90px;
+  gap:10px;
 }
-
-table{
-  width:100%;
-  border-collapse:collapse;
+.grid-anestesista{
+  display:grid;
+  grid-template-columns:1fr 1fr auto;
+  gap:10px;
+  align-items:end;
 }
-
-th,td{
-  border-bottom:1px solid #e5e7eb;
-  padding:10px;
-  text-align:left;
-}
-
-th{
-  background:#f9fafb;
-}
-
 .status{
   margin-top:10px;
   padding:10px;
   border-radius:10px;
+  border:1px solid #e5e7eb;
+  background:#f9fafb;
+  white-space:pre-wrap;
+}
+.status.ok{background:#ecfdf5;border-color:#a7f3d0;color:#065f46}
+.status.err{background:#fef2f2;border-color:#fecaca;color:#991b1b}
+table{
+  width:100%;
+  border-collapse:collapse;
+}
+th,td{
+  border-bottom:1px solid #e5e7eb;
+  padding:10px;
+  text-align:left;
+  vertical-align:middle;
+}
+th{
+  background:#f9fafb;
+  font-size:13px;
+  color:#374151;
+}
+.actions{display:flex;gap:8px;flex-wrap:wrap}
+.badge{
+  display:inline-block;
+  padding:4px 8px;
+  border-radius:999px;
+  background:#eef2ff;
+  color:#3730a3;
+  font-weight:700;
+  font-size:12px;
+}
+.badge.sma{background:#ecfdf5;color:#065f46}
+.badge.particular{background:#fff7ed;color:#9a3412}
+.summary{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(180px,1fr));
+  gap:10px;
+}
+.stat{
+  background:#f9fafb;
+  border:1px solid #e5e7eb;
+  border-radius:12px;
+  padding:12px;
+}
+.stat strong{
+  display:block;
+  font-size:24px;
+}
+.empty{
+  border:1px dashed #d1d5db;
+  border-radius:12px;
+  padding:16px;
+  text-align:center;
+  color:#6b7280;
   background:#f9fafb;
 }
-
 pre{
   background:#111827;
   color:#d1d5db;
   padding:14px;
   border-radius:12px;
   overflow:auto;
+  max-height:420px;
 }
-
+.scroll{overflow-x:auto}
+@media(max-width:900px){
+  body{padding:12px}
+  .grid-cirurgia,.grid-anestesista{grid-template-columns:1fr}
+  button{width:100%}
+}
 </style>
 </head>
 
 <body>
-
 <div class="wrap">
 
 <div class="card">
+  <div class="topbar">
+    <div>
+      <h1>Mapa de Cirurgias por Dia</h1>
+      <p>Escolha uma data para navegar no banco: cirurgias e anestesistas aparecem só daquele dia.</p>
+    </div>
 
-<h1>Sistema de Cirurgias</h1>
+    <div style="min-width:220px">
+      <label>Data do mapa</label>
+      <input id="dataSelecionada" type="date" onchange="trocarData()"/>
+    </div>
 
-<div class="grid">
+    <div>
+      <button class="gray" onclick="hoje()">Hoje</button>
+    </div>
+  </div>
 
-<div>
-<label>Horário</label>
-<input id="horario_inicio" placeholder="07:30"/>
-</div>
+  <div class="summary" style="margin-top:14px">
+    <div class="stat">
+      <strong id="statCirurgias">0</strong>
+      <span>Cirurgias no dia</span>
+    </div>
+    <div class="stat">
+      <strong id="statAnestesistas">0</strong>
+      <span>Anestesistas no dia</span>
+    </div>
+    <div class="stat">
+      <strong id="statData">--</strong>
+      <span>Data selecionada</span>
+    </div>
+  </div>
 
-<div>
-<label>Cirurgia</label>
-<input id="nome_cirurgia"/>
-</div>
-
-<div>
-<label>Duração</label>
-<input id="duracao" placeholder="02:00"/>
-</div>
-
-<div>
-<label>Sala</label>
-<input id="sala"/>
-</div>
-
-<div>
-<label>Serviço</label>
-<select id="servico">
-<option>SMA</option>
-<option>Particular</option>
-</select>
-</div>
-
-<div>
-<label>Anestesista</label>
-<input id="anestesista_escalado"/>
-</div>
-
-<div>
-<label>Iniciais</label>
-<input id="iniciais_paciente"/>
-</div>
-
-<div>
-<label>Idade</label>
-<input id="idade_paciente" type="number"/>
-</div>
-
-</div>
-
-<div style="margin-top:14px;">
-<button onclick="salvar()">
-Salvar cirurgia
-</button>
-</div>
-
-<div
-  class="status"
-  id="status"
->
-Pronto.
-</div>
-
+  <div id="status" class="status">Pronto.</div>
 </div>
 
 <div class="card">
+  <h2 id="tituloCirurgia">Adicionar cirurgia</h2>
 
-<h2>Cirurgias cadastradas</h2>
+  <div class="grid-cirurgia">
+    <div>
+      <label>Horário início</label>
+      <input id="horario_inicio" placeholder="07:30"/>
+    </div>
 
-<div id="lista"></div>
+    <div>
+      <label>Nome da cirurgia</label>
+      <input id="nome_cirurgia" placeholder="Colecistectomia..."/>
+    </div>
 
+    <div>
+      <label>Duração</label>
+      <input id="duracao" placeholder="02:00"/>
+    </div>
+
+    <div>
+      <label>Sala</label>
+      <input id="sala" placeholder="Sala 01"/>
+    </div>
+
+    <div>
+      <label>Serviço</label>
+      <select id="servico">
+        <option>SMA</option>
+        <option>Particular</option>
+      </select>
+    </div>
+
+    <div>
+      <label>Anestesista escalado</label>
+      <input id="anestesista_escalado" placeholder="Nome"/>
+    </div>
+
+    <div>
+      <label>Iniciais paciente</label>
+      <input id="iniciais_paciente" placeholder="JPS"/>
+    </div>
+
+    <div>
+      <label>Idade</label>
+      <input id="idade_paciente" type="number" min="0" max="130"/>
+    </div>
+  </div>
+
+  <div style="margin-top:14px;display:flex;gap:10px;flex-wrap:wrap">
+    <button onclick="salvarCirurgia()" id="btnSalvarCirurgia">Salvar cirurgia</button>
+    <button class="gray" onclick="cancelarEdicaoCirurgia()">Cancelar edição</button>
+  </div>
 </div>
 
 <div class="card">
+  <h2>Escala de anestesistas do dia</h2>
 
-<h2>DB Inspector</h2>
+  <div class="grid-anestesista">
+    <div>
+      <label>Nome do anestesista</label>
+      <input id="nome_anestesista" placeholder="Ex: André"/>
+    </div>
 
-<pre id="inspector">
-Carregando...
-</pre>
+    <div>
+      <label>Observação</label>
+      <input id="observacao_anestesista" placeholder="Ex: coordenador, plantão, particular..."/>
+    </div>
 
+    <div>
+      <button onclick="salvarAnestesista()" id="btnSalvarAnestesista">Adicionar anestesista</button>
+    </div>
+  </div>
+
+  <div id="listaAnestesistas" style="margin-top:14px"></div>
+</div>
+
+<div class="card">
+  <h2>Cirurgias do dia</h2>
+  <div id="listaCirurgias"></div>
+</div>
+
+<div class="card">
+  <div class="topbar">
+    <h2>DB Inspector</h2>
+    <button class="gray small" onclick="carregarInspector()">Atualizar inspector</button>
+  </div>
+  <pre id="inspector">Carregando...</pre>
 </div>
 
 </div>
 
 <script>
+let editandoCirurgiaId = null;
+let editandoAnestesistaId = null;
 
-async function api(url, options={}) {
+const $ = id => document.getElementById(id);
 
+function dataHojeISO(){
+  const d = new Date();
+  const tz = d.getTimezoneOffset() * 60000;
+  return new Date(d - tz).toISOString().slice(0,10);
+}
+
+function formatarDataBR(iso){
+  if(!iso) return "--";
+  const [a,m,d] = iso.split("-");
+  return `${d}/${m}/${a}`;
+}
+
+function setStatus(msg,tipo){
+  $("status").textContent = msg;
+  $("status").className = "status" + (tipo ? " " + tipo : "");
+}
+
+async function api(url, options={}){
   const r = await fetch(url,{
-    headers:{
-      "Content-Type":"application/json"
-    },
+    headers:{"Content-Type":"application/json"},
+    cache:"no-store",
     ...options
   });
 
-  const data = await r.json();
+  const text = await r.text();
+  let data;
+
+  try{
+    data = text ? JSON.parse(text) : {};
+  }catch{
+    throw new Error("Resposta não JSON: " + text.slice(0,180));
+  }
 
   if(!r.ok){
-    throw new Error(
-      data.error || "Erro"
-    );
+    throw new Error(data.error || "Erro HTTP " + r.status);
   }
 
   return data;
-
 }
 
-function status(msg){
-  document
-    .getElementById("status")
-    .innerText = msg;
+function getData(){
+  return $("dataSelecionada").value;
 }
 
-async function salvar(){
+function hoje(){
+  $("dataSelecionada").value = dataHojeISO();
+  trocarData();
+}
 
+function trocarData(){
+  cancelarEdicaoCirurgia();
+  cancelarEdicaoAnestesista();
+  carregarDia();
+}
+
+async function carregarDia(){
   try{
+    const data = getData();
 
+    $("statData").textContent = formatarDataBR(data);
+
+    const mapa = await api("/api/dia/" + data);
+
+    renderCirurgias(mapa.cirurgias || []);
+    renderAnestesistas(mapa.anestesistas || []);
+
+    $("statCirurgias").textContent = (mapa.cirurgias || []).length;
+    $("statAnestesistas").textContent = (mapa.anestesistas || []).length;
+
+    await carregarInspector();
+
+    setStatus("Mapa carregado: " + formatarDataBR(data), "ok");
+  }catch(err){
+    setStatus(err.message, "err");
+  }
+}
+
+function renderCirurgias(rows){
+  if(!rows.length){
+    $("listaCirurgias").innerHTML = '<div class="empty">Nenhuma cirurgia cadastrada para esta data.</div>';
+    return;
+  }
+
+  $("listaCirurgias").innerHTML = `
+    <div class="scroll">
+    <table>
+      <thead>
+        <tr>
+          <th>Hora</th>
+          <th>Cirurgia</th>
+          <th>Duração</th>
+          <th>Sala</th>
+          <th>Serviço</th>
+          <th>Anestesista</th>
+          <th>Paciente</th>
+          <th>Idade</th>
+          <th>Ações</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${rows.map(r => `
+          <tr>
+            <td><b>${escapeHtml(r.horario_inicio)}</b></td>
+            <td>${escapeHtml(r.nome_cirurgia)}</td>
+            <td>${escapeHtml(r.duracao)}</td>
+            <td>${escapeHtml(r.sala)}</td>
+            <td><span class="badge ${r.servico === "SMA" ? "sma" : "particular"}">${escapeHtml(r.servico)}</span></td>
+            <td>${escapeHtml(r.anestesista_escalado || "")}</td>
+            <td><b>${escapeHtml(r.iniciais_paciente)}</b></td>
+            <td>${escapeHtml(r.idade_paciente)}</td>
+            <td>
+              <div class="actions">
+                <button class="small" onclick='editarCirurgia(${JSON.stringify(r)})'>Editar</button>
+                <button class="small red" onclick="deletarCirurgia(${r.id})">Deletar</button>
+              </div>
+            </td>
+          </tr>
+        `).join("")}
+      </tbody>
+    </table>
+    </div>
+  `;
+}
+
+function renderAnestesistas(rows){
+  if(!rows.length){
+    $("listaAnestesistas").innerHTML = '<div class="empty">Nenhum anestesista cadastrado para esta data.</div>';
+    return;
+  }
+
+  $("listaAnestesistas").innerHTML = `
+    <div class="scroll">
+    <table>
+      <thead>
+        <tr>
+          <th>Anestesista</th>
+          <th>Observação</th>
+          <th>Ações</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${rows.map(r => `
+          <tr>
+            <td><b>${escapeHtml(r.nome_anestesista)}</b></td>
+            <td>${escapeHtml(r.observacao || "")}</td>
+            <td>
+              <div class="actions">
+                <button class="small" onclick='editarAnestesista(${JSON.stringify(r)})'>Editar</button>
+                <button class="small red" onclick="deletarAnestesista(${r.id})">Deletar</button>
+              </div>
+            </td>
+          </tr>
+        `).join("")}
+      </tbody>
+    </table>
+    </div>
+  `;
+}
+
+async function salvarCirurgia(){
+  try{
     const body = {
-
-      horario_inicio:
-        document
-          .getElementById("horario_inicio")
-          .value,
-
-      nome_cirurgia:
-        document
-          .getElementById("nome_cirurgia")
-          .value,
-
-      duracao:
-        document
-          .getElementById("duracao")
-          .value,
-
-      sala:
-        document
-          .getElementById("sala")
-          .value,
-
-      servico:
-        document
-          .getElementById("servico")
-          .value,
-
-      anestesista_escalado:
-        document
-          .getElementById("anestesista_escalado")
-          .value,
-
-      iniciais_paciente:
-        document
-          .getElementById("iniciais_paciente")
-          .value,
-
-      idade_paciente:
-        Number(
-          document
-            .getElementById("idade_paciente")
-            .value
-        )
-
+      data_cirurgia: getData(),
+      horario_inicio: $("horario_inicio").value,
+      nome_cirurgia: $("nome_cirurgia").value,
+      duracao: $("duracao").value,
+      sala: $("sala").value,
+      servico: $("servico").value,
+      anestesista_escalado: $("anestesista_escalado").value,
+      iniciais_paciente: $("iniciais_paciente").value,
+      idade_paciente: Number($("idade_paciente").value)
     };
 
-    await api("/api/cirurgias",{
-      method:"POST",
-      body:JSON.stringify(body)
-    });
+    if(editandoCirurgiaId){
+      await api("/api/cirurgias/" + editandoCirurgiaId,{
+        method:"PUT",
+        body:JSON.stringify(body)
+      });
+      setStatus("Cirurgia atualizada.", "ok");
+    }else{
+      await api("/api/cirurgias",{
+        method:"POST",
+        body:JSON.stringify(body)
+      });
+      setStatus("Cirurgia salva.", "ok");
+    }
 
-    status("Cirurgia salva.");
-
-    carregar();
-
+    cancelarEdicaoCirurgia();
+    await carregarDia();
   }catch(err){
-
-    status(err.message);
-
+    setStatus(err.message, "err");
   }
-
 }
 
-async function carregar(){
+function editarCirurgia(r){
+  editandoCirurgiaId = r.id;
+
+  $("horario_inicio").value = r.horario_inicio || "";
+  $("nome_cirurgia").value = r.nome_cirurgia || "";
+  $("duracao").value = r.duracao || "";
+  $("sala").value = r.sala || "";
+  $("servico").value = r.servico || "SMA";
+  $("anestesista_escalado").value = r.anestesista_escalado || "";
+  $("iniciais_paciente").value = r.iniciais_paciente || "";
+  $("idade_paciente").value = r.idade_paciente || "";
+
+  $("tituloCirurgia").textContent = "Editando cirurgia ID " + r.id;
+  $("btnSalvarCirurgia").textContent = "Salvar edição";
+  window.scrollTo({top:0, behavior:"smooth"});
+}
+
+function cancelarEdicaoCirurgia(){
+  editandoCirurgiaId = null;
+
+  $("horario_inicio").value = "";
+  $("nome_cirurgia").value = "";
+  $("duracao").value = "";
+  $("sala").value = "";
+  $("servico").value = "SMA";
+  $("anestesista_escalado").value = "";
+  $("iniciais_paciente").value = "";
+  $("idade_paciente").value = "";
+
+  $("tituloCirurgia").textContent = "Adicionar cirurgia";
+  $("btnSalvarCirurgia").textContent = "Salvar cirurgia";
+}
+
+async function deletarCirurgia(id){
+  if(!confirm("Deletar esta cirurgia?")) return;
 
   try{
-
-    const rows =
-      await api("/api/cirurgias");
-
-    document
-      .getElementById("lista")
-      .innerHTML = `
-
-      <table>
-
-      <thead>
-
-      <tr>
-        <th>Hora</th>
-        <th>Cirurgia</th>
-        <th>Duração</th>
-        <th>Sala</th>
-        <th>Serviço</th>
-        <th>Anestesista</th>
-        <th>Paciente</th>
-        <th>Idade</th>
-      </tr>
-
-      </thead>
-
-      <tbody>
-
-      ${rows.map(r=>`
-
-      <tr>
-
-      <td>${r.horario_inicio}</td>
-
-      <td>${r.nome_cirurgia}</td>
-
-      <td>${r.duracao}</td>
-
-      <td>${r.sala}</td>
-
-      <td>${r.servico}</td>
-
-      <td>${r.anestesista_escalado || ""}</td>
-
-      <td>${r.iniciais_paciente}</td>
-
-      <td>${r.idade_paciente}</td>
-
-      </tr>
-
-      `).join("")}
-
-      </tbody>
-
-      </table>
-
-      `;
-
-    const db =
-      await api("/api/db-inspector");
-
-    document
-      .getElementById("inspector")
-      .innerText =
-        JSON.stringify(db,null,2);
-
+    await api("/api/cirurgias/" + id,{method:"DELETE"});
+    setStatus("Cirurgia deletada.", "ok");
+    await carregarDia();
   }catch(err){
-
-    status(err.message);
-
+    setStatus(err.message, "err");
   }
-
 }
 
-carregar();
+async function salvarAnestesista(){
+  try{
+    const body = {
+      data_escala: getData(),
+      nome_anestesista: $("nome_anestesista").value,
+      observacao: $("observacao_anestesista").value
+    };
 
+    if(editandoAnestesistaId){
+      await api("/api/anestesistas/" + editandoAnestesistaId,{
+        method:"PUT",
+        body:JSON.stringify(body)
+      });
+      setStatus("Anestesista atualizado.", "ok");
+    }else{
+      await api("/api/anestesistas",{
+        method:"POST",
+        body:JSON.stringify(body)
+      });
+      setStatus("Anestesista adicionado à escala do dia.", "ok");
+    }
+
+    cancelarEdicaoAnestesista();
+    await carregarDia();
+  }catch(err){
+    setStatus(err.message, "err");
+  }
+}
+
+function editarAnestesista(r){
+  editandoAnestesistaId = r.id;
+  $("nome_anestesista").value = r.nome_anestesista || "";
+  $("observacao_anestesista").value = r.observacao || "";
+  $("btnSalvarAnestesista").textContent = "Salvar edição";
+}
+
+function cancelarEdicaoAnestesista(){
+  editandoAnestesistaId = null;
+  $("nome_anestesista").value = "";
+  $("observacao_anestesista").value = "";
+  $("btnSalvarAnestesista").textContent = "Adicionar anestesista";
+}
+
+async function deletarAnestesista(id){
+  if(!confirm("Remover anestesista da escala do dia?")) return;
+
+  try{
+    await api("/api/anestesistas/" + id,{method:"DELETE"});
+    setStatus("Anestesista removido.", "ok");
+    await carregarDia();
+  }catch(err){
+    setStatus(err.message, "err");
+  }
+}
+
+async function carregarInspector(){
+  const db = await api("/api/db-inspector");
+  $("inspector").textContent = JSON.stringify(db,null,2);
+}
+
+function escapeHtml(value){
+  return String(value ?? "")
+    .replaceAll("&","&amp;")
+    .replaceAll("<","&lt;")
+    .replaceAll(">","&gt;")
+    .replaceAll('"',"&quot;")
+    .replaceAll("'","&#039;");
+}
+
+$("dataSelecionada").value = dataHojeISO();
+carregarDia();
 </script>
 
 </body>

@@ -1,8 +1,19 @@
-# SQLite Railway Pro
+# Mapa de Cirurgias por Dia
 
-Projeto completo para Railway com Node.js, Express e SQLite.
+Sistema Node + Express + SQLite para Railway.
 
-## Estrutura correta
+## Recursos
+
+- Banco persistente em `/data/database.db`
+- Cirurgias com data
+- Escala de anestesistas por data
+- Navegação por data no topo
+- CRUD de cirurgias
+- CRUD de anestesistas do dia
+- DB inspector
+- Proteção contra duplicidade por data + iniciais + idade
+
+## Estrutura
 
 ```txt
 server.js
@@ -11,44 +22,12 @@ public/
   index.html
 ```
 
-## Rotas de teste
-
-Depois do deploy, teste:
-
-```txt
-/api/health
-/api/routes
-/api/pessoas
-/api/db-inspector
-```
-
-Exemplo:
-
-```txt
-https://SEU-DOMINIO.up.railway.app/api/health
-```
-
-Se `/api/health` mostrar `Cannot GET /api/health`, então o Railway não está executando este `server.js`.
-
-## Rodar local
-
-```bash
-npm install
-npm start
-```
-
-Abrir:
-
-```txt
-http://localhost:3000
-```
-
 ## Railway
 
-O comando de start é:
+Crie um Volume com mount path:
 
-```bash
-npm start
+```txt
+/data
 ```
 
-O arquivo `database.db` será criado automaticamente.
+Depois faça deploy normalmente.
