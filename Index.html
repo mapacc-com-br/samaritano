@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>CC Sama Bolso v4</title>
+
+  <style>
+    body{
+      font-family:-apple-system,BlinkMacSystemFont,sans-serif;
+      background:#f3f4f8;
+      margin:0;
+      padding:20px;
+      color:#111827;
+    }
+
+    .container{
+      max-width:900px;
+      margin:0 auto;
+    }
+
+    .card{
+      background:white;
+      border-radius:24px;
+      padding:24px;
+      box-shadow:0 2px 12px rgba(0,0,0,.08);
+      margin-bottom:20px;
+    }
+
+    h1{
+      margin:0 0 10px;
+      font-size:38px;
+      font-weight:800;
+    }
+
+    .subtitle{
+      color:#6b7280;
+      line-height:1.4;
+      margin-bottom:20px;
+      font-size:20px;
+    }
+
+    .row{
+      display:flex;
+      gap:12px;
+      flex-wrap:wrap;
+      margin-bottom:14px;
+    }
+
+    input[type="date"]{
+      flex:1;
+      min-width:240px;
+      padding:16px;
+      border-radius:18px;
+      border:1px solid #d1d5db;
+      font-size:20px;
+      background:white;
+    }
+
+    button{
+      border:none;
+      border-radius:18px;
+      padding:16px 22px;
+      font-size:20px;
+      font-weight:700;
+      cursor:pointer;
+      transition:.15s;
+    }
+
+    button:active{
+      transform:scale(.98);
+    }
+
+    .green{
+      background:#16a34a;
+      color:white;
+    }
+
+    .blue{
+      background:#2563eb;
+      color:white;
+    }
+
+    .gray{
+      background:#e5e7eb;
+      color:#111827;
+    }
+
+    .status{
+      padding:16px;
+      border-radius:18px;
+      font-weight:700;
+      margin-bottom:16px;
+      font-size:18px;
+    }
+
+    .status.ok{
+      background:#dcfce7;
+      color:#166534;
+    }
+
+    .status.err{
+      background:#fee2e2;
+      color:#991b1b;
+    }
+
+    textarea{
+      width:100%;
+      min-height:320px;
+      border-radius:20px;
+      border:1px solid #d1d5db;
+      padding:16px;
+      font-size:18px;
+      box-sizing:border-box;
+      resize:vertical;
+    }
+
+    .pillRow{
+      display:flex;
+      flex-wrap:wrap;
+      gap:12px;
+      margin-top:20px;
+    }
+
+    .pill{
+      padding:12px 18px;
+      border-radius:999px;
+      font-weight:700;
+      font-size:18px;
+      border:2px solid;
+    }
+
+    .pill.blue{
+      background:#eff6ff;
+      border-color:#93c5fd;
+      color:#1d4ed8;
+    }
+
+    .pill.green{
+      background:#ecfdf5;
+      border-color:#86efac;
+      color:#166534;
+    }
+
+    .pill.red{
+      background:#fef2f2;
+      border-color:#fca5a5;
+      color:#991b1b;
+    }
+
+    .pill.purple{
+      background:#faf5ff;
+      border-color:#d8b4fe;
+      color:#6b21a8;
+    }
+  </style>
+</head>
+
+<body>
+
+<div class="container">
+
+  <div class="card">
+
+    <h1>CC Sama Bolso v4 — Editor</h1>
+
+    <div class="subtitle">
+      SQL via Node/Express com fallback local.
+      Pressione e segure para mover blocos futuramente.
+    </div>
+
+    <div class="row">
+      <input type="date" id="dateInput">
+
+      <button class="blue" onclick="carregar()">
+        Carregar
+      </button>
+
+      <button class="green" onclick="salvar()">
+        Salvar
+      </button>
+    </div>
+
+    <div id="status"></div>
+
+    <textarea
+      id="dados"
+      placeholder="Cole aqui a lista de cirurgias..."
+    ></textarea>
+
+    <div class="pillRow">
+      <div class="pill blue" id="cirurgiasPill">
+        0 cirurgias
+      </div>
+
+      <div class="pill green" id="anesPill">
+        0 anestesistas
+      </div>
+
+      <div class="pill red" id="semAnesPill">
+        0 sem anestesista
+      </div>
+
+      <div class="pill purple" id="naoEscaladasPill">
+        0 não escaladas
+      </div>
+    </div>
+
+  </div>
+
+</div>
+
+<script>
+
+const API_BASE = window.location.origin;
+
+const dateInput = document.getElementById("dateInput");
+const dados = document.getElementById("dados");
+const statusDiv = document.getElementById("status");
+
+function hojeISO(){
+  return new Date().toISOString().slice(0,10);
+}
+
+dateInput.value = hojeISO();
+
+function getDateKey(){
+
+  const value = dateInput.value;
+
+  if(value && /^\\d{4}-\\d{2}-\\d{2}$/.test(value)){
+    return value;
+  }
+
+  return hojeISO();
+}
+
+function setStatus(msg, ok=true){
+
+  statusDiv.className = "status " + (ok ? "ok" : "err");
+  statusDiv.innerText = msg;
+}
+
+function atualizarResumo(){
+
+  const linhas = dados.value
+    .split("\\n")
+    .filter(x => x.trim());
+
+  const cirurgias = linhas.length;
+
+  let naoEscaladas = 0;
+
+  linhas.forEach(l => {
+
+    if(
+      l.toLowerCase().includes("não escalada") ||
+      l.toLowerCase().includes("nao escalada")
+    ){
+      naoEscaladas++;
+    }
+
+  });
+
+  document.getElementById("cirurgiasPill").innerText =
+    `${cirurgias} cirurgias`;
+
+  document.getElementById("anesPill").innerText =
+    `0 anestesistas`;
+
+  document.getElementById("semAnesPill").innerText =
+    `0 sem anestesista`;
+
+  document.getElementById("naoEscaladasPill").innerText =
+    `${naoEscaladas} não escaladas`;
+}
+
+dados.addEventListener("input", atualizarResumo);
+
+async function carregar(){
+
+  const dateKey = encodeURIComponent(getDateKey());
+
+  try{
+
+    const response = await fetch(
+      `${API_BASE}/api/state/${dateKey}`
+    );
+
+    if(!response.ok){
+      throw new Error("Erro API");
+    }
+
+    const json = await response.json();
+
+    dados.value = json.data || "";
+
+    atualizarResumo();
+
+    setStatus("Dados carregados da API.");
+
+  }catch(err){
+
+    console.error(err);
+
+    const local =
+      localStorage.getItem("ccmapa_" + dateKey);
+
+    dados.value = local || "";
+
+    atualizarResumo();
+
+    setStatus(
+      "API indisponível. Carregado do localStorage.",
+      false
+    );
+  }
+
+}
+
+async function salvar(){
+
+  const dateKey = encodeURIComponent(getDateKey());
+
+  const payload = {
+    data: dados.value
+  };
+
+  try{
+
+    const response = await fetch(
+      `${API_BASE}/api/state/${dateKey}`,
+      {
+        method:"POST",
+        headers:{
+          "Content-Type":"application/json"
+        },
+        body:JSON.stringify(payload)
+      }
+    );
+
+    if(!response.ok){
+      throw new Error("Erro API");
+    }
+
+    localStorage.setItem(
+      "ccmapa_" + dateKey,
+      dados.value
+    );
+
+    setStatus("Dados salvos na API.");
+
+  }catch(err){
+
+    console.error(err);
+
+    localStorage.setItem(
+      "ccmapa_" + dateKey,
+      dados.value
+    );
+
+    setStatus(
+      "API indisponível. Salvo localmente.",
+      false
+    );
+  }
+
+}
+
+carregar();
+
+</script>
+
+</body>
+</html>
