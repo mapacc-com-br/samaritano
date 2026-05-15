@@ -44,6 +44,7 @@ input,select{
   border-radius:10px;
   padding:10px;
   font-size:14px;
+  background:white;
 }
 button{
   border:0;
@@ -62,7 +63,7 @@ button.red:hover{background:#b91c1c}
 button.small{padding:7px 10px;font-size:12px}
 .grid-cirurgia{
   display:grid;
-  grid-template-columns:100px 1.5fr 100px 130px 130px 180px 100px 90px;
+  grid-template-columns:100px 1.5fr 100px 130px 130px 220px 100px 90px;
   gap:10px;
 }
 .grid-anestesista{
@@ -108,6 +109,7 @@ th{
 }
 .badge.sma{background:#ecfdf5;color:#065f46}
 .badge.particular{background:#fff7ed;color:#9a3412}
+.badge.anest{background:#eef2ff;color:#3730a3}
 .summary{
   display:grid;
   grid-template-columns:repeat(auto-fit,minmax(180px,1fr));
@@ -131,15 +133,12 @@ th{
   color:#6b7280;
   background:#f9fafb;
 }
-pre{
-  background:#111827;
-  color:#d1d5db;
-  padding:14px;
-  border-radius:12px;
-  overflow:auto;
-  max-height:420px;
-}
 .scroll{overflow-x:auto}
+.hint{
+  color:#6b7280;
+  font-size:12px;
+  margin-top:5px;
+}
 @media(max-width:900px){
   body{padding:12px}
   .grid-cirurgia,.grid-anestesista{grid-template-columns:1fr}
@@ -212,15 +211,16 @@ pre{
 
     <div>
       <label>Serviço</label>
-      <select id="servico">
-        <option>SMA</option>
-        <option>Particular</option>
+      <select id="servico" onchange="atualizarOpcoesAnestesista()">
+        <option value="SMA">SMA</option>
+        <option value="Particular">Particular</option>
       </select>
     </div>
 
     <div>
-      <label>Anestesista escalado</label>
-      <input id="anestesista_escalado" placeholder="Nome"/>
+      <label>Escalar anestesista</label>
+      <select id="anestesista_escalado"></select>
+      <div class="hint">Escolha “Particular” ou alguém da escala do dia.</div>
     </div>
 
     <div>
@@ -267,19 +267,12 @@ pre{
   <div id="listaCirurgias"></div>
 </div>
 
-<div class="card">
-  <div class="topbar">
-    <h2>DB Inspector</h2>
-    <button class="gray small" onclick="carregarInspector()">Atualizar inspector</button>
-  </div>
-  <pre id="inspector">Carregando...</pre>
-</div>
-
 </div>
 
 <script>
 let editandoCirurgiaId = null;
 let editandoAnestesistaId = null;
+let anestesistasDoDia = [];
 
 const $ = id => document.getElementById(id);
 
@@ -346,17 +339,51 @@ async function carregarDia(){
 
     const mapa = await api("/api/dia/" + data);
 
+    anestesistasDoDia = mapa.anestesistas || [];
+
+    atualizarOpcoesAnestesista();
+
     renderCirurgias(mapa.cirurgias || []);
-    renderAnestesistas(mapa.anestesistas || []);
+    renderAnestesistas(anestesistasDoDia);
 
     $("statCirurgias").textContent = (mapa.cirurgias || []).length;
-    $("statAnestesistas").textContent = (mapa.anestesistas || []).length;
-
-    await carregarInspector();
+    $("statAnestesistas").textContent = anestesistasDoDia.length;
 
     setStatus("Mapa carregado: " + formatarDataBR(data), "ok");
   }catch(err){
     setStatus(err.message, "err");
+  }
+}
+
+function atualizarOpcoesAnestesista(valorSelecionado){
+  const select = $("anestesista_escalado");
+  const servico = $("servico").value;
+  const atual = valorSelecionado ?? select.value;
+
+  const opcoes = [];
+
+  opcoes.push({value:"", label:"Sem anestesista definido"});
+
+  if(servico === "Particular"){
+    opcoes.push({value:"Particular", label:"Particular"});
+  }else{
+    opcoes.push({value:"Particular", label:"Particular"});
+    for(const a of anestesistasDoDia){
+      opcoes.push({
+        value:a.nome_anestesista,
+        label:a.nome_anestesista + (a.observacao ? " — " + a.observacao : "")
+      });
+    }
+  }
+
+  select.innerHTML = opcoes
+    .map(o => `<option value="${escapeAttr(o.value)}">${escapeHtml(o.label)}</option>`)
+    .join("");
+
+  if([...select.options].some(o => o.value === atual)){
+    select.value = atual;
+  }else if(servico === "Particular"){
+    select.value = "Particular";
   }
 }
 
@@ -376,7 +403,7 @@ function renderCirurgias(rows){
           <th>Duração</th>
           <th>Sala</th>
           <th>Serviço</th>
-          <th>Anestesista</th>
+          <th>Anestesista / Particular</th>
           <th>Paciente</th>
           <th>Idade</th>
           <th>Ações</th>
@@ -390,7 +417,7 @@ function renderCirurgias(rows){
             <td>${escapeHtml(r.duracao)}</td>
             <td>${escapeHtml(r.sala)}</td>
             <td><span class="badge ${r.servico === "SMA" ? "sma" : "particular"}">${escapeHtml(r.servico)}</span></td>
-            <td>${escapeHtml(r.anestesista_escalado || "")}</td>
+            <td><span class="badge anest">${escapeHtml(r.anestesista_escalado || "Não definido")}</span></td>
             <td><b>${escapeHtml(r.iniciais_paciente)}</b></td>
             <td>${escapeHtml(r.idade_paciente)}</td>
             <td>
@@ -456,6 +483,10 @@ async function salvarCirurgia(){
       idade_paciente: Number($("idade_paciente").value)
     };
 
+    if(body.servico === "Particular" && !body.anestesista_escalado){
+      body.anestesista_escalado = "Particular";
+    }
+
     if(editandoCirurgiaId){
       await api("/api/cirurgias/" + editandoCirurgiaId,{
         method:"PUT",
@@ -485,9 +516,10 @@ function editarCirurgia(r){
   $("duracao").value = r.duracao || "";
   $("sala").value = r.sala || "";
   $("servico").value = r.servico || "SMA";
-  $("anestesista_escalado").value = r.anestesista_escalado || "";
   $("iniciais_paciente").value = r.iniciais_paciente || "";
   $("idade_paciente").value = r.idade_paciente || "";
+
+  atualizarOpcoesAnestesista(r.anestesista_escalado || "");
 
   $("tituloCirurgia").textContent = "Editando cirurgia ID " + r.id;
   $("btnSalvarCirurgia").textContent = "Salvar edição";
@@ -502,9 +534,10 @@ function cancelarEdicaoCirurgia(){
   $("duracao").value = "";
   $("sala").value = "";
   $("servico").value = "SMA";
-  $("anestesista_escalado").value = "";
   $("iniciais_paciente").value = "";
   $("idade_paciente").value = "";
+
+  atualizarOpcoesAnestesista("");
 
   $("tituloCirurgia").textContent = "Adicionar cirurgia";
   $("btnSalvarCirurgia").textContent = "Salvar cirurgia";
@@ -577,11 +610,6 @@ async function deletarAnestesista(id){
   }
 }
 
-async function carregarInspector(){
-  const db = await api("/api/db-inspector");
-  $("inspector").textContent = JSON.stringify(db,null,2);
-}
-
 function escapeHtml(value){
   return String(value ?? "")
     .replaceAll("&","&amp;")
@@ -589,6 +617,14 @@ function escapeHtml(value){
     .replaceAll(">","&gt;")
     .replaceAll('"',"&quot;")
     .replaceAll("'","&#039;");
+}
+
+function escapeAttr(value){
+  return String(value ?? "")
+    .replaceAll("&","&amp;")
+    .replaceAll('"',"&quot;")
+    .replaceAll("<","&lt;")
+    .replaceAll(">","&gt;");
 }
 
 $("dataSelecionada").value = dataHojeISO();

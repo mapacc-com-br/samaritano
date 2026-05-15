@@ -190,7 +190,6 @@ function validarAnestesista(body) {
   return { ok:true, data_escala, nome_anestesista, observacao };
 }
 
-// HEALTH
 app.get("/api/health", async (req, res) => {
   try {
     const c = await get("SELECT COUNT(*) AS total FROM cirurgias");
@@ -208,7 +207,6 @@ app.get("/api/health", async (req, res) => {
   }
 });
 
-// MAPA DO DIA
 app.get("/api/dia/:data", async (req, res) => {
   try {
     const data = String(req.params.data || "").trim();
@@ -230,26 +228,19 @@ app.get("/api/dia/:data", async (req, res) => {
       ORDER BY nome_anestesista ASC
     `, [data]);
 
-    res.json({
-      data,
-      cirurgias,
-      anestesistas
-    });
+    res.json({ data, cirurgias, anestesistas });
   } catch(err) {
     res.status(500).json({ error:err.message });
   }
 });
 
-// CIRURGIAS
 app.get("/api/cirurgias", async (req, res) => {
   try {
     const data = String(req.query.data || "").trim();
-
     let rows;
 
     if (data) {
       if (!validarDataISO(data)) return res.status(400).json({ error:"Data inválida." });
-
       rows = await all(`
         SELECT *
         FROM cirurgias
@@ -304,11 +295,8 @@ app.post("/api/cirurgias", async (req, res) => {
     res.status(201).json(row);
   } catch(err) {
     if (String(err.message || "").includes("UNIQUE")) {
-      return res.status(400).json({
-        error:"Já existe cirurgia nesse dia com essas iniciais e idade."
-      });
+      return res.status(400).json({ error:"Já existe cirurgia nesse dia com essas iniciais e idade." });
     }
-
     res.status(500).json({ error:err.message });
   }
 });
@@ -353,11 +341,8 @@ app.put("/api/cirurgias/:id", async (req, res) => {
     res.json(row);
   } catch(err) {
     if (String(err.message || "").includes("UNIQUE")) {
-      return res.status(400).json({
-        error:"Já existe cirurgia nesse dia com essas iniciais e idade."
-      });
+      return res.status(400).json({ error:"Já existe cirurgia nesse dia com essas iniciais e idade." });
     }
-
     res.status(500).json({ error:err.message });
   }
 });
@@ -368,7 +353,6 @@ app.delete("/api/cirurgias/:id", async (req, res) => {
     if (!Number.isInteger(id) || id <= 0) return res.status(400).json({ error:"ID inválido." });
 
     const result = await run("DELETE FROM cirurgias WHERE id = ?", [id]);
-
     if (result.changes === 0) return res.status(404).json({ error:"Cirurgia não encontrada." });
 
     res.json({ ok:true, deleted_id:id });
@@ -377,16 +361,13 @@ app.delete("/api/cirurgias/:id", async (req, res) => {
   }
 });
 
-// ANESTESISTAS DO DIA
 app.get("/api/anestesistas", async (req, res) => {
   try {
     const data = String(req.query.data || "").trim();
-
     let rows;
 
     if (data) {
       if (!validarDataISO(data)) return res.status(400).json({ error:"Data inválida." });
-
       rows = await all(`
         SELECT *
         FROM anestesistas_dia
@@ -419,21 +400,14 @@ app.post("/api/anestesistas", async (req, res) => {
         observacao
       )
       VALUES (?, ?, ?)
-    `, [
-      v.data_escala,
-      v.nome_anestesista,
-      v.observacao
-    ]);
+    `, [v.data_escala, v.nome_anestesista, v.observacao]);
 
     const row = await get("SELECT * FROM anestesistas_dia WHERE id = ?", [result.lastID]);
     res.status(201).json(row);
   } catch(err) {
     if (String(err.message || "").includes("UNIQUE")) {
-      return res.status(400).json({
-        error:"Esse anestesista já está na escala desse dia."
-      });
+      return res.status(400).json({ error:"Esse anestesista já está na escala desse dia." });
     }
-
     res.status(500).json({ error:err.message });
   }
 });
@@ -448,17 +422,9 @@ app.put("/api/anestesistas/:id", async (req, res) => {
 
     const result = await run(`
       UPDATE anestesistas_dia
-      SET
-        data_escala = ?,
-        nome_anestesista = ?,
-        observacao = ?
+      SET data_escala = ?, nome_anestesista = ?, observacao = ?
       WHERE id = ?
-    `, [
-      v.data_escala,
-      v.nome_anestesista,
-      v.observacao,
-      id
-    ]);
+    `, [v.data_escala, v.nome_anestesista, v.observacao, id]);
 
     if (result.changes === 0) return res.status(404).json({ error:"Anestesista não encontrado." });
 
@@ -466,11 +432,8 @@ app.put("/api/anestesistas/:id", async (req, res) => {
     res.json(row);
   } catch(err) {
     if (String(err.message || "").includes("UNIQUE")) {
-      return res.status(400).json({
-        error:"Esse anestesista já está na escala desse dia."
-      });
+      return res.status(400).json({ error:"Esse anestesista já está na escala desse dia." });
     }
-
     res.status(500).json({ error:err.message });
   }
 });
@@ -481,7 +444,6 @@ app.delete("/api/anestesistas/:id", async (req, res) => {
     if (!Number.isInteger(id) || id <= 0) return res.status(400).json({ error:"ID inválido." });
 
     const result = await run("DELETE FROM anestesistas_dia WHERE id = ?", [id]);
-
     if (result.changes === 0) return res.status(404).json({ error:"Anestesista não encontrado." });
 
     res.json({ ok:true, deleted_id:id });
@@ -490,7 +452,7 @@ app.delete("/api/anestesistas/:id", async (req, res) => {
   }
 });
 
-// DB INSPECTOR
+// Mantido escondido para diagnóstico, sem aparecer na página
 app.get("/api/db-inspector", async (req, res) => {
   try {
     const tables = await all(`
@@ -504,21 +466,13 @@ app.get("/api/db-inspector", async (req, res) => {
 
     for (const table of tables) {
       const tableName = table.name;
-
       const columns = await all(`PRAGMA table_info("${tableName}")`);
       const rows = await all(`SELECT * FROM "${tableName}"`);
 
-      result[tableName] = {
-        columns,
-        row_count: rows.length,
-        rows
-      };
+      result[tableName] = { columns, row_count: rows.length, rows };
     }
 
-    res.json({
-      database_file: DB_FILE,
-      tables: result
-    });
+    res.json({ database_file: DB_FILE, tables: result });
   } catch(err) {
     res.status(500).json({ error:err.message });
   }
@@ -540,7 +494,6 @@ app.get("/api/routes", (req, res) => {
   ]);
 });
 
-// FRONTEND
 app.use(express.static(PUBLIC_DIR));
 
 app.get("/", (req, res) => {
@@ -566,10 +519,5 @@ initDb()
     process.exit(1);
   });
 
-process.on("SIGINT", () => {
-  db.close(() => process.exit(0));
-});
-
-process.on("SIGTERM", () => {
-  db.close(() => process.exit(0));
-});
+process.on("SIGINT", () => db.close(() => process.exit(0)));
+process.on("SIGTERM", () => db.close(() => process.exit(0)));
