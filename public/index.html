@@ -1,373 +1,342 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Sistema SQLite Railway</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>SQLite Railway Pro</title>
   <style>
-    :root {
-      --bg: #f3f4f6;
-      --card: #ffffff;
-      --text: #111827;
-      --muted: #6b7280;
-      --primary: #2563eb;
-      --primary-dark: #1d4ed8;
-      --danger: #dc2626;
-      --danger-dark: #b91c1c;
-      --border: #e5e7eb;
-      --code: #111827;
-    }
-
-    * {
-      box-sizing: border-box;
-    }
-
+    * { box-sizing: border-box; }
     body {
       margin: 0;
-      font-family: Arial, Helvetica, sans-serif;
-      background: var(--bg);
-      color: var(--text);
       padding: 20px;
+      font-family: Arial, Helvetica, sans-serif;
+      background: #f4f6fb;
+      color: #111827;
     }
-
-    .container {
-      max-width: 1050px;
-      margin: 0 auto;
-    }
-
-    h1, h2 {
-      margin-top: 0;
-    }
-
+    .wrap { max-width: 1100px; margin: 0 auto; }
     .card {
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: 14px;
+      background: white;
+      border: 1px solid #e5e7eb;
+      border-radius: 16px;
       padding: 18px;
-      margin-bottom: 18px;
-      box-shadow: 0 8px 20px rgba(0,0,0,0.04);
+      margin-bottom: 16px;
+      box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
     }
-
-    .grid {
+    h1, h2 { margin: 0 0 10px; }
+    p { color: #4b5563; }
+    .status {
+      padding: 10px;
+      border-radius: 10px;
+      background: #f9fafb;
+      border: 1px solid #e5e7eb;
+      margin-top: 12px;
+      white-space: pre-wrap;
+      font-size: 14px;
+    }
+    .status.ok { background: #ecfdf5; border-color: #a7f3d0; color: #065f46; }
+    .status.err { background: #fef2f2; border-color: #fecaca; color: #991b1b; }
+    form {
       display: grid;
-      grid-template-columns: 1fr 120px auto;
+      grid-template-columns: 1fr 130px 150px 120px;
       gap: 10px;
       align-items: end;
     }
-
     label {
-      font-size: 13px;
-      color: var(--muted);
       display: block;
+      font-size: 13px;
+      color: #6b7280;
       margin-bottom: 5px;
     }
-
     input {
       width: 100%;
-      padding: 11px;
-      border: 1px solid var(--border);
+      padding: 12px;
+      border: 1px solid #d1d5db;
       border-radius: 10px;
       font-size: 15px;
     }
-
     button {
       border: 0;
-      padding: 11px 14px;
+      background: #2563eb;
+      color: white;
+      padding: 12px 14px;
       border-radius: 10px;
       cursor: pointer;
       font-weight: 700;
-      background: var(--primary);
-      color: white;
       font-size: 14px;
     }
-
-    button:hover {
-      background: var(--primary-dark);
+    button:hover { background: #1d4ed8; }
+    button.gray { background: #4b5563; }
+    button.gray:hover { background: #374151; }
+    button.red { background: #dc2626; }
+    button.red:hover { background: #b91c1c; }
+    button.small { padding: 8px 10px; font-size: 12px; }
+    .toolbar {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
     }
-
-    button.secondary {
-      background: #4b5563;
-    }
-
-    button.secondary:hover {
-      background: #374151;
-    }
-
-    button.danger {
-      background: var(--danger);
-    }
-
-    button.danger:hover {
-      background: var(--danger-dark);
-    }
-
-    button.small {
-      padding: 7px 10px;
-      font-size: 12px;
-    }
-
     table {
       width: 100%;
       border-collapse: collapse;
+      margin-top: 8px;
       overflow: hidden;
       border-radius: 12px;
     }
-
     th, td {
-      padding: 10px;
-      border-bottom: 1px solid var(--border);
+      border-bottom: 1px solid #e5e7eb;
       text-align: left;
-      vertical-align: top;
+      padding: 10px;
+      vertical-align: middle;
     }
-
     th {
       background: #f9fafb;
       font-size: 13px;
       color: #374151;
     }
-
     .actions {
       display: flex;
       gap: 8px;
       flex-wrap: wrap;
     }
-
-    .status {
-      color: var(--muted);
-      margin-top: 8px;
-      min-height: 20px;
-    }
-
-    .inspector-toolbar {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 12px;
-      margin-bottom: 10px;
-    }
-
     pre {
-      background: var(--code);
+      background: #111827;
       color: #d1d5db;
       padding: 14px;
       border-radius: 12px;
       overflow-x: auto;
-      white-space: pre-wrap;
       font-size: 13px;
-      min-height: 120px;
+      min-height: 160px;
+      white-space: pre-wrap;
     }
-
+    .muted { color: #6b7280; }
     .empty {
-      color: var(--muted);
-      padding: 12px;
+      padding: 16px;
       text-align: center;
+      color: #6b7280;
+      background: #f9fafb;
+      border-radius: 12px;
+      border: 1px dashed #d1d5db;
     }
-
-    @media (max-width: 720px) {
-      .grid {
-        grid-template-columns: 1fr;
-      }
-
-      table {
-        font-size: 13px;
-      }
-
-      .actions {
-        flex-direction: column;
-      }
-
-      button {
-        width: 100%;
-      }
+    code {
+      background: #eef2ff;
+      padding: 2px 6px;
+      border-radius: 6px;
+    }
+    @media (max-width: 760px) {
+      body { padding: 12px; }
+      form { grid-template-columns: 1fr; }
+      .actions { flex-direction: column; }
+      button { width: 100%; }
+      th, td { font-size: 13px; padding: 8px; }
     }
   </style>
 </head>
 <body>
-  <div class="container">
+  <div class="wrap">
     <div class="card">
-      <h1>Banco de Dados Simples</h1>
-      <p>Insira nome e idade. Os dados são salvos em um arquivo SQLite chamado <b>database.db</b>.</p>
+      <h1>SQLite Railway Pro</h1>
+      <p>
+        Cadastro simples com banco real em arquivo <code>database.db</code>.
+        Dá para adicionar, editar, deletar e inspecionar todas as tabelas.
+      </p>
+      <button class="gray" onclick="testarApi()">Testar API /api/health</button>
+      <div id="apiStatus" class="status">Ainda não testado.</div>
+    </div>
 
-      <form id="formPessoa" class="grid">
+    <div class="card">
+      <h2 id="tituloForm">Adicionar pessoa</h2>
+      <form id="formPessoa">
         <div>
-          <label for="nome">Nome</label>
-          <input id="nome" placeholder="Ex: João" autocomplete="off" required />
+          <label>Nome</label>
+          <input id="nome" autocomplete="off" placeholder="Ex: André" required />
         </div>
-
         <div>
-          <label for="idade">Idade</label>
-          <input id="idade" type="number" min="0" max="130" placeholder="Ex: 32" required />
+          <label>Idade</label>
+          <input id="idade" type="number" min="0" max="130" placeholder="Ex: 35" required />
         </div>
-
-        <div>
-          <button id="btnSalvar" type="submit">Adicionar</button>
-        </div>
+        <button type="submit" id="btnSalvar">Inserir</button>
+        <button type="button" class="gray" onclick="cancelarEdicao()">Cancelar</button>
       </form>
-
-      <div class="status" id="status"></div>
+      <div id="formStatus" class="status">Pronto.</div>
     </div>
 
     <div class="card">
-      <h2>Dados cadastrados</h2>
-      <div id="tabelaPessoas"></div>
-    </div>
-
-    <div class="card">
-      <div class="inspector-toolbar">
-        <h2 style="margin: 0;">DB Inspector</h2>
-        <button class="secondary small" onclick="carregarInspector()">Atualizar inspector</button>
+      <div class="toolbar">
+        <h2>Pessoas cadastradas</h2>
+        <button class="gray small" onclick="carregarTudo()">Atualizar tudo</button>
       </div>
-      <p style="color: var(--muted); margin-top: 0;">Mostra todas as tabelas e linhas salvas no SQLite.</p>
-      <pre id="dbInspector">Carregando...</pre>
+      <div id="lista"></div>
+    </div>
+
+    <div class="card">
+      <div class="toolbar">
+        <h2>DB Inspector</h2>
+        <button class="gray small" onclick="carregarInspector()">Atualizar inspector</button>
+      </div>
+      <p class="muted">Aqui aparece o conteúdo bruto do SQLite: tabelas, colunas e linhas.</p>
+      <pre id="inspector">Carregando...</pre>
     </div>
   </div>
 
   <script>
     let editandoId = null;
 
-    const form = document.getElementById("formPessoa");
-    const nomeInput = document.getElementById("nome");
-    const idadeInput = document.getElementById("idade");
-    const btnSalvar = document.getElementById("btnSalvar");
-    const statusEl = document.getElementById("status");
-    const tabelaPessoas = document.getElementById("tabelaPessoas");
-    const dbInspector = document.getElementById("dbInspector");
+    const $ = (id) => document.getElementById(id);
 
-    function setStatus(msg) {
-      statusEl.textContent = msg || "";
+    function setStatus(id, msg, tipo) {
+      const el = $(id);
+      el.textContent = msg;
+      el.className = "status" + (tipo ? " " + tipo : "");
     }
 
-    async function api(url, options = {}) {
-      const response = await fetch(url, {
+    async function requestJson(url, options = {}) {
+      const resp = await fetch(url, {
         headers: { "Content-Type": "application/json" },
+        cache: "no-store",
         ...options
       });
 
-      const data = await response.json().catch(() => ({}));
+      const text = await resp.text();
+      let data;
 
-      if (!response.ok) {
-        throw new Error(data.error || "Erro na requisição.");
+      try {
+        data = text ? JSON.parse(text) : {};
+      } catch {
+        throw new Error(
+          "A resposta não foi JSON. Isso geralmente significa que o servidor está entregando HTML antigo no lugar da API. Resposta: " +
+          text.slice(0, 180)
+        );
+      }
+
+      if (!resp.ok) {
+        throw new Error(data.error || "Erro HTTP " + resp.status);
       }
 
       return data;
     }
 
-    async function carregarPessoas() {
+    async function testarApi() {
       try {
-        const pessoas = await api("/api/pessoas");
-
-        if (!pessoas.length) {
-          tabelaPessoas.innerHTML = '<div class="empty">Nenhum cadastro ainda.</div>';
-          return;
-        }
-
-        tabelaPessoas.innerHTML = `
-          <table>
-            <thead>
-              <tr>
-                <th>ID</th>
-                <th>Nome</th>
-                <th>Idade</th>
-                <th>Criado em</th>
-                <th>Atualizado em</th>
-                <th>Ações</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${pessoas.map(p => `
-                <tr>
-                  <td>${p.id}</td>
-                  <td>${escapeHtml(p.nome)}</td>
-                  <td>${p.idade}</td>
-                  <td>${p.criado_em || ""}</td>
-                  <td>${p.atualizado_em || ""}</td>
-                  <td>
-                    <div class="actions">
-                      <button class="small" onclick="iniciarEdicao(${p.id}, '${escapeJs(p.nome)}', ${p.idade})">Editar</button>
-                      <button class="danger small" onclick="deletarPessoa(${p.id})">Deletar</button>
-                    </div>
-                  </td>
-                </tr>
-              `).join("")}
-            </tbody>
-          </table>
-        `;
+        const data = await requestJson("/api/health");
+        setStatus("apiStatus", JSON.stringify(data, null, 2), "ok");
       } catch (err) {
-        tabelaPessoas.innerHTML = `<div class="empty">Erro: ${escapeHtml(err.message)}</div>`;
+        setStatus("apiStatus", err.message, "err");
       }
+    }
+
+    async function carregarPessoas() {
+      const pessoas = await requestJson("/api/pessoas");
+
+      if (!pessoas.length) {
+        $("lista").innerHTML = '<div class="empty">Nenhuma pessoa cadastrada ainda.</div>';
+        return;
+      }
+
+      $("lista").innerHTML = `
+        <table>
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Nome</th>
+              <th>Idade</th>
+              <th>Criado em</th>
+              <th>Atualizado em</th>
+              <th>Ações</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${pessoas.map(p => `
+              <tr>
+                <td>${p.id}</td>
+                <td>${escapeHtml(p.nome)}</td>
+                <td>${p.idade}</td>
+                <td>${p.criado_em || ""}</td>
+                <td>${p.atualizado_em || ""}</td>
+                <td>
+                  <div class="actions">
+                    <button class="small" onclick="editar(${p.id}, '${escapeAttr(p.nome)}', ${p.idade})">Editar</button>
+                    <button class="small red" onclick="deletar(${p.id})">Deletar</button>
+                  </div>
+                </td>
+              </tr>
+            `).join("")}
+          </tbody>
+        </table>
+      `;
     }
 
     async function carregarInspector() {
-      try {
-        const data = await api("/api/db-inspector");
-        dbInspector.textContent = JSON.stringify(data, null, 2);
-      } catch (err) {
-        dbInspector.textContent = "Erro no inspector: " + err.message;
-      }
-    }
-
-    form.addEventListener("submit", async (event) => {
-      event.preventDefault();
-
-      const nome = nomeInput.value.trim();
-      const idade = Number(idadeInput.value);
-
-      try {
-        if (editandoId) {
-          await api(`/api/pessoas/${editandoId}`, {
-            method: "PUT",
-            body: JSON.stringify({ nome, idade })
-          });
-
-          setStatus("Registro atualizado com sucesso.");
-        } else {
-          await api("/api/pessoas", {
-            method: "POST",
-            body: JSON.stringify({ nome, idade })
-          });
-
-          setStatus("Registro adicionado com sucesso.");
-        }
-
-        limparFormulario();
-        await carregarTudo();
-      } catch (err) {
-        setStatus("Erro: " + err.message);
-      }
-    });
-
-    function iniciarEdicao(id, nome, idade) {
-      editandoId = id;
-      nomeInput.value = nome;
-      idadeInput.value = idade;
-      btnSalvar.textContent = "Salvar edição";
-      setStatus(`Editando ID ${id}.`);
-      nomeInput.focus();
-    }
-
-    function limparFormulario() {
-      editandoId = null;
-      nomeInput.value = "";
-      idadeInput.value = "";
-      btnSalvar.textContent = "Adicionar";
-    }
-
-    async function deletarPessoa(id) {
-      const confirmar = confirm(`Deletar o registro ID ${id}?`);
-      if (!confirmar) return;
-
-      try {
-        await api(`/api/pessoas/${id}`, { method: "DELETE" });
-        setStatus("Registro deletado.");
-        await carregarTudo();
-      } catch (err) {
-        setStatus("Erro: " + err.message);
-      }
+      const data = await requestJson("/api/db-inspector");
+      $("inspector").textContent = JSON.stringify(data, null, 2);
     }
 
     async function carregarTudo() {
-      await carregarPessoas();
-      await carregarInspector();
+      try {
+        await carregarPessoas();
+        await carregarInspector();
+      } catch (err) {
+        setStatus("formStatus", err.message, "err");
+      }
+    }
+
+    $("formPessoa").addEventListener("submit", async (e) => {
+      e.preventDefault();
+
+      const nome = $("nome").value.trim();
+      const idade = Number($("idade").value);
+
+      try {
+        if (editandoId) {
+          await requestJson("/api/pessoas/" + editandoId, {
+            method: "PUT",
+            body: JSON.stringify({ nome, idade })
+          });
+          setStatus("formStatus", "Registro atualizado.", "ok");
+        } else {
+          await requestJson("/api/pessoas", {
+            method: "POST",
+            body: JSON.stringify({ nome, idade })
+          });
+          setStatus("formStatus", "Registro inserido no database.db.", "ok");
+        }
+
+        cancelarEdicao();
+        await carregarTudo();
+      } catch (err) {
+        setStatus("formStatus", err.message, "err");
+      }
+    });
+
+    function editar(id, nome, idade) {
+      editandoId = id;
+      $("nome").value = nome;
+      $("idade").value = idade;
+      $("tituloForm").textContent = "Editando pessoa ID " + id;
+      $("btnSalvar").textContent = "Salvar";
+      setStatus("formStatus", "Editando ID " + id + ".", "");
+      $("nome").focus();
+    }
+
+    function cancelarEdicao() {
+      editandoId = null;
+      $("nome").value = "";
+      $("idade").value = "";
+      $("tituloForm").textContent = "Adicionar pessoa";
+      $("btnSalvar").textContent = "Inserir";
+    }
+
+    async function deletar(id) {
+      if (!confirm("Deletar o registro ID " + id + "?")) return;
+
+      try {
+        await requestJson("/api/pessoas/" + id, { method: "DELETE" });
+        setStatus("formStatus", "Registro deletado.", "ok");
+        await carregarTudo();
+      } catch (err) {
+        setStatus("formStatus", err.message, "err");
+      }
     }
 
     function escapeHtml(value) {
@@ -379,14 +348,15 @@
         .replaceAll("'", "&#039;");
     }
 
-    function escapeJs(value) {
+    function escapeAttr(value) {
       return String(value)
         .replaceAll("\\", "\\\\")
         .replaceAll("'", "\\'")
-        .replaceAll("\n", "\\n")
-        .replaceAll("\r", "");
+        .replaceAll("\n", " ")
+        .replaceAll("\r", " ");
     }
 
+    testarApi();
     carregarTudo();
   </script>
 </body>

@@ -1,24 +1,54 @@
-# Railway + Node + SQLite CRUD
+# SQLite Railway Pro
 
-Projeto mínimo para subir no Railway.
+Projeto completo para Railway com Node.js, Express e SQLite.
 
-## Estrutura
+## Estrutura correta
 
-- server.js
-- package.json
-- public/index.html
+```txt
+server.js
+package.json
+public/
+  index.html
+```
 
-## Rotas
+## Rotas de teste
 
-- `/` abre a página principal
-- `/api/test` testa a API
-- `/api/pessoas` lista/inserir pessoas
-- `/api/db/tabelas` lista tabelas do SQLite
-- `/api/db/tabela/pessoas` mostra os dados da tabela pessoas
+Depois do deploy, teste:
 
-## Como usar
+```txt
+/api/health
+/api/routes
+/api/pessoas
+/api/db-inspector
+```
 
-1. Suba todos os arquivos para o GitHub.
-2. Conecte o repositório no Railway.
-3. O Railway deve rodar automaticamente `npm install` e depois `npm start`.
-4. Abra a URL do Railway.
+Exemplo:
+
+```txt
+https://SEU-DOMINIO.up.railway.app/api/health
+```
+
+Se `/api/health` mostrar `Cannot GET /api/health`, então o Railway não está executando este `server.js`.
+
+## Rodar local
+
+```bash
+npm install
+npm start
+```
+
+Abrir:
+
+```txt
+http://localhost:3000
+```
+
+## Railway
+
+O comando de start é:
+
+```bash
+npm start
+```
+
+O arquivo `database.db` será criado automaticamente.
