@@ -3,280 +3,391 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Teste Railway + SQLite</title>
+  <title>Sistema SQLite Railway</title>
   <style>
+    :root {
+      --bg: #f3f4f6;
+      --card: #ffffff;
+      --text: #111827;
+      --muted: #6b7280;
+      --primary: #2563eb;
+      --primary-dark: #1d4ed8;
+      --danger: #dc2626;
+      --danger-dark: #b91c1c;
+      --border: #e5e7eb;
+      --code: #111827;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
     body {
-      font-family: Arial, sans-serif;
       margin: 0;
-      background: #f4f6f8;
-      color: #222;
+      font-family: Arial, Helvetica, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      padding: 20px;
     }
 
-    header {
-      background: #1f2937;
-      color: white;
-      padding: 18px;
-      text-align: center;
+    .container {
+      max-width: 1050px;
+      margin: 0 auto;
     }
 
-    main {
-      max-width: 900px;
-      margin: 24px auto;
-      padding: 0 16px;
-    }
-
-    section {
-      background: white;
-      border-radius: 12px;
-      padding: 18px;
-      margin-bottom: 18px;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.08);
-    }
-
-    h2 {
+    h1, h2 {
       margin-top: 0;
     }
 
-    input, button, select {
-      padding: 10px;
-      margin: 4px 0;
-      font-size: 16px;
-      border-radius: 8px;
-      border: 1px solid #ccc;
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 18px;
+      margin-bottom: 18px;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.04);
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 120px auto;
+      gap: 10px;
+      align-items: end;
+    }
+
+    label {
+      font-size: 13px;
+      color: var(--muted);
+      display: block;
+      margin-bottom: 5px;
+    }
+
+    input {
+      width: 100%;
+      padding: 11px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      font-size: 15px;
     }
 
     button {
+      border: 0;
+      padding: 11px 14px;
+      border-radius: 10px;
       cursor: pointer;
-      border: none;
-      background: #2563eb;
+      font-weight: 700;
+      background: var(--primary);
       color: white;
-      font-weight: bold;
+      font-size: 14px;
     }
 
-    button.delete {
-      background: #dc2626;
-    }
-
-    button.edit {
-      background: #059669;
+    button:hover {
+      background: var(--primary-dark);
     }
 
     button.secondary {
       background: #4b5563;
     }
 
+    button.secondary:hover {
+      background: #374151;
+    }
+
+    button.danger {
+      background: var(--danger);
+    }
+
+    button.danger:hover {
+      background: var(--danger-dark);
+    }
+
+    button.small {
+      padding: 7px 10px;
+      font-size: 12px;
+    }
+
     table {
       width: 100%;
       border-collapse: collapse;
-      margin-top: 12px;
-      background: white;
+      overflow: hidden;
+      border-radius: 12px;
     }
 
     th, td {
-      border-bottom: 1px solid #ddd;
       padding: 10px;
+      border-bottom: 1px solid var(--border);
       text-align: left;
+      vertical-align: top;
     }
 
     th {
-      background: #f3f4f6;
+      background: #f9fafb;
+      font-size: 13px;
+      color: #374151;
     }
 
-    .row-actions {
+    .actions {
       display: flex;
-      gap: 6px;
+      gap: 8px;
       flex-wrap: wrap;
     }
 
-    pre {
-      background: #111827;
-      color: #d1fae5;
-      padding: 14px;
-      border-radius: 10px;
-      overflow: auto;
-      max-height: 380px;
+    .status {
+      color: var(--muted);
+      margin-top: 8px;
+      min-height: 20px;
     }
 
-    .status {
-      padding: 10px;
-      border-radius: 8px;
-      background: #eef2ff;
-      margin-top: 10px;
+    .inspector-toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 10px;
+    }
+
+    pre {
+      background: var(--code);
+      color: #d1d5db;
+      padding: 14px;
+      border-radius: 12px;
+      overflow-x: auto;
+      white-space: pre-wrap;
+      font-size: 13px;
+      min-height: 120px;
+    }
+
+    .empty {
+      color: var(--muted);
+      padding: 12px;
+      text-align: center;
+    }
+
+    @media (max-width: 720px) {
+      .grid {
+        grid-template-columns: 1fr;
+      }
+
+      table {
+        font-size: 13px;
+      }
+
+      .actions {
+        flex-direction: column;
+      }
+
+      button {
+        width: 100%;
+      }
     }
   </style>
 </head>
 <body>
-  <header>
-    <h1>Railway + Node + SQLite</h1>
-    <p>CRUD simples: nome e idade</p>
-  </header>
+  <div class="container">
+    <div class="card">
+      <h1>Banco de Dados Simples</h1>
+      <p>Insira nome e idade. Os dados são salvos em um arquivo SQLite chamado <b>database.db</b>.</p>
 
-  <main>
-    <section>
-      <h2>Inserir / Atualizar pessoa</h2>
+      <form id="formPessoa" class="grid">
+        <div>
+          <label for="nome">Nome</label>
+          <input id="nome" placeholder="Ex: João" autocomplete="off" required />
+        </div>
 
-      <input type="hidden" id="id" />
+        <div>
+          <label for="idade">Idade</label>
+          <input id="idade" type="number" min="0" max="130" placeholder="Ex: 32" required />
+        </div>
 
-      <div>
-        <input id="nome" placeholder="Nome" />
-        <input id="idade" type="number" placeholder="Idade" />
-        <button onclick="salvarPessoa()">Salvar</button>
-        <button class="secondary" onclick="limparFormulario()">Limpar</button>
+        <div>
+          <button id="btnSalvar" type="submit">Adicionar</button>
+        </div>
+      </form>
+
+      <div class="status" id="status"></div>
+    </div>
+
+    <div class="card">
+      <h2>Dados cadastrados</h2>
+      <div id="tabelaPessoas"></div>
+    </div>
+
+    <div class="card">
+      <div class="inspector-toolbar">
+        <h2 style="margin: 0;">DB Inspector</h2>
+        <button class="secondary small" onclick="carregarInspector()">Atualizar inspector</button>
       </div>
-
-      <div id="status" class="status">Pronto.</div>
-    </section>
-
-    <section>
-      <h2>Pessoas salvas</h2>
-      <button onclick="carregarPessoas()">Recarregar</button>
-
-      <table>
-        <thead>
-          <tr>
-            <th>ID</th>
-            <th>Nome</th>
-            <th>Idade</th>
-            <th>Criado em</th>
-            <th>Ações</th>
-          </tr>
-        </thead>
-        <tbody id="tbodyPessoas"></tbody>
-      </table>
-    </section>
-
-    <section>
-      <h2>DB Inspector</h2>
-      <button onclick="carregarTabelas()">Listar tabelas</button>
-      <select id="selectTabelas"></select>
-      <button onclick="inspecionarTabela()">Ver dados</button>
-
-      <pre id="dbInspector">Clique em "Listar tabelas".</pre>
-    </section>
-  </main>
+      <p style="color: var(--muted); margin-top: 0;">Mostra todas as tabelas e linhas salvas no SQLite.</p>
+      <pre id="dbInspector">Carregando...</pre>
+    </div>
+  </div>
 
   <script>
-    const statusEl = document.getElementById('status');
+    let editandoId = null;
+
+    const form = document.getElementById("formPessoa");
+    const nomeInput = document.getElementById("nome");
+    const idadeInput = document.getElementById("idade");
+    const btnSalvar = document.getElementById("btnSalvar");
+    const statusEl = document.getElementById("status");
+    const tabelaPessoas = document.getElementById("tabelaPessoas");
+    const dbInspector = document.getElementById("dbInspector");
 
     function setStatus(msg) {
-      statusEl.textContent = msg;
+      statusEl.textContent = msg || "";
+    }
+
+    async function api(url, options = {}) {
+      const response = await fetch(url, {
+        headers: { "Content-Type": "application/json" },
+        ...options
+      });
+
+      const data = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        throw new Error(data.error || "Erro na requisição.");
+      }
+
+      return data;
     }
 
     async function carregarPessoas() {
-      const res = await fetch('/api/pessoas');
-      const pessoas = await res.json();
+      try {
+        const pessoas = await api("/api/pessoas");
 
-      const tbody = document.getElementById('tbodyPessoas');
-      tbody.innerHTML = '';
+        if (!pessoas.length) {
+          tabelaPessoas.innerHTML = '<div class="empty">Nenhum cadastro ainda.</div>';
+          return;
+        }
 
-      pessoas.forEach(p => {
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-          <td>${p.id}</td>
-          <td>${p.nome}</td>
-          <td>${p.idade}</td>
-          <td>${p.criado_em || ''}</td>
-          <td>
-            <div class="row-actions">
-              <button class="edit" onclick='editarPessoa(${JSON.stringify(p)})'>Editar</button>
-              <button class="delete" onclick="deletarPessoa(${p.id})">Deletar</button>
-            </div>
-          </td>
+        tabelaPessoas.innerHTML = `
+          <table>
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Nome</th>
+                <th>Idade</th>
+                <th>Criado em</th>
+                <th>Atualizado em</th>
+                <th>Ações</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${pessoas.map(p => `
+                <tr>
+                  <td>${p.id}</td>
+                  <td>${escapeHtml(p.nome)}</td>
+                  <td>${p.idade}</td>
+                  <td>${p.criado_em || ""}</td>
+                  <td>${p.atualizado_em || ""}</td>
+                  <td>
+                    <div class="actions">
+                      <button class="small" onclick="iniciarEdicao(${p.id}, '${escapeJs(p.nome)}', ${p.idade})">Editar</button>
+                      <button class="danger small" onclick="deletarPessoa(${p.id})">Deletar</button>
+                    </div>
+                  </td>
+                </tr>
+              `).join("")}
+            </tbody>
+          </table>
         `;
-        tbody.appendChild(tr);
-      });
+      } catch (err) {
+        tabelaPessoas.innerHTML = `<div class="empty">Erro: ${escapeHtml(err.message)}</div>`;
+      }
     }
 
-    async function salvarPessoa() {
-      const id = document.getElementById('id').value;
-      const nome = document.getElementById('nome').value.trim();
-      const idade = document.getElementById('idade').value;
-
-      if (!nome || !idade) {
-        setStatus('Preencha nome e idade.');
-        return;
+    async function carregarInspector() {
+      try {
+        const data = await api("/api/db-inspector");
+        dbInspector.textContent = JSON.stringify(data, null, 2);
+      } catch (err) {
+        dbInspector.textContent = "Erro no inspector: " + err.message;
       }
-
-      const metodo = id ? 'PUT' : 'POST';
-      const url = id ? `/api/pessoas/${id}` : '/api/pessoas';
-
-      const res = await fetch(url, {
-        method: metodo,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ nome, idade })
-      });
-
-      const json = await res.json();
-
-      if (!res.ok) {
-        setStatus('Erro: ' + (json.erro || 'erro desconhecido'));
-        return;
-      }
-
-      setStatus(id ? 'Atualizado com sucesso.' : 'Inserido com sucesso.');
-      limparFormulario();
-      carregarPessoas();
     }
 
-    function editarPessoa(p) {
-      document.getElementById('id').value = p.id;
-      document.getElementById('nome').value = p.nome;
-      document.getElementById('idade').value = p.idade;
-      setStatus('Editando ID ' + p.id);
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    }
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
 
-    async function deletarPessoa(id) {
-      if (!confirm('Deletar pessoa ID ' + id + '?')) return;
+      const nome = nomeInput.value.trim();
+      const idade = Number(idadeInput.value);
 
-      const res = await fetch(`/api/pessoas/${id}`, { method: 'DELETE' });
-      const json = await res.json();
+      try {
+        if (editandoId) {
+          await api(`/api/pessoas/${editandoId}`, {
+            method: "PUT",
+            body: JSON.stringify({ nome, idade })
+          });
 
-      if (!res.ok) {
-        setStatus('Erro: ' + (json.erro || 'erro desconhecido'));
-        return;
+          setStatus("Registro atualizado com sucesso.");
+        } else {
+          await api("/api/pessoas", {
+            method: "POST",
+            body: JSON.stringify({ nome, idade })
+          });
+
+          setStatus("Registro adicionado com sucesso.");
+        }
+
+        limparFormulario();
+        await carregarTudo();
+      } catch (err) {
+        setStatus("Erro: " + err.message);
       }
+    });
 
-      setStatus('Deletado com sucesso.');
-      carregarPessoas();
+    function iniciarEdicao(id, nome, idade) {
+      editandoId = id;
+      nomeInput.value = nome;
+      idadeInput.value = idade;
+      btnSalvar.textContent = "Salvar edição";
+      setStatus(`Editando ID ${id}.`);
+      nomeInput.focus();
     }
 
     function limparFormulario() {
-      document.getElementById('id').value = '';
-      document.getElementById('nome').value = '';
-      document.getElementById('idade').value = '';
+      editandoId = null;
+      nomeInput.value = "";
+      idadeInput.value = "";
+      btnSalvar.textContent = "Adicionar";
     }
 
-    async function carregarTabelas() {
-      const res = await fetch('/api/db/tabelas');
-      const tabelas = await res.json();
+    async function deletarPessoa(id) {
+      const confirmar = confirm(`Deletar o registro ID ${id}?`);
+      if (!confirmar) return;
 
-      const select = document.getElementById('selectTabelas');
-      select.innerHTML = '';
-
-      tabelas.forEach(t => {
-        const opt = document.createElement('option');
-        opt.value = t;
-        opt.textContent = t;
-        select.appendChild(opt);
-      });
-
-      document.getElementById('dbInspector').textContent =
-        JSON.stringify(tabelas, null, 2);
+      try {
+        await api(`/api/pessoas/${id}`, { method: "DELETE" });
+        setStatus("Registro deletado.");
+        await carregarTudo();
+      } catch (err) {
+        setStatus("Erro: " + err.message);
+      }
     }
 
-    async function inspecionarTabela() {
-      const tabela = document.getElementById('selectTabelas').value;
-      if (!tabela) return;
-
-      const res = await fetch(`/api/db/tabela/${encodeURIComponent(tabela)}`);
-      const dados = await res.json();
-
-      document.getElementById('dbInspector').textContent =
-        JSON.stringify(dados, null, 2);
+    async function carregarTudo() {
+      await carregarPessoas();
+      await carregarInspector();
     }
 
-    carregarPessoas();
+    function escapeHtml(value) {
+      return String(value)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+
+    function escapeJs(value) {
+      return String(value)
+        .replaceAll("\\", "\\\\")
+        .replaceAll("'", "\\'")
+        .replaceAll("\n", "\\n")
+        .replaceAll("\r", "");
+    }
+
+    carregarTudo();
   </script>
 </body>
 </html>
