@@ -13,7 +13,7 @@
       background: #f4f6fb;
       color: #111827;
     }
-    .wrap { max-width: 1100px; margin: 0 auto; }
+    .wrap { max-width: 1150px; margin: 0 auto; }
     .card {
       background: white;
       border: 1px solid #e5e7eb;
@@ -22,7 +22,7 @@
       margin-bottom: 16px;
       box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
     }
-    h1, h2 { margin: 0 0 10px; }
+    h1, h2, h3 { margin: 0 0 10px; }
     p { color: #4b5563; }
     .status {
       padding: 10px;
@@ -95,21 +95,7 @@
       font-size: 13px;
       color: #374151;
     }
-    .actions {
-      display: flex;
-      gap: 8px;
-      flex-wrap: wrap;
-    }
-    pre {
-      background: #111827;
-      color: #d1d5db;
-      padding: 14px;
-      border-radius: 12px;
-      overflow-x: auto;
-      font-size: 13px;
-      min-height: 160px;
-      white-space: pre-wrap;
-    }
+    .actions { display: flex; gap: 8px; flex-wrap: wrap; }
     .muted { color: #6b7280; }
     .empty {
       padding: 16px;
@@ -123,6 +109,88 @@
       background: #eef2ff;
       padding: 2px 6px;
       border-radius: 6px;
+    }
+
+    .db-summary {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 10px;
+      margin: 12px 0;
+    }
+    .db-stat {
+      background: #f9fafb;
+      border: 1px solid #e5e7eb;
+      border-radius: 12px;
+      padding: 12px;
+    }
+    .db-stat strong {
+      display: block;
+      font-size: 22px;
+      margin-bottom: 4px;
+    }
+    .table-card {
+      border: 1px solid #e5e7eb;
+      border-radius: 14px;
+      margin-top: 16px;
+      overflow: hidden;
+      background: #ffffff;
+    }
+    .table-head {
+      padding: 14px;
+      background: #f9fafb;
+      border-bottom: 1px solid #e5e7eb;
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      background: #eef2ff;
+      color: #3730a3;
+      padding: 5px 9px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 700;
+    }
+    .table-section {
+      padding: 14px;
+    }
+    .scroll {
+      overflow-x: auto;
+      border: 1px solid #e5e7eb;
+      border-radius: 12px;
+    }
+    .schema-table th {
+      background: #eef2ff;
+    }
+    .data-table th {
+      background: #ecfdf5;
+    }
+    .null {
+      color: #9ca3af;
+      font-style: italic;
+    }
+    details {
+      margin-top: 14px;
+    }
+    summary {
+      cursor: pointer;
+      color: #2563eb;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+    pre {
+      background: #111827;
+      color: #d1d5db;
+      padding: 14px;
+      border-radius: 12px;
+      overflow-x: auto;
+      font-size: 13px;
+      white-space: pre-wrap;
     }
     @media (max-width: 760px) {
       body { padding: 12px; }
@@ -172,17 +240,18 @@
 
     <div class="card">
       <div class="toolbar">
-        <h2>DB Inspector</h2>
+        <div>
+          <h2>DB Inspector visual</h2>
+          <p class="muted" style="margin: 0;">Mostra tabelas, colunas e dados do SQLite em formato legível.</p>
+        </div>
         <button class="gray small" onclick="carregarInspector()">Atualizar inspector</button>
       </div>
-      <p class="muted">Aqui aparece o conteúdo bruto do SQLite: tabelas, colunas e linhas.</p>
-      <pre id="inspector">Carregando...</pre>
+      <div id="inspectorVisual">Carregando...</div>
     </div>
   </div>
 
   <script>
     let editandoId = null;
-
     const $ = (id) => document.getElementById(id);
 
     function setStatus(id, msg, tipo) {
@@ -204,16 +273,10 @@
       try {
         data = text ? JSON.parse(text) : {};
       } catch {
-        throw new Error(
-          "A resposta não foi JSON. Isso geralmente significa que o servidor está entregando HTML antigo no lugar da API. Resposta: " +
-          text.slice(0, 180)
-        );
+        throw new Error("A resposta não foi JSON. Resposta recebida: " + text.slice(0, 180));
       }
 
-      if (!resp.ok) {
-        throw new Error(data.error || "Erro HTTP " + resp.status);
-      }
-
+      if (!resp.ok) throw new Error(data.error || "Erro HTTP " + resp.status);
       return data;
     }
 
@@ -268,8 +331,145 @@
     }
 
     async function carregarInspector() {
-      const data = await requestJson("/api/db-inspector");
-      $("inspector").textContent = JSON.stringify(data, null, 2);
+      try {
+        const data = await requestJson("/api/db-inspector");
+        renderInspector(data);
+      } catch (err) {
+        $("inspectorVisual").innerHTML = `<div class="status err">${escapeHtml(err.message)}</div>`;
+      }
+    }
+
+    function renderInspector(data) {
+      const tables = data.tables || {};
+      const tableNames = Object.keys(tables);
+      const totalRows = tableNames.reduce((sum, name) => sum + Number(tables[name].row_count || 0), 0);
+      const totalColumns = tableNames.reduce((sum, name) => sum + ((tables[name].columns || []).length), 0);
+
+      let html = `
+        <div class="db-summary">
+          <div class="db-stat">
+            <strong>${tableNames.length}</strong>
+            <span>Tabelas</span>
+          </div>
+          <div class="db-stat">
+            <strong>${totalRows}</strong>
+            <span>Linhas totais</span>
+          </div>
+          <div class="db-stat">
+            <strong>${totalColumns}</strong>
+            <span>Colunas totais</span>
+          </div>
+        </div>
+
+        <p class="muted"><b>Arquivo do banco:</b> ${escapeHtml(data.database_file || "database.db")}</p>
+      `;
+
+      if (!tableNames.length) {
+        html += '<div class="empty">Nenhuma tabela encontrada.</div>';
+        $("inspectorVisual").innerHTML = html;
+        return;
+      }
+
+      for (const tableName of tableNames) {
+        const table = tables[tableName];
+        const columns = table.columns || [];
+        const rows = table.rows || [];
+
+        html += `
+          <div class="table-card">
+            <div class="table-head">
+              <div>
+                <h3 style="margin:0;">Tabela: ${escapeHtml(tableName)}</h3>
+                <span class="muted">${columns.length} colunas · ${rows.length} linhas</span>
+              </div>
+              <span class="pill">${rows.length} registros</span>
+            </div>
+
+            <div class="table-section">
+              <h3>Estrutura da tabela</h3>
+              ${renderSchemaTable(columns)}
+            </div>
+
+            <div class="table-section">
+              <h3>Dados inseridos</h3>
+              ${renderDataTable(columns, rows)}
+            </div>
+
+            <div class="table-section">
+              <details>
+                <summary>Ver JSON bruto desta tabela</summary>
+                <pre>${escapeHtml(JSON.stringify(table, null, 2))}</pre>
+              </details>
+            </div>
+          </div>
+        `;
+      }
+
+      $("inspectorVisual").innerHTML = html;
+    }
+
+    function renderSchemaTable(columns) {
+      if (!columns.length) return '<div class="empty">Sem colunas.</div>';
+
+      return `
+        <div class="scroll">
+          <table class="schema-table">
+            <thead>
+              <tr>
+                <th>Ordem</th>
+                <th>Nome da coluna</th>
+                <th>Tipo</th>
+                <th>Obrigatório?</th>
+                <th>Chave primária?</th>
+                <th>Valor padrão</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${columns.map(c => `
+                <tr>
+                  <td>${c.cid}</td>
+                  <td><b>${escapeHtml(c.name)}</b></td>
+                  <td>${escapeHtml(c.type || "")}</td>
+                  <td>${c.notnull ? "Sim" : "Não"}</td>
+                  <td>${c.pk ? "Sim" : "Não"}</td>
+                  <td>${formatValue(c.dflt_value)}</td>
+                </tr>
+              `).join("")}
+            </tbody>
+          </table>
+        </div>
+      `;
+    }
+
+    function renderDataTable(columns, rows) {
+      if (!rows.length) return '<div class="empty">Essa tabela ainda não tem dados.</div>';
+
+      const columnNames = columns.length ? columns.map(c => c.name) : Object.keys(rows[0]);
+
+      return `
+        <div class="scroll">
+          <table class="data-table">
+            <thead>
+              <tr>
+                ${columnNames.map(name => `<th>${escapeHtml(name)}</th>`).join("")}
+              </tr>
+            </thead>
+            <tbody>
+              ${rows.map(row => `
+                <tr>
+                  ${columnNames.map(name => `<td>${formatValue(row[name])}</td>`).join("")}
+                </tr>
+              `).join("")}
+            </tbody>
+          </table>
+        </div>
+      `;
+    }
+
+    function formatValue(value) {
+      if (value === null || value === undefined) return '<span class="null">NULL</span>';
+      if (value === "") return '<span class="null">vazio</span>';
+      return escapeHtml(value);
     }
 
     async function carregarTudo() {
