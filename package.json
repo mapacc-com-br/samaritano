@@ -1,6 +1,6 @@
 {
-  "name": "mapa-cirurgias-escala-funcao",
-  "version": "1.4.0",
+  "name": "celv1-sqlite-drag",
+  "version": "1.5.0",
   "main": "server.js",
   "type": "commonjs",
   "scripts": {
