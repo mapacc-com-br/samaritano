@@ -1,7 +1,17 @@
-# Mapa de Cirurgias por Dia
+# CC Sama Bolso SQLite Drag
 
-Atualização:
-- Remove o DB Inspector visual da página
-- Mantém `/api/db-inspector` escondido para diagnóstico
-- Campo de anestesista da cirurgia virou seletor
-- Permite escolher Particular ou anestesistas da escala do dia
+Versão mobile/compacta com SQLite persistente e mapa interativo.
+
+## Recursos
+
+- SQLite em `/data/database.db`
+- Cirurgias por data
+- Escala de anestesistas por data
+- Upsert de cirurgia: data + nome + iniciais + idade
+- Arrastar bloco para mudar horário e sala
+- Alça direita para mudar duração
+- Clique no bloco para escalar/desescalar/finalizar/editar
+- Nome do anestesista em badge acima do bloco
+- Régua de horário fixa
+- Coluna de salas fixa
+- Barra horizontal fixa inferior sincronizada

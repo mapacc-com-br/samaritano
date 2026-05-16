@@ -1,635 +1,470 @@
 <!doctype html>
 <html lang="pt-BR">
 <head>
-<meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Mapa de Cirurgias por Dia</title>
-
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>CC Sama Bolso SQL</title>
 <style>
-*{box-sizing:border-box}
-body{
-  margin:0;
-  padding:20px;
-  background:#f4f6fb;
-  font-family:Arial,Helvetica,sans-serif;
-  color:#111827;
-}
-.wrap{max-width:1450px;margin:0 auto}
-.card{
-  background:white;
-  border:1px solid #e5e7eb;
-  border-radius:16px;
-  padding:18px;
-  margin-bottom:16px;
-  box-shadow:0 8px 22px rgba(15,23,42,.05);
-}
-.topbar{
-  display:flex;
-  justify-content:space-between;
-  align-items:end;
-  gap:12px;
-  flex-wrap:wrap;
-}
-h1,h2,h3{margin:0 0 10px}
-p{color:#6b7280}
-label{
-  display:block;
-  color:#6b7280;
-  font-size:12px;
-  margin-bottom:4px;
-}
-input,select{
-  width:100%;
-  border:1px solid #d1d5db;
-  border-radius:10px;
-  padding:10px;
-  font-size:14px;
-  background:white;
-}
-button{
-  border:0;
-  background:#2563eb;
-  color:white;
-  padding:10px 14px;
-  border-radius:10px;
-  cursor:pointer;
-  font-weight:700;
-}
-button:hover{background:#1d4ed8}
-button.gray{background:#4b5563}
-button.gray:hover{background:#374151}
-button.red{background:#dc2626}
-button.red:hover{background:#b91c1c}
-button.small{padding:7px 10px;font-size:12px}
-.grid-cirurgia{
-  display:grid;
-  grid-template-columns:100px 1.5fr 100px 130px 130px 220px 100px 90px;
-  gap:10px;
-}
-.grid-anestesista{
-  display:grid;
-  grid-template-columns:1fr 1fr auto;
-  gap:10px;
-  align-items:end;
-}
-.status{
-  margin-top:10px;
-  padding:10px;
-  border-radius:10px;
-  border:1px solid #e5e7eb;
-  background:#f9fafb;
-  white-space:pre-wrap;
-}
-.status.ok{background:#ecfdf5;border-color:#a7f3d0;color:#065f46}
-.status.err{background:#fef2f2;border-color:#fecaca;color:#991b1b}
-table{
-  width:100%;
-  border-collapse:collapse;
-}
-th,td{
-  border-bottom:1px solid #e5e7eb;
-  padding:10px;
-  text-align:left;
-  vertical-align:middle;
-}
-th{
-  background:#f9fafb;
-  font-size:13px;
-  color:#374151;
-}
-.actions{display:flex;gap:8px;flex-wrap:wrap}
-.badge{
-  display:inline-block;
-  padding:4px 8px;
-  border-radius:999px;
-  background:#eef2ff;
-  color:#3730a3;
-  font-weight:700;
-  font-size:12px;
-}
-.badge.sma{background:#ecfdf5;color:#065f46}
-.badge.particular{background:#fff7ed;color:#9a3412}
-.badge.anest{background:#eef2ff;color:#3730a3}
-.summary{
-  display:grid;
-  grid-template-columns:repeat(auto-fit,minmax(180px,1fr));
-  gap:10px;
-}
-.stat{
-  background:#f9fafb;
-  border:1px solid #e5e7eb;
-  border-radius:12px;
-  padding:12px;
-}
-.stat strong{
-  display:block;
-  font-size:24px;
-}
-.empty{
-  border:1px dashed #d1d5db;
-  border-radius:12px;
-  padding:16px;
-  text-align:center;
-  color:#6b7280;
-  background:#f9fafb;
-}
-.scroll{overflow-x:auto}
-.hint{
-  color:#6b7280;
-  font-size:12px;
-  margin-top:5px;
-}
-@media(max-width:900px){
-  body{padding:12px}
-  .grid-cirurgia,.grid-anestesista{grid-template-columns:1fr}
-  button{width:100%}
-}
+:root{--bg:#eef2f7;--card:#fff;--line:#d8e0ee;--text:#172033;--muted:#607086;--blue:#2563eb;--green:#16a34a;--red:#dc2626;--amber:#f59e0b;--purple:#7c3aed;--gray:#64748b;--lane:#dbeafe;--oeste:#e0f2fe;--virtual:#fef3c7;--hemo:#fae8ff}
+*{box-sizing:border-box}html,body{margin:0;padding:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif}button,input,textarea,select{font:inherit}button{border:0;border-radius:14px;padding:12px 14px;font-weight:800;color:#fff;background:var(--blue);box-shadow:0 2px 8px #0001;touch-action:manipulation}button:active{transform:scale(.98)}button.green{background:var(--green)}button.red{background:var(--red)}button.gray{background:var(--gray)}button.purple{background:var(--purple)}button.light{background:#fff;color:#172033;border:1px solid var(--line)}button.small{padding:8px 10px;border-radius:10px;font-size:12px}input,textarea,select{width:100%;border:1px solid var(--line);border-radius:14px;padding:12px;background:#fff;color:var(--text)}textarea{min-height:150px;resize:vertical;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13px;line-height:1.35}header{position:sticky;top:0;z-index:20;background:rgba(255,255,255,.96);backdrop-filter:blur(12px);border-bottom:1px solid var(--line);padding:12px}.title{font-weight:900;font-size:18px}.sub{font-size:12px;color:var(--muted);margin-top:3px}.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.toprow{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;margin-top:10px}.tabs{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:10px}.tabs button{padding:10px 6px;font-size:12px;background:#e2e8f0;color:#334155;box-shadow:none}.tabs button.active{background:var(--blue);color:#fff}.wrap{padding:12px;max-width:980px;margin:0 auto}.card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:14px;margin-bottom:12px;box-shadow:0 6px 20px #0f172a0d}.card h2{font-size:16px;margin:0 0 10px}.hint{font-size:12px;color:var(--muted);line-height:1.35}.status{white-space:pre-wrap;border:1px solid #bfdbfe;background:#eff6ff;color:#1e3a8a;border-radius:14px;padding:10px;font-size:12px;font-weight:700;margin-top:10px}.status.ok{background:#ecfff5;border-color:#bce8ce;color:#14532d}.status.warn,.status.err{background:#fff6d7;border-color:#ead58a;color:#854d0e}.hidden{display:none!important}.grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}.list{display:grid;gap:8px}.case{border:1px solid var(--line);border-radius:16px;padding:10px;background:#fff}.caseTop{display:flex;justify-content:space-between;gap:8px}.caseName{font-weight:900;font-size:14px}.caseMeta{font-size:12px;color:var(--muted);margin-top:4px}.pill{display:inline-flex;align-items:center;border-radius:999px;padding:5px 8px;font-size:11px;font-weight:900;border:1px solid var(--line);background:#f8fafc;color:#334155}.pill.sma{background:#dcfce7;color:#166534;border-color:#86efac}.pill.ext{background:#f3e8ff;color:#6b21a8;border-color:#d8b4fe}.pill.pend{background:#dbeafe;color:#1d4ed8;border-color:#93c5fd}.pill.fin{background:#e2e8f0;color:#475569}.tools{display:flex;gap:6px;flex-wrap:wrap;margin-top:9px}.tools button{font-size:12px;padding:8px 10px;border-radius:10px}.mapShell{overflow:auto;border:1px solid var(--line);border-radius:16px;background:#fff;-webkit-overflow-scrolling:touch}.map{position:relative;min-width:1280px;padding-bottom:18px}.timeHeader{position:sticky;top:0;z-index:3;display:grid;background:#f8fafc;border-bottom:1px solid var(--line)}.timeCell{height:34px;border-right:1px solid var(--line);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:900;color:#334155}.roomRow{position:relative;border-bottom:1px solid var(--line);height:58px}.roomLabel{position:sticky;left:0;z-index:2;width:102px;height:58px;background:#f8fafc;border-right:1px solid var(--line);display:flex;align-items:center;justify-content:center;text-align:center;font-size:11px;font-weight:900;padding:3px}.roomLabel.virtual{background:var(--virtual);color:#92400e}.roomLabel.lane{background:var(--lane);color:#1d4ed8}.roomLabel.oeste{background:var(--oeste);color:#075985}.roomLabel.hemo{background:var(--hemo);color:#86198f}.block{position:absolute;top:8px;height:42px;border-radius:12px;padding:6px 8px;color:#fff;background:linear-gradient(135deg,#38bdf8,#2563eb);font-size:11px;font-weight:900;overflow:hidden;box-shadow:0 4px 12px #0f172a33;display:flex;align-items:center;line-height:1.1}.block.ext{background:linear-gradient(135deg,#a78bfa,#7c3aed)}.block.virtual{background:linear-gradient(135deg,#f59e0b,#d97706)}.block.selected{outline:3px solid #facc15}.roomGridLine{position:absolute;top:0;bottom:0;border-left:1px solid #e2e8f0}.modalBg{display:none;position:fixed;inset:0;background:#0f172a99;z-index:99;padding:14px;align-items:center;justify-content:center}.modal{width:min(560px,100%);max-height:88vh;overflow:auto;background:#fff;border-radius:20px;padding:16px}.modal h2{margin:0 0 10px}.safeBottom{height:calc(12px + env(safe-area-inset-bottom))}.summaryGrid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.stat{background:#f8fafc;border:1px solid var(--line);border-radius:14px;padding:9px;text-align:center}.stat b{display:block;font-size:20px}.stat span{font-size:11px;color:var(--muted);font-weight:800}@media(min-width:760px){.mobileOnly{display:none}.desktopGrid{display:grid;grid-template-columns:360px 1fr;gap:12px}.tabs{max-width:520px}.roomLabel{width:120px}.map{min-width:1500px}}@media(max-width:420px){.tabs button{font-size:11px}.grid2,.grid3{grid-template-columns:1fr}.toprow{grid-template-columns:1fr}.roomLabel{width:92px}.map{min-width:1160px}.summaryGrid{grid-template-columns:1fr 1fr 1fr}}
 </style>
 </head>
-
 <body>
+<header>
+  <div class="title">CC Sama Bolso SQL</div>
+  <div class="sub">Visual celv1 + SQLite persistente. Data, cirurgias e escala são carregadas do banco.</div>
+  <div class="toprow">
+    <input id="dateInput" type="date">
+    <button id="btnRefresh" class="green">Atualizar</button>
+  </div>
+  <div class="tabs">
+    <button class="tab active" data-tab="importar">Importar</button>
+    <button class="tab" data-tab="mapa">Mapa</button>
+    <button class="tab" data-tab="lista">Lista</button>
+    <button class="tab" data-tab="escala">Escala</button>
+  </div>
+</header>
+
 <div class="wrap">
-
-<div class="card">
-  <div class="topbar">
-    <div>
-      <h1>Mapa de Cirurgias por Dia</h1>
-      <p>Escolha uma data para navegar no banco: cirurgias e anestesistas aparecem só daquele dia.</p>
+  <div class="card">
+    <div class="summaryGrid">
+      <div class="stat"><b id="statCases">0</b><span>Cirurgias</span></div>
+      <div class="stat"><b id="statAnes">0</b><span>Anestesistas</span></div>
+      <div class="stat"><b id="statDate">--</b><span>Data</span></div>
     </div>
-
-    <div style="min-width:220px">
-      <label>Data do mapa</label>
-      <input id="dataSelecionada" type="date" onchange="trocarData()"/>
-    </div>
-
-    <div>
-      <button class="gray" onclick="hoje()">Hoje</button>
-    </div>
+    <div id="status" class="status">Carregando...</div>
   </div>
 
-  <div class="summary" style="margin-top:14px">
-    <div class="stat">
-      <strong id="statCirurgias">0</strong>
-      <span>Cirurgias no dia</span>
+  <section id="tab-importar" class="screen">
+    <div class="card">
+      <h2>Importador de cirurgias</h2>
+      <div class="hint">Cole no formato: Início | Sala | Cirurgia | Duração | Serviço | Iniciais | Idade | Obs opcional</div>
+      <textarea id="surgeryText" placeholder="07:00 | Oeste 03 | Colecistectomia | 120 | SMA | FC | 30"></textarea>
+      <div class="row" style="margin-top:8px">
+        <button id="btnParse" class="green">Processar lista</button>
+        <button id="btnExample" class="light">Exemplo</button>
+        <button id="btnClearText" class="gray">Limpar texto</button>
+      </div>
     </div>
-    <div class="stat">
-      <strong id="statAnestesistas">0</strong>
-      <span>Anestesistas no dia</span>
+    <div class="card">
+      <h2>Prévia da importação</h2>
+      <div id="importPreview" class="hint">Nenhuma lista processada ainda.</div>
+      <div class="row" style="margin-top:10px">
+        <button id="btnSaveImported" class="green">Salvar/atualizar no SQLite</button>
+        <button id="btnAddSurgeryImport" class="light">+ Cirurgia manual</button>
+      </div>
     </div>
-    <div class="stat">
-      <strong id="statData">--</strong>
-      <span>Data selecionada</span>
-    </div>
-  </div>
+  </section>
 
-  <div id="status" class="status">Pronto.</div>
+  <section id="tab-mapa" class="screen hidden">
+    <div class="card">
+      <h2>Mapa compacto</h2>
+      <div class="row">
+        <button id="btnNow" class="light">Ir para 7h</button>
+        <button id="btnAddSurgery" class="green">+ Cirurgia</button>
+      </div>
+      <div class="hint" style="margin-top:8px">Toque no bloco para selecionar. Use a aba Lista para editar com mais facilidade.</div>
+    </div>
+    <div class="mapShell"><div id="map" class="map"></div></div>
+  </section>
+
+  <section id="tab-lista" class="screen hidden">
+    <div class="card">
+      <h2>Lista do dia</h2>
+      <div class="row">
+        <button id="btnAddSurgery2" class="green">+ Cirurgia</button>
+        <button id="btnExport" class="light">Exportar JSON</button>
+      </div>
+    </div>
+    <div id="caseList" class="list"></div>
+  </section>
+
+  <section id="tab-escala" class="screen hidden">
+    <div class="card">
+      <h2>Anestesistas do dia</h2>
+      <div class="grid2">
+        <input id="anesName" placeholder="Nome">
+        <input id="anesShift" placeholder="07:00-19:00">
+      </div>
+      <div class="grid2" style="margin-top:8px">
+        <select id="anesRole">
+          <option value="">Função</option>
+          <option>Coordenador</option>
+          <option>Sala</option>
+          <option>Plantonista</option>
+          <option>Apoio</option>
+          <option>Particular</option>
+          <option>Sobreaviso</option>
+        </select>
+        <input id="anesObs" placeholder="Observação">
+      </div>
+      <button id="btnAddAnes" class="green" style="margin-top:8px;width:100%">Adicionar / atualizar anestesista</button>
+    </div>
+    <div id="anesList" class="list"></div>
+  </section>
+
+  <div class="safeBottom"></div>
 </div>
 
-<div class="card">
-  <h2 id="tituloCirurgia">Adicionar cirurgia</h2>
-
-  <div class="grid-cirurgia">
-    <div>
-      <label>Horário início</label>
-      <input id="horario_inicio" placeholder="07:30"/>
-    </div>
-
-    <div>
-      <label>Nome da cirurgia</label>
-      <input id="nome_cirurgia" placeholder="Colecistectomia..."/>
-    </div>
-
-    <div>
-      <label>Duração</label>
-      <input id="duracao" placeholder="02:00"/>
-    </div>
-
-    <div>
-      <label>Sala</label>
-      <input id="sala" placeholder="Sala 01"/>
-    </div>
-
-    <div>
-      <label>Serviço</label>
-      <select id="servico" onchange="atualizarOpcoesAnestesista()">
-        <option value="SMA">SMA</option>
-        <option value="Particular">Particular</option>
-      </select>
-    </div>
-
-    <div>
-      <label>Escalar anestesista</label>
-      <select id="anestesista_escalado"></select>
-      <div class="hint">Escolha “Particular” ou alguém da escala do dia.</div>
-    </div>
-
-    <div>
-      <label>Iniciais paciente</label>
-      <input id="iniciais_paciente" placeholder="JPS"/>
-    </div>
-
-    <div>
-      <label>Idade</label>
-      <input id="idade_paciente" type="number" min="0" max="130"/>
-    </div>
-  </div>
-
-  <div style="margin-top:14px;display:flex;gap:10px;flex-wrap:wrap">
-    <button onclick="salvarCirurgia()" id="btnSalvarCirurgia">Salvar cirurgia</button>
-    <button class="gray" onclick="cancelarEdicaoCirurgia()">Cancelar edição</button>
-  </div>
-</div>
-
-<div class="card">
-  <h2>Escala de anestesistas do dia</h2>
-
-  <div class="grid-anestesista">
-    <div>
-      <label>Nome do anestesista</label>
-      <input id="nome_anestesista" placeholder="Ex: André"/>
-    </div>
-
-    <div>
-      <label>Observação</label>
-      <input id="observacao_anestesista" placeholder="Ex: coordenador, plantão, particular..."/>
-    </div>
-
-    <div>
-      <button onclick="salvarAnestesista()" id="btnSalvarAnestesista">Adicionar anestesista</button>
-    </div>
-  </div>
-
-  <div id="listaAnestesistas" style="margin-top:14px"></div>
-</div>
-
-<div class="card">
-  <h2>Cirurgias do dia</h2>
-  <div id="listaCirurgias"></div>
-</div>
-
-</div>
+<div id="modalBg" class="modalBg"><div class="modal" id="modal"></div></div>
 
 <script>
-let editandoCirurgiaId = null;
-let editandoAnestesistaId = null;
-let anestesistasDoDia = [];
+(function(){
+'use strict';
 
-const $ = id => document.getElementById(id);
+var rooms=[];
+var startHour=5,endHour=23,hourW=64,labelW=104,rowH=58;
+var currentDate="";
+var items=[];
+var anesthetists=[];
+var selectedId=null;
+var parsedImport=[];
 
-function dataHojeISO(){
-  const d = new Date();
-  const tz = d.getTimezoneOffset() * 60000;
-  return new Date(d - tz).toISOString().slice(0,10);
-}
+function $(id){return document.getElementById(id)}
+function todayISO(){var d=new Date();var off=d.getTimezoneOffset()*60000;return new Date(d-off).toISOString().slice(0,10)}
+function brDate(iso){if(!iso)return"--";var p=iso.split("-");return p[2]+"/"+p[1]+"/"+p[0]}
+function parseTime(t){if(!t)return null;var s=String(t).trim();var m=s.match(/(\d{1,2})[:hH]?(\d{2})?/);if(!m)return null;return Number(m[1])*60+Number(m[2]||0)}
+function fmtTime(min){min=Math.round(Number(min)||0);var h=Math.floor(min/60),m=min%60;return String(h).padStart(2,"0")+":"+String(m).padStart(2,"0")}
+function parseDur(d){if(!d)return 60;var s=String(d).trim().toLowerCase();if(s.includes(":")){var p=s.split(":");return Number(p[0])*60+Number(p[1]||0)}if(s.includes("h"))return Math.round(Number(s.replace("h","").replace(",","."))*60);var n=Number(s);if(!Number.isFinite(n))return 60;if(n>0&&n<12)return n*60;return n}
+function durToText(v){var n=parseDur(v);var h=Math.floor(n/60),m=n%60;return String(h).padStart(2,"0")+":"+String(m).padStart(2,"0")}
+function roomNameToIndex(name){name=String(name||"").toLowerCase();if(!name||name.includes("não")||name.includes("nao")||name.includes("sem sala"))return 0;if(name.includes("hemo")||name.includes("radio"))return rooms.findIndex(r=>r.type==="hemo");if(name.includes("cdi"))return rooms.findIndex(r=>r.name==="CDI");var n=(name.match(/\d+/)||[])[0];if(n){n=Number(n);if(name.includes("lane"))return rooms.findIndex(r=>r.name==="Lane "+n);return rooms.findIndex(r=>r.name==="Oeste "+n)}var exact=rooms.findIndex(r=>r.name.toLowerCase()===name);return exact>=0?exact:0}
+function html(s){return String(s??"").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;").replaceAll("'","&#039;")}
+function status(msg,cls){$('status').textContent=msg;$('status').className="status "+(cls||"")}
+function selectedItem(){return items.find(x=>x.id===selectedId)}
 
-function formatarDataBR(iso){
-  if(!iso) return "--";
-  const [a,m,d] = iso.split("-");
-  return `${d}/${m}/${a}`;
-}
-
-function setStatus(msg,tipo){
-  $("status").textContent = msg;
-  $("status").className = "status" + (tipo ? " " + tipo : "");
-}
-
-async function api(url, options={}){
-  const r = await fetch(url,{
-    headers:{"Content-Type":"application/json"},
-    cache:"no-store",
-    ...options
-  });
-
-  const text = await r.text();
-  let data;
-
-  try{
-    data = text ? JSON.parse(text) : {};
-  }catch{
-    throw new Error("Resposta não JSON: " + text.slice(0,180));
-  }
-
-  if(!r.ok){
-    throw new Error(data.error || "Erro HTTP " + r.status);
-  }
-
+async function api(url,opt){
+  var r=await fetch(url,Object.assign({headers:{"Content-Type":"application/json"},cache:"no-store"},opt||{}));
+  var text=await r.text(); var data={};
+  try{data=text?JSON.parse(text):{}}catch(e){throw new Error("Resposta não JSON: "+text.slice(0,150))}
+  if(!r.ok)throw new Error(data.error||("Erro HTTP "+r.status));
   return data;
 }
 
-function getData(){
-  return $("dataSelecionada").value;
+function initRooms(){
+  rooms=[{name:"Não escaladas",type:"virtual"}];
+  for(var i=1;i<=10;i++)rooms.push({name:"Oeste "+i,type:"oeste"});
+  for(var j=1;j<=10;j++)rooms.push({name:"Lane "+j,type:"lane"});
+  rooms.push({name:"CDI",type:"cdi"});
+  rooms.push({name:"HEMO",type:"hemo"});
 }
 
-function hoje(){
-  $("dataSelecionada").value = dataHojeISO();
-  trocarData();
-}
-
-function trocarData(){
-  cancelarEdicaoCirurgia();
-  cancelarEdicaoAnestesista();
-  carregarDia();
-}
-
-async function carregarDia(){
-  try{
-    const data = getData();
-
-    $("statData").textContent = formatarDataBR(data);
-
-    const mapa = await api("/api/dia/" + data);
-
-    anestesistasDoDia = mapa.anestesistas || [];
-
-    atualizarOpcoesAnestesista();
-
-    renderCirurgias(mapa.cirurgias || []);
-    renderAnestesistas(anestesistasDoDia);
-
-    $("statCirurgias").textContent = (mapa.cirurgias || []).length;
-    $("statAnestesistas").textContent = anestesistasDoDia.length;
-
-    setStatus("Mapa carregado: " + formatarDataBR(data), "ok");
-  }catch(err){
-    setStatus(err.message, "err");
+function dbToItem(r){
+  var start=parseTime(r.horario_inicio)||startHour*60;
+  var dur=parseDur(r.duracao);
+  return {
+    id:r.id,
+    dbId:r.id,
+    name:r.nome_cirurgia,
+    start:start,
+    end:start+dur,
+    duration:dur,
+    room:r.sala,
+    row:roomNameToIndex(r.sala),
+    servico:r.servico||"SMA",
+    anest:r.anestesista_escalado||"",
+    initials:r.iniciais_paciente||"",
+    age:r.idade_paciente ?? "",
+    obs:r.observacao||""
   }
 }
 
-function atualizarOpcoesAnestesista(valorSelecionado){
-  const select = $("anestesista_escalado");
-  const servico = $("servico").value;
-  const atual = valorSelecionado ?? select.value;
+function itemToPayload(it){
+  return {
+    data_cirurgia:currentDate,
+    horario_inicio:fmtTime(it.start),
+    nome_cirurgia:it.name,
+    duracao:durToText(it.duration||it.end-it.start),
+    sala:it.room || (rooms[it.row]?rooms[it.row].name:"Não escaladas"),
+    servico:it.servico||"SMA",
+    anestesista_escalado:it.anest||"",
+    iniciais_paciente:String(it.initials||"").toUpperCase(),
+    idade_paciente:Number(it.age),
+    observacao:it.obs||""
+  }
+}
 
-  const opcoes = [];
+async function loadDay(){
+  var data=await api("/api/dia/"+encodeURIComponent(currentDate));
+  items=(data.cirurgias||[]).map(dbToItem);
+  anesthetists=(data.anestesistas||[]).map(function(a){return {
+    id:a.id,
+    name:a.nome_anestesista,
+    shift:a.horario_escala||"",
+    role:a.funcao||"",
+    obs:a.observacao||""
+  }});
+  selectedId=null;
+  renderAll();
+  status("Data carregada: "+brDate(currentDate)+" · "+items.length+" cirurgia(s).","ok");
+}
 
-  opcoes.push({value:"", label:"Sem anestesista definido"});
+function renderStats(){
+  $('statCases').textContent=items.length;
+  $('statAnes').textContent=anesthetists.length;
+  $('statDate').textContent=brDate(currentDate).slice(0,5);
+}
 
-  if(servico === "Particular"){
-    opcoes.push({value:"Particular", label:"Particular"});
-  }else{
-    opcoes.push({value:"Particular", label:"Particular"});
-    for(const a of anestesistasDoDia){
-      opcoes.push({
-        value:a.nome_anestesista,
-        label:a.nome_anestesista + (a.observacao ? " — " + a.observacao : "")
-      });
+function renderAll(){
+  renderStats();
+  renderMap();
+  renderList();
+  renderAnes();
+  renderImportPreview();
+}
+
+function renderMap(){
+  var map=$('map'); if(!map)return;
+  var totalHours=endHour-startHour;
+  var totalW=labelW+totalHours*hourW;
+  var htmlMap='';
+  htmlMap+='<div class="timeHeader" style="grid-template-columns:'+labelW+'px repeat('+totalHours+','+hourW+'px);width:'+totalW+'px">';
+  htmlMap+='<div></div>';
+  for(var h=startHour;h<endHour;h++)htmlMap+='<div class="timeCell">'+String(h).padStart(2,'0')+'h</div>';
+  htmlMap+='</div>';
+
+  rooms.forEach(function(room,idx){
+    htmlMap+='<div class="roomRow" style="width:'+totalW+'px">';
+    htmlMap+='<div class="roomLabel '+room.type+'">'+html(room.name)+'</div>';
+    for(var h=startHour;h<=endHour;h++){
+      var x=labelW+(h-startHour)*hourW;
+      htmlMap+='<div class="roomGridLine" style="left:'+x+'px"></div>';
     }
-  }
+    items.filter(it=>it.row===idx).forEach(function(it){
+      var x=labelW+((it.start-startHour*60)/60)*hourW;
+      var w=Math.max(46,((it.end-it.start)/60)*hourW);
+      var cls=it.servico==="Particular"?"ext":"";
+      if(idx===0)cls+=" virtual";
+      if(it.id===selectedId)cls+=" selected";
+      htmlMap+='<div class="block '+cls+'" style="left:'+x+'px;width:'+w+'px" data-id="'+it.id+'">'+
+        html(fmtTime(it.start)+' '+it.name+' · '+(it.anest||'s/ anest'))+
+      '</div>';
+    });
+    htmlMap+='</div>';
+  });
 
-  select.innerHTML = opcoes
-    .map(o => `<option value="${escapeAttr(o.value)}">${escapeHtml(o.label)}</option>`)
-    .join("");
+  map.innerHTML=htmlMap;
+  map.querySelectorAll('.block').forEach(function(el){
+    el.addEventListener('click',function(){
+      selectedId=Number(el.dataset.id);
+      renderAll();
+      setTab('lista');
+    });
+  });
+}
 
-  if([...select.options].some(o => o.value === atual)){
-    select.value = atual;
-  }else if(servico === "Particular"){
-    select.value = "Particular";
+function renderList(){
+  var list=$('caseList');
+  if(!items.length){list.innerHTML='<div class="card hint">Nenhuma cirurgia cadastrada para este dia.</div>';return}
+  list.innerHTML=items.map(function(it){
+    return '<div class="case">'+
+      '<div class="caseTop"><div><div class="caseName">'+html(fmtTime(it.start)+' · '+it.name)+'</div>'+
+      '<div class="caseMeta">'+html(it.room)+' · '+html(durToText(it.duration))+' · '+html(it.initials)+' · '+html(it.age)+' anos</div></div>'+
+      '<span class="pill '+(it.servico==="SMA"?'sma':'ext')+'">'+html(it.servico)+'</span></div>'+
+      '<div class="caseMeta">Anest: <b>'+html(it.anest||'não definido')+'</b> '+(it.obs?('· '+html(it.obs)):'')+'</div>'+
+      '<div class="tools"><button class="light" data-edit="'+it.id+'">Editar</button><button class="purple" data-assign="'+it.id+'">Escalar</button><button class="red" data-del="'+it.id+'">Deletar</button></div>'+
+    '</div>'
+  }).join('');
+
+  list.querySelectorAll('[data-edit]').forEach(b=>b.onclick=()=>openSurgeryModal(Number(b.dataset.edit)));
+  list.querySelectorAll('[data-assign]').forEach(b=>b.onclick=()=>openAssignModal(Number(b.dataset.assign)));
+  list.querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>deleteSurgery(Number(b.dataset.del)));
+}
+
+function renderAnes(){
+  var list=$('anesList');
+  if(!anesthetists.length){list.innerHTML='<div class="card hint">Nenhum anestesista cadastrado para este dia.</div>';return}
+  list.innerHTML=anesthetists.map(function(a){
+    return '<div class="case"><div class="caseTop"><div><div class="caseName">'+html(a.name)+'</div>'+
+      '<div class="caseMeta">'+html(a.shift||'sem horário')+' · '+html(a.role||'sem função')+' '+(a.obs?('· '+html(a.obs)):'')+'</div></div>'+
+      '<span class="pill pend">escala do dia</span></div>'+
+      '<div class="tools"><button class="light" data-edita="'+a.id+'">Editar</button><button class="red" data-dela="'+a.id+'">Remover</button></div></div>'
+  }).join('');
+  list.querySelectorAll('[data-edita]').forEach(b=>b.onclick=()=>fillAnesForm(Number(b.dataset.edita)));
+  list.querySelectorAll('[data-dela]').forEach(b=>b.onclick=()=>deleteAnes(Number(b.dataset.dela)));
+}
+
+function parseLine(line){
+  var p=line.split('|').map(s=>s.trim());
+  if(p.length<5)return null;
+  return {
+    data_cirurgia:currentDate,
+    horario_inicio:p[0]||"",
+    sala:p[1]||"Não escaladas",
+    nome_cirurgia:p[2]||"",
+    duracao:durToText(p[3]||"01:00"),
+    servico:(String(p[4]||"").toLowerCase().includes("particular")||String(p[4]||"").toLowerCase().includes("externo"))?"Particular":"SMA",
+    iniciais_paciente:(p[5]||"NI").replace(/\W/g,"").toUpperCase()||"NI",
+    idade_paciente:Number(p[6]||0),
+    observacao:p.slice(7).join(" | ")
   }
 }
 
-function renderCirurgias(rows){
-  if(!rows.length){
-    $("listaCirurgias").innerHTML = '<div class="empty">Nenhuma cirurgia cadastrada para esta data.</div>';
-    return;
-  }
-
-  $("listaCirurgias").innerHTML = `
-    <div class="scroll">
-    <table>
-      <thead>
-        <tr>
-          <th>Hora</th>
-          <th>Cirurgia</th>
-          <th>Duração</th>
-          <th>Sala</th>
-          <th>Serviço</th>
-          <th>Anestesista / Particular</th>
-          <th>Paciente</th>
-          <th>Idade</th>
-          <th>Ações</th>
-        </tr>
-      </thead>
-      <tbody>
-        ${rows.map(r => `
-          <tr>
-            <td><b>${escapeHtml(r.horario_inicio)}</b></td>
-            <td>${escapeHtml(r.nome_cirurgia)}</td>
-            <td>${escapeHtml(r.duracao)}</td>
-            <td>${escapeHtml(r.sala)}</td>
-            <td><span class="badge ${r.servico === "SMA" ? "sma" : "particular"}">${escapeHtml(r.servico)}</span></td>
-            <td><span class="badge anest">${escapeHtml(r.anestesista_escalado || "Não definido")}</span></td>
-            <td><b>${escapeHtml(r.iniciais_paciente)}</b></td>
-            <td>${escapeHtml(r.idade_paciente)}</td>
-            <td>
-              <div class="actions">
-                <button class="small" onclick='editarCirurgia(${JSON.stringify(r)})'>Editar</button>
-                <button class="small red" onclick="deletarCirurgia(${r.id})">Deletar</button>
-              </div>
-            </td>
-          </tr>
-        `).join("")}
-      </tbody>
-    </table>
-    </div>
-  `;
-}
-
-function renderAnestesistas(rows){
-  if(!rows.length){
-    $("listaAnestesistas").innerHTML = '<div class="empty">Nenhum anestesista cadastrado para esta data.</div>';
-    return;
-  }
-
-  $("listaAnestesistas").innerHTML = `
-    <div class="scroll">
-    <table>
-      <thead>
-        <tr>
-          <th>Anestesista</th>
-          <th>Observação</th>
-          <th>Ações</th>
-        </tr>
-      </thead>
-      <tbody>
-        ${rows.map(r => `
-          <tr>
-            <td><b>${escapeHtml(r.nome_anestesista)}</b></td>
-            <td>${escapeHtml(r.observacao || "")}</td>
-            <td>
-              <div class="actions">
-                <button class="small" onclick='editarAnestesista(${JSON.stringify(r)})'>Editar</button>
-                <button class="small red" onclick="deletarAnestesista(${r.id})">Deletar</button>
-              </div>
-            </td>
-          </tr>
-        `).join("")}
-      </tbody>
-    </table>
-    </div>
-  `;
-}
-
-async function salvarCirurgia(){
+function parseImport(){
+  var text=$('surgeryText').value.trim();
+  if(!text){parsedImport=[];renderImportPreview();return}
   try{
-    const body = {
-      data_cirurgia: getData(),
-      horario_inicio: $("horario_inicio").value,
-      nome_cirurgia: $("nome_cirurgia").value,
-      duracao: $("duracao").value,
-      sala: $("sala").value,
-      servico: $("servico").value,
-      anestesista_escalado: $("anestesista_escalado").value,
-      iniciais_paciente: $("iniciais_paciente").value,
-      idade_paciente: Number($("idade_paciente").value)
-    };
-
-    if(body.servico === "Particular" && !body.anestesista_escalado){
-      body.anestesista_escalado = "Particular";
-    }
-
-    if(editandoCirurgiaId){
-      await api("/api/cirurgias/" + editandoCirurgiaId,{
-        method:"PUT",
-        body:JSON.stringify(body)
+    if(text.startsWith('[')){
+      var arr=JSON.parse(text);
+      parsedImport=arr.map(function(x){
+        return {
+          data_cirurgia:currentDate,
+          horario_inicio:x.horario_inicio||x.inicio||x.hora||"",
+          sala:x.sala||"Não escaladas",
+          nome_cirurgia:x.nome_cirurgia||x.cirurgia||x.nome||"",
+          duracao:durToText(x.duracao||x.duration||"01:00"),
+          servico:(x.servico||"SMA").toString().toLowerCase().includes("particular")?"Particular":"SMA",
+          iniciais_paciente:(x.iniciais_paciente||x.iniciais||"NI").toString().replace(/\W/g,"").toUpperCase(),
+          idade_paciente:Number(x.idade_paciente||x.idade||0),
+          observacao:x.observacao||x.obs||""
+        }
       });
-      setStatus("Cirurgia atualizada.", "ok");
     }else{
-      await api("/api/cirurgias",{
-        method:"POST",
-        body:JSON.stringify(body)
-      });
-      setStatus("Cirurgia salva.", "ok");
+      parsedImport=text.split(/\n+/).map(l=>l.trim()).filter(Boolean).map(parseLine).filter(Boolean);
     }
-
-    cancelarEdicaoCirurgia();
-    await carregarDia();
-  }catch(err){
-    setStatus(err.message, "err");
-  }
+    renderImportPreview();
+    status("Processado: "+parsedImport.length+" cirurgia(s).","ok");
+  }catch(e){status("Erro ao processar: "+e.message,"err")}
 }
 
-function editarCirurgia(r){
-  editandoCirurgiaId = r.id;
-
-  $("horario_inicio").value = r.horario_inicio || "";
-  $("nome_cirurgia").value = r.nome_cirurgia || "";
-  $("duracao").value = r.duracao || "";
-  $("sala").value = r.sala || "";
-  $("servico").value = r.servico || "SMA";
-  $("iniciais_paciente").value = r.iniciais_paciente || "";
-  $("idade_paciente").value = r.idade_paciente || "";
-
-  atualizarOpcoesAnestesista(r.anestesista_escalado || "");
-
-  $("tituloCirurgia").textContent = "Editando cirurgia ID " + r.id;
-  $("btnSalvarCirurgia").textContent = "Salvar edição";
-  window.scrollTo({top:0, behavior:"smooth"});
+function renderImportPreview(){
+  var box=$('importPreview');
+  if(!parsedImport.length){box.innerHTML='Nenhuma lista processada ainda.';return}
+  box.innerHTML='<div class="list">'+parsedImport.map(function(c,i){
+    return '<div class="case"><div class="caseName">'+html(c.horario_inicio+' · '+c.nome_cirurgia)+'</div>'+
+      '<div class="caseMeta">'+html(c.sala)+' · '+html(c.duracao)+' · '+html(c.servico)+' · '+html(c.iniciais_paciente)+' · '+html(c.idade_paciente)+' anos</div></div>'
+  }).join('')+'</div>';
 }
 
-function cancelarEdicaoCirurgia(){
-  editandoCirurgiaId = null;
-
-  $("horario_inicio").value = "";
-  $("nome_cirurgia").value = "";
-  $("duracao").value = "";
-  $("sala").value = "";
-  $("servico").value = "SMA";
-  $("iniciais_paciente").value = "";
-  $("idade_paciente").value = "";
-
-  atualizarOpcoesAnestesista("");
-
-  $("tituloCirurgia").textContent = "Adicionar cirurgia";
-  $("btnSalvarCirurgia").textContent = "Salvar cirurgia";
+async function saveImported(){
+  if(!parsedImport.length){status("Nada para importar.","warn");return}
+  var resp=await api("/api/cirurgias/bulk",{method:"POST",body:JSON.stringify({cirurgias:parsedImport})});
+  status("Importação salva: "+resp.inserted+" novas · "+resp.updated+" atualizadas · "+resp.errors+" erros.","ok");
+  parsedImport=[];
+  $('surgeryText').value="";
+  await loadDay();
 }
 
-async function deletarCirurgia(id){
-  if(!confirm("Deletar esta cirurgia?")) return;
+function openModal(htmlContent){$('modal').innerHTML=htmlContent;$('modalBg').style.display='flex'}
+function closeModal(){$('modalBg').style.display='none';$('modal').innerHTML=''}
+$('modalBg').addEventListener('click',function(e){if(e.target===$('modalBg'))closeModal()});
 
-  try{
-    await api("/api/cirurgias/" + id,{method:"DELETE"});
-    setStatus("Cirurgia deletada.", "ok");
-    await carregarDia();
-  }catch(err){
-    setStatus(err.message, "err");
-  }
-}
-
-async function salvarAnestesista(){
-  try{
-    const body = {
-      data_escala: getData(),
-      nome_anestesista: $("nome_anestesista").value,
-      observacao: $("observacao_anestesista").value
+function openSurgeryModal(id){
+  var it=id?items.find(x=>x.id===id):null;
+  var opts=['Não escaladas'].concat(rooms.slice(1).map(r=>r.name));
+  var anesOptions='<option value="">Sem anestesista</option><option value="Particular">Particular</option>'+anesthetists.map(a=>'<option>'+html(a.name)+'</option>').join('');
+  openModal('<h2>'+(it?'Editar':'Nova')+' cirurgia</h2>'+
+    '<div class="grid2"><input id="mHora" placeholder="07:00" value="'+html(it?fmtTime(it.start):'')+'"><input id="mDur" placeholder="02:00" value="'+html(it?durToText(it.duration):'')+'"></div>'+
+    '<input id="mNome" placeholder="Nome da cirurgia" style="margin-top:8px" value="'+html(it?it.name:'')+'">'+
+    '<div class="grid2" style="margin-top:8px"><select id="mSala">'+opts.map(o=>'<option '+(it&&it.room===o?'selected':'')+'>'+html(o)+'</option>').join('')+'</select><select id="mServ"><option '+(it&&it.servico==='SMA'?'selected':'')+'>SMA</option><option '+(it&&it.servico==='Particular'?'selected':'')+'>Particular</option></select></div>'+
+    '<select id="mAnest" style="margin-top:8px">'+anesOptions+'</select>'+
+    '<div class="grid2" style="margin-top:8px"><input id="mIni" placeholder="Iniciais" value="'+html(it?it.initials:'')+'"><input id="mIdade" type="number" placeholder="Idade" value="'+html(it?it.age:'')+'"></div>'+
+    '<input id="mObs" placeholder="Obs" style="margin-top:8px" value="'+html(it?it.obs:'')+'">'+
+    '<div class="row" style="margin-top:12px"><button class="green" id="mSave">Salvar</button><button class="gray" id="mCancel">Cancelar</button></div>');
+  if(it)$('mAnest').value=it.anest||"";
+  $('mCancel').onclick=closeModal;
+  $('mSave').onclick=async function(){
+    var payload={
+      data_cirurgia:currentDate,
+      horario_inicio:$('mHora').value,
+      nome_cirurgia:$('mNome').value,
+      duracao:$('mDur').value,
+      sala:$('mSala').value,
+      servico:$('mServ').value,
+      anestesista_escalado:$('mAnest').value,
+      iniciais_paciente:$('mIni').value,
+      idade_paciente:Number($('mIdade').value),
+      observacao:$('mObs').value
     };
+    if(payload.servico==='Particular'&&!payload.anestesista_escalado)payload.anestesista_escalado='Particular';
+    if(it) await api('/api/cirurgias/'+it.id,{method:'PUT',body:JSON.stringify(payload)});
+    else await api('/api/cirurgias',{method:'POST',body:JSON.stringify(payload)});
+    closeModal();
+    await loadDay();
+  };
+}
 
-    if(editandoAnestesistaId){
-      await api("/api/anestesistas/" + editandoAnestesistaId,{
-        method:"PUT",
-        body:JSON.stringify(body)
-      });
-      setStatus("Anestesista atualizado.", "ok");
-    }else{
-      await api("/api/anestesistas",{
-        method:"POST",
-        body:JSON.stringify(body)
-      });
-      setStatus("Anestesista adicionado à escala do dia.", "ok");
+function openAssignModal(id){
+  var it=items.find(x=>x.id===id); if(!it)return;
+  var choices=['Particular'].concat(anesthetists.map(a=>a.name));
+  openModal('<h2>Escalar: '+html(it.name)+'</h2><div class="list">'+choices.map(function(n){return '<button class="light" data-an="'+html(n)+'">'+html(n)+'</button>'}).join('')+'</div><button class="gray" style="margin-top:10px" id="mCancel">Cancelar</button>');
+  $('mCancel').onclick=closeModal;
+  document.querySelectorAll('[data-an]').forEach(function(b){
+    b.onclick=async function(){
+      it.anest=b.dataset.an;
+      it.servico=it.anest==='Particular'?'Particular':'SMA';
+      await api('/api/cirurgias/'+it.id,{method:'PUT',body:JSON.stringify(itemToPayload(it))});
+      closeModal();
+      await loadDay();
     }
-
-    cancelarEdicaoAnestesista();
-    await carregarDia();
-  }catch(err){
-    setStatus(err.message, "err");
-  }
+  });
 }
 
-function editarAnestesista(r){
-  editandoAnestesistaId = r.id;
-  $("nome_anestesista").value = r.nome_anestesista || "";
-  $("observacao_anestesista").value = r.observacao || "";
-  $("btnSalvarAnestesista").textContent = "Salvar edição";
+async function deleteSurgery(id){
+  if(!confirm("Deletar cirurgia?"))return;
+  await api('/api/cirurgias/'+id,{method:'DELETE'});
+  await loadDay();
 }
 
-function cancelarEdicaoAnestesista(){
-  editandoAnestesistaId = null;
-  $("nome_anestesista").value = "";
-  $("observacao_anestesista").value = "";
-  $("btnSalvarAnestesista").textContent = "Adicionar anestesista";
+async function addAnes(){
+  var name=$('anesName').value.trim();
+  if(!name){status("Nome do anestesista obrigatório.","warn");return}
+  var payload={data_escala:currentDate,nome_anestesista:name,horario_escala:$('anesShift').value,funcao:$('anesRole').value,observacao:$('anesObs').value};
+  var resp=await api('/api/anestesistas',{method:'POST',body:JSON.stringify(payload)});
+  status(resp.message||"Anestesista salvo.","ok");
+  $('anesName').value='';$('anesShift').value='';$('anesRole').value='';$('anesObs').value='';
+  await loadDay();
 }
 
-async function deletarAnestesista(id){
-  if(!confirm("Remover anestesista da escala do dia?")) return;
-
-  try{
-    await api("/api/anestesistas/" + id,{method:"DELETE"});
-    setStatus("Anestesista removido.", "ok");
-    await carregarDia();
-  }catch(err){
-    setStatus(err.message, "err");
-  }
+function fillAnesForm(id){
+  var a=anesthetists.find(x=>x.id===id); if(!a)return;
+  $('anesName').value=a.name;$('anesShift').value=a.shift;$('anesRole').value=a.role;$('anesObs').value=a.obs;
+  setTab('escala');
 }
 
-function escapeHtml(value){
-  return String(value ?? "")
-    .replaceAll("&","&amp;")
-    .replaceAll("<","&lt;")
-    .replaceAll(">","&gt;")
-    .replaceAll('"',"&quot;")
-    .replaceAll("'","&#039;");
+async function deleteAnes(id){
+  if(!confirm("Remover anestesista da escala deste dia?"))return;
+  await api('/api/anestesistas/'+id,{method:'DELETE'});
+  await loadDay();
 }
 
-function escapeAttr(value){
-  return String(value ?? "")
-    .replaceAll("&","&amp;")
-    .replaceAll('"',"&quot;")
-    .replaceAll("<","&lt;")
-    .replaceAll(">","&gt;");
+function exportJson(){
+  var data={data:currentDate,cirurgias:items.map(itemToPayload),anestesistas:anesthetists};
+  openModal('<h2>Exportar JSON</h2><textarea>'+html(JSON.stringify(data,null,2))+'</textarea><button class="gray" onclick="document.getElementById(\'modalBg\').click()">Fechar</button>');
 }
 
-$("dataSelecionada").value = dataHojeISO();
-carregarDia();
+function setTab(tab){
+  document.querySelectorAll('.tab').forEach(b=>b.classList.toggle('active',b.dataset.tab===tab));
+  document.querySelectorAll('.screen').forEach(s=>s.classList.add('hidden'));
+  $('tab-'+tab).classList.remove('hidden');
+}
+
+function bind(){
+  document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>setTab(b.dataset.tab));
+  $('btnRefresh').onclick=loadDay;
+  $('dateInput').onchange=function(){currentDate=this.value||todayISO();loadDay()};
+  $('btnParse').onclick=parseImport;
+  $('btnExample').onclick=function(){$('surgeryText').value='07:00 | Oeste 03 | Colecistectomia | 120 | SMA | FC | 30\n09:30 | Lane 02 | Herniorrafia inguinal | 90 | Particular | AB | 44';parseImport()};
+  $('btnClearText').onclick=function(){$('surgeryText').value='';parsedImport=[];renderImportPreview()};
+  $('btnSaveImported').onclick=saveImported;
+  $('btnAddSurgery').onclick=()=>openSurgeryModal();
+  $('btnAddSurgery2').onclick=()=>openSurgeryModal();
+  $('btnAddSurgeryImport').onclick=()=>openSurgeryModal();
+  $('btnNow').onclick=function(){var sh=document.querySelector('.mapShell');if(sh)sh.scrollLeft=Math.max(0,labelW+(7-startHour)*hourW-80)};
+  $('btnExport').onclick=exportJson;
+  $('btnAddAnes').onclick=addAnes;
+}
+
+function boot(){
+  initRooms();
+  currentDate=todayISO();
+  $('dateInput').value=currentDate;
+  bind();
+  loadDay().catch(e=>status("Erro no boot: "+e.message,"err"));
+}
+
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot); else boot();
+
+})();
 </script>
-
 </body>
 </html>
