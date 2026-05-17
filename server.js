@@ -1442,6 +1442,8 @@ app.post('/api/hospitais', authRequired, adminRequired, async (req,res)=>{
     const nome = String(req.body.nome || '').trim();
     const tipo = String(req.body.tipo || 'hospital').trim() || 'hospital';
     if(!nome) return res.status(400).json({ok:false,error:'Nome do hospital obrigatorio'});
+    const existente = await get(`SELECT id FROM hospitais WHERE lower(nome) = lower(?)`, [nome]);
+    if(existente) return res.status(409).json({ok:false,error:'Ja existe hospital/clinica com este nome'});
     const slug = normalizarTextoChave(nome).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'') || ('hospital-'+Date.now());
     const result = await run(`INSERT INTO hospitais(nome, slug, tipo) VALUES(?,?,?)`, [nome, slug, tipo]);
     const hospitalId = result.lastID;
