@@ -1428,9 +1428,24 @@ app.get('/api/hospitais', authRequired, async (req,res)=>{
   }
 });
 
-app.get('/api/admin-hospitais', authRequired, async (req,res)=>{
+app.get('/api/admin-hospitais', authRequired, adminRequired, async (req,res)=>{
   try{
-    const hospitais = await all(`SELECT id, nome, tipo FROM hospitais WHERE ativo = 1 ORDER BY nome`);
+    const hospitais = await all(`
+      SELECT
+        h.id,
+        h.nome,
+        h.slug,
+        h.tipo,
+        h.ativo,
+        COUNT(DISTINCT hs.id) AS total_salas,
+        COUNT(DISTINCT uh.user_id) AS total_usuarios
+      FROM hospitais h
+      LEFT JOIN hospital_salas hs ON hs.hospital_id = h.id AND hs.ativa = 1
+      LEFT JOIN user_hospitais uh ON uh.hospital_id = h.id
+      WHERE h.ativo = 1
+      GROUP BY h.id
+      ORDER BY h.nome
+    `);
     res.json({ok:true,hospitais});
   }catch(e){
     res.status(500).json({ok:false,error:e.message});
@@ -1459,6 +1474,49 @@ app.post('/api/hospitais', authRequired, adminRequired, async (req,res)=>{
     }
     const hospital = await get(`SELECT * FROM hospitais WHERE id = ?`, [hospitalId]);
     res.status(201).json({ok:true,hospital});
+  }catch(e){
+    res.status(500).json({ok:false,error:e.message});
+  }
+});
+
+app.put('/api/hospitais/:id', authRequired, adminRequired, async (req,res)=>{
+  try{
+    const id = Number(req.params.id);
+    if(!Number.isInteger(id) || id <= 0) return res.status(400).json({ok:false,error:'Hospital invalido'});
+    const atual = await get(`SELECT id FROM hospitais WHERE id = ? AND ativo = 1`, [id]);
+    if(!atual) return res.status(404).json({ok:false,error:'Hospital/clinica nao encontrado'});
+
+    const nome = String(req.body.nome || '').trim();
+    const tipo = String(req.body.tipo || 'hospital').trim() || 'hospital';
+    if(!nome) return res.status(400).json({ok:false,error:'Nome do hospital obrigatorio'});
+
+    const duplicado = await get(`SELECT id FROM hospitais WHERE lower(nome) = lower(?) AND id <> ? AND ativo = 1`, [nome, id]);
+    if(duplicado) return res.status(409).json({ok:false,error:'Ja existe hospital/clinica com este nome'});
+
+    await run(`
+      UPDATE hospitais
+      SET nome = ?, tipo = ?, atualizado_em = datetime('now', 'localtime')
+      WHERE id = ? AND ativo = 1
+    `, [nome, tipo, id]);
+    const hospital = await get(`SELECT * FROM hospitais WHERE id = ?`, [id]);
+    res.json({ok:true,hospital});
+  }catch(e){
+    res.status(500).json({ok:false,error:e.message});
+  }
+});
+
+app.delete('/api/hospitais/:id', authRequired, adminRequired, async (req,res)=>{
+  try{
+    const id = Number(req.params.id);
+    if(!Number.isInteger(id) || id <= 0) return res.status(400).json({ok:false,error:'Hospital invalido'});
+    const atual = await get(`SELECT id, nome FROM hospitais WHERE id = ? AND ativo = 1`, [id]);
+    if(!atual) return res.status(404).json({ok:false,error:'Hospital/clinica nao encontrado'});
+
+    const total = await get(`SELECT COUNT(*) AS total FROM hospitais WHERE ativo = 1`);
+    if(total && total.total <= 1) return res.status(400).json({ok:false,error:'Nao e possivel deletar o ultimo hospital ativo'});
+
+    await run(`UPDATE hospitais SET ativo = 0, atualizado_em = datetime('now', 'localtime') WHERE id = ?`, [id]);
+    res.json({ok:true,deleted_id:id});
   }catch(e){
     res.status(500).json({ok:false,error:e.message});
   }
@@ -1978,6 +2036,11 @@ app.get('/index_graf.html', authRequired, (req,res)=>{
 
 app.get('/sala.html', authRequired, (req,res)=>{
   res.sendFile(path.join(__dirname,'public','sala.html'));
+});
+
+app.get('/admin_clinicas.html', authRequired, adminRequired, (req,res)=>{
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+  res.sendFile(path.join(__dirname,'public','admin_clinicas.html'));
 });
 
 app.get('/admin_usuarios.html', authRequired, (req,res)=>{
