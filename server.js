@@ -88,6 +88,8 @@ console.log("==================================");
 console.log("Sistema Mapa de Cirurgias por Dia");
 console.log("DB:", DB_FILE);
 console.log("Railway:", IS_RAILWAY ? "sim" : "nao");
+console.log("OpenAI API key:", process.env.OPENAI_API_KEY ? "configurada" : "nao configurada");
+console.log("OpenAI vision model:", OPENAI_VISION_MODEL);
 console.log("PORT:", PORT);
 console.log("==================================");
 
@@ -862,6 +864,18 @@ app.get("/api/health", async (req, res) => {
   } catch(err) {
     res.status(500).json({ ok:false, error:err.message });
   }
+});
+
+app.get("/api/config-check", authRequired, adminRequired, async (req, res) => {
+  res.json({
+    ok: true,
+    railway: IS_RAILWAY,
+    database: DB_FILE,
+    openai_api_key_configurada: !!process.env.OPENAI_API_KEY,
+    openai_api_key_tamanho: process.env.OPENAI_API_KEY ? process.env.OPENAI_API_KEY.length : 0,
+    openai_vision_model: OPENAI_VISION_MODEL,
+    port: PORT
+  });
 });
 
 app.get("/api/dia/:data", async (req, res) => {
