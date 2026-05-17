@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta http-equiv="Cache-Control" content="no-store">
+<title>Recuperar senha - MAPA CC</title>
+<style>
+:root{--bg:#0d141c;--ink:#f8fafc;--muted:#aebdca;--card:#fff;--text:#132033;--line:#d8e1eb;--blue:#2454ff;--blue2:#1532a3;--green:#0f8a63;--err:#be123c}
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;background:radial-gradient(circle at 20% 12%,#29435d 0,#0d141c 34%,#070b10 100%);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;color:var(--text);display:grid;place-items:center;padding:22px}
+.card{width:min(460px,100%);background:var(--card);border:1px solid #ffffff66;border-radius:24px;padding:24px;box-shadow:0 24px 70px #0008}
+.brand{font-size:12px;font-weight:900;letter-spacing:.18em;text-transform:uppercase;color:#175cd3}
+h1{margin:10px 0 8px;font-size:28px}.sub{color:#667085;font-size:14px;line-height:1.45;margin-bottom:18px}
+label{font-size:12px;font-weight:900;margin:13px 0 6px;display:block;color:#475467;text-transform:uppercase}
+input{width:100%;border:1px solid var(--line);border-radius:14px;padding:14px;font:inherit;background:#fbfdff;color:var(--text)}
+input:focus{outline:3px solid #dbe7ff;border-color:#8aa8ff;background:white}
+button{width:100%;margin-top:18px;border:0;border-radius:14px;background:linear-gradient(135deg,var(--blue),var(--blue2));color:white;font-weight:900;padding:14px;font:inherit;cursor:pointer}
+button.green{background:var(--green)}button:disabled{opacity:.72;cursor:wait}
+.status{margin-top:14px;padding:11px;border-radius:13px;font-size:13px;font-weight:800;background:#eff6ff;color:#1d4ed8;white-space:pre-wrap}
+.status.ok{background:#dcfce7;color:#166534}.status.err{background:#fff1f2;color:var(--err)}
+.link{display:inline-block;margin-top:14px;color:#175cd3;font-weight:900;font-size:13px;text-decoration:none}.link:hover{text-decoration:underline}
+.hidden{display:none}
+</style>
+<link rel="stylesheet" href="/mapacc-theme.css">
+</head>
+<body>
+<main class="card">
+  <div class="brand">MAPA CC</div>
+  <section id="requestBox">
+    <h1>Recuperar senha</h1>
+    <div class="sub">Informe seu usuario ou e-mail cadastrado. Se encontrarmos um e-mail vinculado, enviaremos um link de redefinicao.</div>
+    <label>Usuario ou e-mail</label>
+    <input id="identificador" autocomplete="username email">
+    <button id="btnRequest">Enviar link</button>
+  </section>
+
+  <section id="resetBox" class="hidden">
+    <h1>Nova senha</h1>
+    <div class="sub">Digite sua nova senha para concluir a recuperacao.</div>
+    <label>Nova senha</label>
+    <input id="newPassword" type="password" autocomplete="new-password">
+    <label>Confirmar senha</label>
+    <input id="confirmPassword" type="password" autocomplete="new-password">
+    <button class="green" id="btnReset">Salvar nova senha</button>
+  </section>
+
+  <div id="status" class="status">Pronto.</div>
+  <a class="link" href="/login.html">Voltar ao login</a>
+</main>
+
+<script>
+const $ = id => document.getElementById(id);
+const params = new URLSearchParams(location.search);
+const token = params.get('token') || '';
+if(token){
+  $('requestBox').classList.add('hidden');
+  $('resetBox').classList.remove('hidden');
+  $('status').textContent = 'Link validado no navegador. Informe a nova senha.';
+}
+
+async function api(url, body){
+  const r = await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body),cache:'no-store'});
+  const data = await r.json().catch(()=>({}));
+  if(!r.ok || data.ok===false) throw new Error(data.error || 'Erro de API');
+  return data;
+}
+
+$('btnRequest').onclick = async ()=>{
+  const st = $('status');
+  try{
+    $('btnRequest').disabled = true;
+    $('btnRequest').textContent = 'Enviando...';
+    const data = await api('/api/password-reset/request',{identificador:$('identificador').value.trim()});
+    st.className = 'status ok';
+    st.textContent = data.message || 'Se existir e-mail cadastrado, enviaremos um link.';
+  }catch(e){
+    st.className = 'status err';
+    st.textContent = e.message;
+  }finally{
+    $('btnRequest').disabled = false;
+    $('btnRequest').textContent = 'Enviar link';
+  }
+};
+
+$('btnReset').onclick = async ()=>{
+  const st = $('status');
+  const password = $('newPassword').value;
+  if(password !== $('confirmPassword').value){
+    st.className = 'status err';
+    st.textContent = 'As senhas nao conferem.';
+    return;
+  }
+  try{
+    $('btnReset').disabled = true;
+    $('btnReset').textContent = 'Salvando...';
+    const data = await api('/api/password-reset/confirm',{token,password});
+    st.className = 'status ok';
+    st.textContent = data.message || 'Senha redefinida.';
+    setTimeout(()=>{ location.href='/login.html'; }, 1200);
+  }catch(e){
+    st.className = 'status err';
+    st.textContent = e.message;
+    $('btnReset').disabled = false;
+    $('btnReset').textContent = 'Salvar nova senha';
+  }
+};
+
+$('identificador').addEventListener('keydown', e => { if(e.key === 'Enter') $('btnRequest').click(); });
+$('confirmPassword').addEventListener('keydown', e => { if(e.key === 'Enter') $('btnReset').click(); });
+</script>
+</body>
+</html>

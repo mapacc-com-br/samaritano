@@ -8,6 +8,7 @@
   },
   "dependencies": {
     "express": "4.19.2",
+    "nodemailer": "6.9.14",
     "sqlite3": "5.1.7"
   },
   "engines": {

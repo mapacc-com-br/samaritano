@@ -37,6 +37,12 @@ const DEFAULT_HOSPITAL_NOME = "Hospital Samaritano";
 const DEFAULT_HOSPITAL_SLUG = "samaritano";
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY || process.env.MAPACC_OPENAI_API_KEY || "";
 const OPENAI_VISION_MODEL = process.env.OPENAI_VISION_MODEL || "gpt-5.4-mini";
+const APP_BASE_URL = String(process.env.APP_BASE_URL || process.env.RAILWAY_PUBLIC_DOMAIN || "").trim();
+const SMTP_HOST = String(process.env.SMTP_HOST || "").trim();
+const SMTP_PORT = Number(process.env.SMTP_PORT || 587);
+const SMTP_USER = String(process.env.SMTP_USER || "").trim();
+const SMTP_PASS = String(process.env.SMTP_PASS || "").trim();
+const SMTP_FROM = String(process.env.SMTP_FROM || SMTP_USER || "").trim();
 const MAX_IMPORT_IMAGE_CHARS = 12 * 1024 * 1024;
 const DEFAULT_IMPORT_PROMPT = [
   "Extraia a lista de cirurgias do Samaritano no formato:",
@@ -68,10 +74,13 @@ const SIRIO_LIBANES_SALAS = [
   "RPA CDI"
 ];
 const BACKUP_TABLES = [
+  "empresas",
+  "empresa_hospitais",
   "hospitais",
   "hospital_salas",
   "app_config",
   "users",
+  "user_empresas",
   "user_hospitais",
   "hospital_acessos_dia",
   "cirurgias",
@@ -180,6 +189,17 @@ async function garantirHospitalPadrao() {
   `);
 
   await run(`
+    CREATE TABLE IF NOT EXISTS empresas (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      nome TEXT NOT NULL UNIQUE,
+      slug TEXT NOT NULL UNIQUE,
+      ativo INTEGER NOT NULL DEFAULT 1,
+      criado_em TEXT DEFAULT (datetime('now', 'localtime')),
+      atualizado_em TEXT DEFAULT (datetime('now', 'localtime'))
+    )
+  `);
+
+  await run(`
     CREATE TABLE IF NOT EXISTS hospitais (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       nome TEXT NOT NULL UNIQUE,
@@ -192,6 +212,18 @@ async function garantirHospitalPadrao() {
     )
   `);
   await garantirColuna("hospitais", "prompt_importacao_foto", "TEXT");
+
+  await run(`
+    CREATE TABLE IF NOT EXISTS empresa_hospitais (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      empresa_id INTEGER NOT NULL,
+      hospital_id INTEGER NOT NULL,
+      criado_em TEXT DEFAULT (datetime('now', 'localtime')),
+      UNIQUE(empresa_id, hospital_id),
+      FOREIGN KEY(empresa_id) REFERENCES empresas(id) ON DELETE CASCADE,
+      FOREIGN KEY(hospital_id) REFERENCES hospitais(id) ON DELETE CASCADE
+    )
+  `);
 
   await run(`
     CREATE TABLE IF NOT EXISTS hospital_salas (
@@ -218,6 +250,19 @@ async function garantirHospitalPadrao() {
       papel TEXT NOT NULL DEFAULT 'plantonista',
       criado_em TEXT DEFAULT (datetime('now', 'localtime')),
       UNIQUE(user_id, hospital_id)
+    )
+  `);
+
+  await run(`
+    CREATE TABLE IF NOT EXISTS user_empresas (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL,
+      empresa_id INTEGER NOT NULL,
+      papel TEXT NOT NULL DEFAULT 'plantonista',
+      criado_em TEXT DEFAULT (datetime('now', 'localtime')),
+      UNIQUE(user_id, empresa_id),
+      FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE,
+      FOREIGN KEY(empresa_id) REFERENCES empresas(id) ON DELETE CASCADE
     )
   `);
 
@@ -289,12 +334,25 @@ async function garantirUsuariosTabela() {
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     username TEXT NOT NULL UNIQUE,
     password_hash TEXT NOT NULL,
+    email TEXT,
     role TEXT NOT NULL DEFAULT 'plantonista',
     ativo INTEGER NOT NULL DEFAULT 1,
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
   )`);
   await garantirColuna("users", "ativo", "INTEGER NOT NULL DEFAULT 1");
+  await garantirColuna("users", "email", "TEXT");
+  await run(`
+    CREATE TABLE IF NOT EXISTS password_reset_tokens (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL,
+      token_hash TEXT NOT NULL UNIQUE,
+      expires_at TEXT NOT NULL,
+      used_at TEXT,
+      created_at TEXT DEFAULT (datetime('now', 'localtime')),
+      FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
+    )
+  `);
 }
 
 async function migrarAnestesistasDiaPorHospital(hospitalPadraoId) {
@@ -576,7 +634,18 @@ async function usuarioTemVinculo(userId, hospitalId) {
     FROM user_hospitais
     WHERE user_id = ? AND hospital_id = ?
   `, [userId, hospitalId]);
-  return !!row;
+  if(row) return true;
+
+  const empresa = await get(`
+    SELECT eh.id
+    FROM empresa_hospitais eh
+    JOIN user_empresas ue ON ue.empresa_id = eh.empresa_id
+    JOIN empresas e ON e.id = eh.empresa_id AND e.ativo = 1
+    WHERE ue.user_id = ?
+      AND eh.hospital_id = ?
+    LIMIT 1
+  `, [userId, hospitalId]);
+  return !!empresa;
 }
 
 async function acessoHospitalNoDia(req, hospitalId, data) {
@@ -608,16 +677,15 @@ async function acessoHospitalNoDia(req, hospitalId, data) {
   }
 
   if (user.role === "coordenador") {
-    if (!vinculado) {
-      return { pode_ver:false, pode_editar:false, papel_dia:"coordenador", origem:"nenhuma" };
-    }
-
     const coordenaHoje = diario && diario.pode_ver && diario.papel_dia === "coordenador";
+    if (!coordenaHoje) {
+      return { pode_ver:false, pode_editar:false, papel_dia:"coordenador", origem:"fora-do-plantao" };
+    }
     return {
       pode_ver:true,
-      pode_editar:!!coordenaHoje,
-      papel_dia:coordenaHoje ? "coordenador" : "visualizacao",
-      origem:coordenaHoje ? "diario" : "vinculo"
+      pode_editar:true,
+      papel_dia:"coordenador",
+      origem:"diario"
     };
   }
 
@@ -655,25 +723,38 @@ async function hospitaisPermitidos(req, data) {
     hospitais = await all(`
       SELECT DISTINCT h.*
       FROM hospitais h
-      JOIN user_hospitais uh ON uh.hospital_id = h.id AND uh.user_id = ?
+      LEFT JOIN user_hospitais uh ON uh.hospital_id = h.id AND uh.user_id = ?
+      LEFT JOIN empresa_hospitais eh ON eh.hospital_id = h.id
+      LEFT JOIN user_empresas ue ON ue.empresa_id = eh.empresa_id AND ue.user_id = ?
+      LEFT JOIN empresas e ON e.id = eh.empresa_id AND e.ativo = 1
       WHERE h.ativo = 1
+        AND (uh.id IS NOT NULL OR (ue.id IS NOT NULL AND e.id IS NOT NULL))
       ORDER BY h.nome
-    `, [user.id]);
+    `, [user.id, user.id]);
   } else {
     hospitais = await all(`
       SELECT DISTINCT h.*
       FROM hospitais h
-      JOIN user_hospitais uh ON uh.hospital_id = h.id AND uh.user_id = ?
+      JOIN hospital_acessos_dia ad ON ad.hospital_id = h.id AND ad.user_id = ? AND ad.data_acesso = ? AND ad.pode_ver = 1
       WHERE h.ativo = 1
       ORDER BY h.nome
-    `, [user.id]);
+    `, [user.id, data || dataLocalISO()]);
   }
 
   const enriquecidos = [];
   for (const hospital of hospitais) {
     const acesso = await acessoHospitalNoDia(req, hospital.id, data);
+    const empresas = await all(`
+      SELECT e.id, e.nome
+      FROM empresas e
+      JOIN empresa_hospitais eh ON eh.empresa_id = e.id
+      WHERE eh.hospital_id = ? AND e.ativo = 1
+      ORDER BY e.nome
+    `, [hospital.id]);
     enriquecidos.push({
       ...hospital,
+      empresa_ids: empresas.map(e => e.id).join(","),
+      empresas: empresas.map(e => e.nome).join(", "),
       papel_dia: acesso.papel_dia,
       pode_ver: acesso.pode_ver ? 1 : 0,
       pode_editar: acesso.pode_editar ? 1 : 0,
@@ -1434,16 +1515,67 @@ function verifyPassword(password, stored){
   return crypto.timingSafeEqual(Buffer.from(hash,'hex'), Buffer.from(test,'hex'));
 }
 
+function sha256Hex(value){
+  return crypto.createHash('sha256').update(String(value || '')).digest('hex');
+}
+
+function publicBaseUrl(req){
+  if(APP_BASE_URL){
+    if(APP_BASE_URL.startsWith('http://') || APP_BASE_URL.startsWith('https://')) return APP_BASE_URL.replace(/\/+$/,'');
+    return 'https://' + APP_BASE_URL.replace(/\/+$/,'');
+  }
+  const proto = req.headers['x-forwarded-proto'] || req.protocol || 'http';
+  return proto + '://' + req.get('host');
+}
+
+function smtpConfigurado(){
+  return !!(SMTP_HOST && SMTP_PORT && SMTP_USER && SMTP_PASS && SMTP_FROM);
+}
+
+async function enviarEmailRecuperacao({ to, username, resetLink }) {
+  if(!smtpConfigurado()) {
+    const err = new Error('SMTP nao configurado');
+    err.code = 'SMTP_NOT_CONFIGURED';
+    throw err;
+  }
+  const nodemailer = require('nodemailer');
+  const transporter = nodemailer.createTransport({
+    host:SMTP_HOST,
+    port:SMTP_PORT,
+    secure:SMTP_PORT === 465,
+    auth:{ user:SMTP_USER, pass:SMTP_PASS }
+  });
+  await transporter.sendMail({
+    from:SMTP_FROM,
+    to,
+    subject:'Recuperacao de senha - MAPA CC',
+    text:[
+      'Ola '+username+',',
+      '',
+      'Recebemos uma solicitacao para redefinir sua senha no MAPA CC.',
+      'Acesse o link abaixo em ate 30 minutos:',
+      resetLink,
+      '',
+      'Se voce nao solicitou isso, ignore este e-mail.'
+    ].join('\n')
+  });
+}
+
 // Cria tabela de usuários e usuário inicial godofredo/admin
 db.serialize(() => {
   db.run(`CREATE TABLE IF NOT EXISTS users (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     username TEXT NOT NULL UNIQUE,
     password_hash TEXT NOT NULL,
+    email TEXT,
     role TEXT NOT NULL DEFAULT 'plantonista',
+    ativo INTEGER NOT NULL DEFAULT 1,
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
   )`);
+
+  db.run(`ALTER TABLE users ADD COLUMN email TEXT`, () => {});
+  db.run(`ALTER TABLE users ADD COLUMN ativo INTEGER NOT NULL DEFAULT 1`, () => {});
 
   db.get(`SELECT id FROM users WHERE username = ?`, ['godofredo'], (err, row) => {
     if (!row) {
@@ -1530,10 +1662,79 @@ app.post('/api/logout', (req,res)=>{
   res.json({ok:true});
 });
 
+app.post('/api/password-reset/request', async (req,res)=>{
+  try{
+    const identificador = String(req.body.identificador || req.body.email || req.body.username || '').trim();
+    const respostaPadrao = {
+      ok:true,
+      message:'Se existir usuario com e-mail cadastrado, enviaremos um link de recuperacao.',
+      smtp_configurado:smtpConfigurado()
+    };
+    if(!identificador) return res.json(respostaPadrao);
+
+    const user = await get(`
+      SELECT id, username, email, ativo
+      FROM users
+      WHERE lower(username) = lower(?) OR lower(COALESCE(email,'')) = lower(?)
+      LIMIT 1
+    `, [identificador, identificador]);
+    if(!user || !user.email || user.ativo === 0) return res.json(respostaPadrao);
+
+    const token = crypto.randomBytes(32).toString('base64url');
+    const tokenHash = sha256Hex(token);
+    await run(`UPDATE password_reset_tokens SET used_at = datetime('now', 'localtime') WHERE user_id = ? AND used_at IS NULL`, [user.id]);
+    await run(`
+      INSERT INTO password_reset_tokens(user_id, token_hash, expires_at)
+      VALUES(?, ?, datetime('now', '+30 minutes', 'localtime'))
+    `, [user.id, tokenHash]);
+
+    const resetLink = publicBaseUrl(req) + '/reset_senha.html?token=' + encodeURIComponent(token);
+    await enviarEmailRecuperacao({ to:user.email, username:user.username, resetLink });
+    res.json(respostaPadrao);
+  }catch(e){
+    if(e.code === 'SMTP_NOT_CONFIGURED'){
+      return res.status(503).json({ok:false,error:'Envio de e-mail ainda nao configurado no servidor. Configure SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS e SMTP_FROM.',smtp_configurado:false});
+    }
+    res.status(500).json({ok:false,error:e.message});
+  }
+});
+
+app.post('/api/password-reset/confirm', async (req,res)=>{
+  try{
+    const token = String(req.body.token || '').trim();
+    const password = String(req.body.password || '');
+    if(!token) return res.status(400).json({ok:false,error:'Token ausente'});
+    if(password.length < 4) return res.status(400).json({ok:false,error:'A senha deve ter pelo menos 4 caracteres'});
+    const tokenHash = sha256Hex(token);
+    const row = await get(`
+      SELECT prt.id, prt.user_id, u.username, u.ativo
+      FROM password_reset_tokens prt
+      JOIN users u ON u.id = prt.user_id
+      WHERE prt.token_hash = ?
+        AND prt.used_at IS NULL
+        AND datetime(prt.expires_at) >= datetime('now', 'localtime')
+      LIMIT 1
+    `, [tokenHash]);
+    if(!row || row.ativo === 0) return res.status(400).json({ok:false,error:'Link invalido ou expirado'});
+
+    await run(`UPDATE users SET password_hash = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`, [hashPassword(password), row.user_id]);
+    await run(`UPDATE password_reset_tokens SET used_at = datetime('now', 'localtime') WHERE id = ?`, [row.id]);
+    res.json({ok:true,message:'Senha redefinida. Voce ja pode entrar.'});
+  }catch(e){
+    res.status(500).json({ok:false,error:e.message});
+  }
+});
+
 app.get('/api/me', authRequired, async (req,res)=>{
   const data = validarDataISO(req.query.data) ? req.query.data : dataLocalISO();
   const hospitais = await hospitaisPermitidos(req, data);
-  res.json({ok:true,user:req.user,hospitais});
+  const mapaEmpresas = new Map();
+  for (const h of hospitais) {
+    const ids = String(h.empresa_ids || '').split(',').map(Number).filter(Boolean);
+    const nomes = String(h.empresas || '').split(',').map(s => s.trim()).filter(Boolean);
+    ids.forEach((id, idx) => mapaEmpresas.set(id, {id, nome:nomes[idx] || ('Empresa '+id)}));
+  }
+  res.json({ok:true,user:req.user,empresas:[...mapaEmpresas.values()],hospitais});
 });
 
 app.get('/api/hospitais', authRequired, async (req,res)=>{
@@ -1556,10 +1757,14 @@ app.get('/api/admin-hospitais', authRequired, adminRequired, async (req,res)=>{
         h.tipo,
         h.ativo,
         COUNT(DISTINCT hs.id) AS total_salas,
-        COUNT(DISTINCT uh.user_id) AS total_usuarios
+        COUNT(DISTINCT uh.user_id) AS total_usuarios,
+        COALESCE(group_concat(DISTINCT e.nome), '') AS empresas,
+        COALESCE(group_concat(DISTINCT e.id), '') AS empresa_ids
       FROM hospitais h
       LEFT JOIN hospital_salas hs ON hs.hospital_id = h.id AND hs.ativa = 1
       LEFT JOIN user_hospitais uh ON uh.hospital_id = h.id
+      LEFT JOIN empresa_hospitais eh ON eh.hospital_id = h.id
+      LEFT JOIN empresas e ON e.id = eh.empresa_id AND e.ativo = 1
       WHERE h.ativo = 1
       GROUP BY h.id
       ORDER BY h.nome
@@ -1634,6 +1839,75 @@ app.delete('/api/hospitais/:id', authRequired, adminRequired, async (req,res)=>{
     if(total && total.total <= 1) return res.status(400).json({ok:false,error:'Nao e possivel deletar o ultimo hospital ativo'});
 
     await run(`UPDATE hospitais SET ativo = 0, atualizado_em = datetime('now', 'localtime') WHERE id = ?`, [id]);
+    res.json({ok:true,deleted_id:id});
+  }catch(e){
+    res.status(500).json({ok:false,error:e.message});
+  }
+});
+
+app.get('/api/admin-empresas', authRequired, adminRequired, async (req,res)=>{
+  try{
+    const empresas = await all(`
+      SELECT
+        e.id,
+        e.nome,
+        e.slug,
+        e.ativo,
+        COALESCE(group_concat(DISTINCT h.id), '') AS hospital_ids,
+        COALESCE(group_concat(DISTINCT h.nome), '') AS hospitais,
+        COUNT(DISTINCT ue.user_id) AS total_usuarios
+      FROM empresas e
+      LEFT JOIN empresa_hospitais eh ON eh.empresa_id = e.id
+      LEFT JOIN hospitais h ON h.id = eh.hospital_id AND h.ativo = 1
+      LEFT JOIN user_empresas ue ON ue.empresa_id = e.id
+      WHERE e.ativo = 1
+      GROUP BY e.id
+      ORDER BY e.nome
+    `);
+    res.json({ok:true,empresas});
+  }catch(e){
+    res.status(500).json({ok:false,error:e.message});
+  }
+});
+
+app.post('/api/empresas', authRequired, adminRequired, async (req,res)=>{
+  try{
+    const id = Number(req.body.id || 0);
+    const nome = String(req.body.nome || '').trim();
+    const hospitalIds = Array.isArray(req.body.hospital_ids) ? req.body.hospital_ids.map(Number).filter(n => Number.isInteger(n) && n > 0) : [];
+    if(!nome) return res.status(400).json({ok:false,error:'Nome da empresa obrigatorio'});
+
+    let empresaId = id;
+    if(empresaId > 0){
+      const atual = await get(`SELECT id FROM empresas WHERE id = ? AND ativo = 1`, [empresaId]);
+      if(!atual) return res.status(404).json({ok:false,error:'Empresa nao encontrada'});
+      const duplicado = await get(`SELECT id FROM empresas WHERE lower(nome) = lower(?) AND id <> ? AND ativo = 1`, [nome, empresaId]);
+      if(duplicado) return res.status(409).json({ok:false,error:'Ja existe empresa com este nome'});
+      await run(`UPDATE empresas SET nome = ?, atualizado_em = datetime('now', 'localtime') WHERE id = ?`, [nome, empresaId]);
+      await run(`DELETE FROM empresa_hospitais WHERE empresa_id = ?`, [empresaId]);
+    }else{
+      const existente = await get(`SELECT id FROM empresas WHERE lower(nome) = lower(?) AND ativo = 1`, [nome]);
+      if(existente) return res.status(409).json({ok:false,error:'Ja existe empresa com este nome'});
+      const slug = normalizarTextoChave(nome).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'') || ('empresa-'+Date.now());
+      const result = await run(`INSERT INTO empresas(nome, slug) VALUES(?, ?)`, [nome, slug]);
+      empresaId = result.lastID;
+    }
+
+    for(const hospitalId of hospitalIds){
+      await run(`INSERT OR IGNORE INTO empresa_hospitais(empresa_id, hospital_id) VALUES(?, ?)`, [empresaId, hospitalId]);
+    }
+    const empresa = await get(`SELECT * FROM empresas WHERE id = ?`, [empresaId]);
+    res.json({ok:true,empresa});
+  }catch(e){
+    res.status(500).json({ok:false,error:e.message});
+  }
+});
+
+app.delete('/api/empresas/:id', authRequired, adminRequired, async (req,res)=>{
+  try{
+    const id = Number(req.params.id);
+    if(!Number.isInteger(id) || id <= 0) return res.status(400).json({ok:false,error:'Empresa invalida'});
+    await run(`UPDATE empresas SET ativo = 0, atualizado_em = datetime('now', 'localtime') WHERE id = ?`, [id]);
     res.json({ok:true,deleted_id:id});
   }catch(e){
     res.status(500).json({ok:false,error:e.message});
@@ -1924,13 +2198,17 @@ app.post('/api/change-password', authRequired, async (req,res)=>{
 app.get('/api/users', authRequired, async (req,res)=>{
   try{
     const users = await all(`
-      SELECT u.id, u.username, u.role, u.ativo, u.created_at,
+      SELECT u.id, u.username, u.email, u.role, u.ativo, u.created_at,
         CASE WHEN lower(u.username) = 'godofredo' THEN 1 ELSE 0 END AS admin_plus,
-        COALESCE(group_concat(h.id), '') AS hospital_ids,
-        COALESCE(group_concat(h.nome, ', '), '') AS hospitais
+        COALESCE(group_concat(DISTINCT h.id), '') AS hospital_ids,
+        COALESCE(group_concat(DISTINCT h.nome), '') AS hospitais,
+        COALESCE(group_concat(DISTINCT emp.id), '') AS empresa_ids,
+        COALESCE(group_concat(DISTINCT emp.nome), '') AS empresas
       FROM users u
       LEFT JOIN user_hospitais uh ON uh.user_id = u.id
       LEFT JOIN hospitais h ON h.id = uh.hospital_id
+      LEFT JOIN user_empresas ue ON ue.user_id = u.id
+      LEFT JOIN empresas emp ON emp.id = ue.empresa_id AND emp.ativo = 1
       GROUP BY u.id
       ORDER BY u.username
     `);
@@ -1972,8 +2250,10 @@ app.post('/api/users', authRequired, async (req,res)=>{
       const ativoPresente = Object.prototype.hasOwnProperty.call(req.body, 'ativo');
       const senhaPresente = Object.prototype.hasOwnProperty.call(req.body, 'password');
       const hospitaisPresente = Object.prototype.hasOwnProperty.call(req.body, 'hospital_ids');
+      const emailPresente = Object.prototype.hasOwnProperty.call(req.body, 'email');
+      const empresasPresente = Object.prototype.hasOwnProperty.call(req.body, 'empresa_ids');
 
-      if(usernamePresente || rolePresente || ativoPresente || senhaPresente || hospitaisPresente){
+      if(usernamePresente || rolePresente || ativoPresente || senhaPresente || hospitaisPresente || emailPresente || empresasPresente){
         const usuario = await atualizarUsuarioSimples(bodyId, req.body || {});
         return res.json({ok:true,usuario});
       }
@@ -1983,16 +2263,21 @@ app.post('/api/users', authRequired, async (req,res)=>{
     }
 
     const username = String(req.body.username || '').trim();
+    const email = String(req.body.email || '').trim();
     const password = String(req.body.password || '');
     const roleInput = String(req.body.role || 'plantonista').trim().toLowerCase();
     const role = ['admin','escalador','coordenador','plantonista'].includes(roleInput) ? roleInput : 'plantonista';
     const ativo = req.body.ativo === false || req.body.ativo === 0 || req.body.ativo === '0' ? 0 : 1;
     const hospitalIds = Array.isArray(req.body.hospital_ids) ? req.body.hospital_ids.map(Number).filter(n => Number.isInteger(n) && n > 0) : [];
+    const empresaIds = Array.isArray(req.body.empresa_ids) ? req.body.empresa_ids.map(Number).filter(n => Number.isInteger(n) && n > 0) : [];
     if(!username) return res.status(400).json({ok:false,error:'Usuario vazio'});
     if(password.length < 4) return res.status(400).json({ok:false,error:'Senha muito curta'});
-    const result = await run(`INSERT INTO users(username,password_hash,role,ativo) VALUES(?,?,?,?)`, [username, hashPassword(password), role, ativo]);
+    const result = await run(`INSERT INTO users(username,email,password_hash,role,ativo) VALUES(?,?,?,?,?)`, [username, email, hashPassword(password), role, ativo]);
     for (const hospitalId of hospitalIds) {
       await run(`INSERT OR IGNORE INTO user_hospitais(user_id, hospital_id, papel) VALUES(?,?,?)`, [result.lastID, hospitalId, role]);
+    }
+    for (const empresaId of empresaIds) {
+      await run(`INSERT OR IGNORE INTO user_empresas(user_id, empresa_id, papel) VALUES(?,?,?)`, [result.lastID, empresaId, role]);
     }
     res.json({ok:true});
   }catch(e){
@@ -2007,7 +2292,7 @@ async function atualizarUsuarioSimples(id, body){
     throw err;
   }
 
-  const alvo = await get(`SELECT id, username FROM users WHERE id = ?`, [id]);
+  const alvo = await get(`SELECT id, username, email FROM users WHERE id = ?`, [id]);
   if(!alvo) {
     const err = new Error('Usuario nao encontrado');
     err.status = 404;
@@ -2015,6 +2300,7 @@ async function atualizarUsuarioSimples(id, body){
   }
 
   const username = String(body.username ?? alvo.username).trim();
+  const email = String(body.email ?? alvo.email ?? '').trim();
   if(!username) {
     const err = new Error('Usuario vazio');
     err.status = 400;
@@ -2041,14 +2327,21 @@ async function atualizarUsuarioSimples(id, body){
   const hospitalIds = Array.isArray(body.hospital_ids)
     ? body.hospital_ids.map(Number).filter(n => Number.isInteger(n) && n > 0)
     : [];
+  const empresaIds = Array.isArray(body.empresa_ids)
+    ? body.empresa_ids.map(Number).filter(n => Number.isInteger(n) && n > 0)
+    : [];
 
-  await run(`UPDATE users SET username = ?, role = ?, ativo = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`, [username, role, ativo, id]);
+  await run(`UPDATE users SET username = ?, email = ?, role = ?, ativo = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`, [username, email, role, ativo, id]);
   if(password){
     await run(`UPDATE users SET password_hash = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`, [hashPassword(password), id]);
   }
   await run(`DELETE FROM user_hospitais WHERE user_id = ?`, [id]);
   for (const hospitalId of hospitalIds) {
     await run(`INSERT OR IGNORE INTO user_hospitais(user_id, hospital_id, papel) VALUES(?,?,?)`, [id, hospitalId, role]);
+  }
+  await run(`DELETE FROM user_empresas WHERE user_id = ?`, [id]);
+  for (const empresaId of empresaIds) {
+    await run(`INSERT OR IGNORE INTO user_empresas(user_id, empresa_id, papel) VALUES(?,?,?)`, [id, empresaId, role]);
   }
 
   for (const [sid, session] of sessions.entries()) {
@@ -2058,7 +2351,7 @@ async function atualizarUsuarioSimples(id, body){
     }
   }
 
-  return {id, username, role, ativo};
+  return {id, username, email, role, ativo};
 }
 
 async function excluirUsuarioSimples(id){
@@ -2084,6 +2377,7 @@ async function excluirUsuarioSimples(id){
 
   await run(`DELETE FROM hospital_acessos_dia WHERE user_id = ?`, [id]);
   await run(`DELETE FROM user_hospitais WHERE user_id = ?`, [id]);
+  await run(`DELETE FROM user_empresas WHERE user_id = ?`, [id]);
   await run(`DELETE FROM users WHERE id = ?`, [id]);
 
   for (const [sid, session] of sessions.entries()) {
@@ -2189,9 +2483,10 @@ app.delete('/api/users/:id', authRequired, async (req,res)=>{
     const total = await get(`SELECT COUNT(*) AS total FROM users`);
     if(total && total.total <= 1) return res.status(400).json({ok:false,error:'Nao e possivel excluir o ultimo usuario'});
 
-    await run(`DELETE FROM hospital_acessos_dia WHERE user_id = ?`, [id]);
-    await run(`DELETE FROM user_hospitais WHERE user_id = ?`, [id]);
-    await run(`DELETE FROM users WHERE id = ?`, [id]);
+  await run(`DELETE FROM hospital_acessos_dia WHERE user_id = ?`, [id]);
+  await run(`DELETE FROM user_hospitais WHERE user_id = ?`, [id]);
+  await run(`DELETE FROM user_empresas WHERE user_id = ?`, [id]);
+  await run(`DELETE FROM users WHERE id = ?`, [id]);
 
     for (const [sid, session] of sessions.entries()) {
       if(session.user && Number(session.user.id) === id) sessions.delete(sid);
@@ -2219,12 +2514,17 @@ app.get('/sala.html', authRequired, (req,res)=>{
   res.sendFile(path.join(__dirname,'public','sala.html'));
 });
 
-app.get('/', authRequired, (req,res)=>{
+app.get('/', (req,res)=>{
   res.sendFile(path.join(__dirname,'public','index.html'));
 });
 
-app.get('/index.html', authRequired, (req,res)=>{
+app.get('/index.html', (req,res)=>{
   res.sendFile(path.join(__dirname,'public','index.html'));
+});
+
+app.get('/reset_senha.html', (req,res)=>{
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+  res.sendFile(path.join(__dirname,'public','reset_senha.html'));
 });
 
 app.get('/admin_clinicas.html', authRequired, adminRequired, (req,res)=>{
@@ -2232,15 +2532,15 @@ app.get('/admin_clinicas.html', authRequired, adminRequired, (req,res)=>{
   res.sendFile(path.join(__dirname,'public','admin_clinicas.html'));
 });
 
-app.get('/admin_usuarios.html', authRequired, (req,res)=>{
+app.get('/admin_usuarios.html', authRequired, adminRequired, (req,res)=>{
   res.redirect('/usuarios.html');
 });
 
-app.get('/reg.html', authRequired, (req,res)=>{
+app.get('/reg.html', authRequired, adminRequired, (req,res)=>{
   res.redirect('/usuarios.html');
 });
 
-app.get('/usuarios.html', authRequired, (req,res)=>{
+app.get('/usuarios.html', authRequired, adminRequired, (req,res)=>{
   res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private');
   res.sendFile(path.join(__dirname,'public','usuarios.html'));
 });

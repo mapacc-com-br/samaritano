@@ -10,6 +10,11 @@
 *{box-sizing:border-box}body{margin:0;background:var(--bg);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;color:var(--text)}
 header{position:sticky;top:0;background:#fffffff2;border-bottom:1px solid var(--line);padding:14px;z-index:10}
 h1{font-size:20px;margin:0}.sub{font-size:12px;color:var(--muted);margin-top:4px}
+.pageHead{max-width:980px;margin:0 auto;display:grid;grid-template-columns:1fr auto;gap:12px;align-items:center}
+.account{display:flex;gap:8px;align-items:center;justify-content:flex-end}
+.accountChip{display:flex;gap:8px;align-items:center;background:#fff;border:1px solid var(--line);border-radius:999px;padding:6px 9px;box-shadow:0 4px 14px #0f172a0d}
+.avatar{width:28px;height:28px;border-radius:50%;display:grid;place-items:center;background:#e0f2fe;color:#0f172a;font-size:12px;font-weight:1000}
+.accountName{font-size:13px;font-weight:900;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.accountRole{font-size:11px;color:var(--muted);font-weight:800}
 .wrap{max-width:980px;margin:0 auto;padding:14px}.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:12px;box-shadow:0 8px 24px #0f172a0d}
 h2{font-size:16px;margin:0 0 10px}label{display:block;font-size:13px;font-weight:800;margin:10px 0 6px}
 input,select,textarea{width:100%;border:1px solid var(--line);border-radius:10px;padding:10px;font:inherit;background:#fff}
@@ -26,15 +31,27 @@ button.green{background:var(--green)}button.red{background:var(--red)}button.lig
 .editor{border-top:1px solid var(--line);margin-top:12px;padding-top:12px}.checks{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:7px;margin-top:6px}
 .check{display:flex;gap:8px;align-items:center;background:#fff;border:1px solid var(--line);border-radius:10px;padding:8px;font-size:13px;font-weight:800}.check input{width:auto}
 .empty{border:1px dashed var(--line);border-radius:12px;padding:16px;color:var(--muted);font-weight:800}
-@media(max-width:720px){.grid,.grid3{grid-template-columns:1fr}.head{display:block}.actions{justify-content:flex-start;margin-top:10px}.mark{top:auto;bottom:10px}}
+@media(max-width:720px){.grid,.grid3,.pageHead{grid-template-columns:1fr}.head{display:block}.actions,.account{justify-content:flex-start;margin-top:10px}.mark{top:auto;bottom:10px}}
 </style>
 <link rel="stylesheet" href="/mapacc-theme.css">
 </head>
 <body>
 <div class="mark">MAPA CC</div>
 <header>
-  <h1>Usuarios e perfis</h1>
-  <div class="sub" id="who">Carregando...</div>
+  <div class="pageHead">
+    <div>
+      <h1>Usuarios e perfis</h1>
+      <div class="sub" id="who">Carregando...</div>
+    </div>
+    <div class="account">
+      <div class="accountChip">
+        <span class="avatar" id="sessionAvatar">--</span>
+        <span><span class="accountName" id="sessionName">Conta</span><br><span class="accountRole" id="sessionRole">Perfil</span></span>
+      </div>
+      <button class="light" onclick="location.href='/sala.html'">Sala</button>
+      <button class="red" id="logoutTop">Sair</button>
+    </div>
+  </div>
 </header>
 <main class="wrap">
   <section class="card">
@@ -42,7 +59,6 @@ button.green{background:var(--green)}button.red{background:var(--red)}button.lig
     <div class="row">
       <button onclick="location.href='/sala.html'">Abrir sala</button>
       <button class="light" onclick="load()">Recarregar</button>
-      <button class="red" id="logout">Sair</button>
     </div>
     <div class="status" id="status">Carregando...</div>
   </section>
@@ -54,10 +70,14 @@ button.green{background:var(--green)}button.red{background:var(--red)}button.lig
         <div><label>Usuario</label><input id="newUser" required></div>
         <div><label>Senha</label><input id="newPass" type="password" required></div>
       </div>
+      <label>E-mail para recuperar senha</label>
+      <input id="newEmail" type="email" placeholder="nome@hospital.com.br">
       <div class="grid">
         <div><label>Atribuicao</label><select id="newRole"><option value="admin">Admin</option><option value="escalador">Escalador</option><option value="coordenador">Coordenador</option><option value="plantonista">Plantonista</option></select></div>
         <div><label>Status</label><select id="newAtivo"><option value="1">Ativo</option><option value="0">Inativo</option></select></div>
       </div>
+      <label>Empresas</label>
+      <div id="newCompanies" class="checks"></div>
       <label>Hospitais</label>
       <div id="newHospitals" class="checks"></div>
       <div class="row"><button class="green" type="submit">Adicionar</button></div>
@@ -86,6 +106,7 @@ button.green{background:var(--green)}button.red{background:var(--red)}button.lig
 <script>
 const $ = id => document.getElementById(id);
 let hospitals = [];
+let companies = [];
 let users = [];
 let editing = null;
 
@@ -96,17 +117,24 @@ async function postUsers(body){const r=await fetch('/api/users',{method:'POST',h
 async function postHospital(body){const r=await fetch('/api/hospitais',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body),cache:'no-store'});const d=await r.json().catch(()=>({}));if(!r.ok||d.ok===false)throw new Error((d.error||'Erro ao salvar hospital')+' [/api/hospitais]');return d}
 function plus(u){return !!u && (u.admin_plus || String(u.username||'').toLowerCase()==='godofredo')}
 function roleLabel(u){return plus(u)?'admin+':String((u&&u.role)||'')}
+function initials(name){const clean=String(name||'').trim();return clean?clean.split(/\s+/).slice(0,2).map(p=>p[0]).join('').toUpperCase():'--'}
+function renderSession(u){$('sessionAvatar').textContent=initials(u.username);$('sessionName').textContent=u.username||'Conta';$('sessionRole').textContent=roleLabel(u)}
 function ids(u){return String((u&&u.hospital_ids)||'').split(',').map(Number).filter(Boolean)}
+function companyIds(u){return String((u&&u.empresa_ids)||'').split(',').map(Number).filter(Boolean)}
 function roleOpts(sel){return ['admin','escalador','coordenador','plantonista'].map(r=>'<option value="'+r+'" '+(r===sel?'selected':'')+'>'+r+'</option>').join('')}
 function hospitalChecks(cls, selectedIds){const selected=new Set(selectedIds||[]);return hospitals.length?hospitals.map(h=>'<label class="check"><input class="'+cls+'" type="checkbox" value="'+Number(h.id)+'" '+(selected.has(Number(h.id))?'checked':'')+'> '+esc(h.nome)+'</label>').join(''):'<div class="empty">Nenhum hospital disponivel.</div>'}
+function companyChecks(cls, selectedIds){const selected=new Set(selectedIds||[]);return companies.length?companies.map(e=>'<label class="check"><input class="'+cls+'" type="checkbox" value="'+Number(e.id)+'" '+(selected.has(Number(e.id))?'checked':'')+'> '+esc(e.nome)+'</label>').join(''):'<div class="empty">Nenhuma empresa cadastrada.</div>'}
 function checked(cls, root=document){return [...root.querySelectorAll('.'+cls+':checked')].map(x=>Number(x.value)).filter(Boolean)}
 
 async function load(){
   try{
     const me=await get('/api/me');
     $('who').textContent='Logado como '+me.user.username+' - '+roleLabel(me.user);
+    renderSession(me.user);
     $('hospitalAdminCard').style.display=(me.user.role==='admin'||plus(me.user))?'block':'none';
     hospitals=(await get('/api/hospitais')).hospitais||[];
+    companies=(await get('/api/admin-empresas')).empresas||[];
+    $('newCompanies').innerHTML=companyChecks('newCompany',[]);
     $('newHospitals').innerHTML=hospitalChecks('newHospital',[]);
     users=(await get('/api/users')).users||[];
     render();
@@ -121,19 +149,21 @@ function render(){
   $('list').innerHTML=users.length?users.map(u=>{
     const active=Number(u.ativo)!==0;
     const hosp=u.hospitais||(u.role==='admin'||plus(u)?'acesso global':'sem hospital');
-    return '<article class="user" data-id="'+Number(u.id)+'"><div class="head"><div><div class="name">'+esc(u.username)+'</div><div class="meta">senha: protegida/trocar no editar | atribuicao: '+esc(roleLabel(u))+' | hospitais: '+esc(hosp)+'</div></div><div class="actions">'+(plus(u)?'<span class="badge plus">admin+</span>':'')+'<span class="badge '+(active?'ok':'err')+'">'+(active?'ativo':'inativo')+'</span><button class="light" data-edit="'+u.id+'">Editar</button><button class="red" data-del="'+u.id+'">Deletar</button></div></div>'+(editing===Number(u.id)?editor(u):'')+'</article>';
+    const emp=u.empresas||(u.role==='admin'||plus(u)?'todas':'sem empresa');
+    const email=u.email||'sem e-mail';
+    return '<article class="user" data-id="'+Number(u.id)+'"><div class="head"><div><div class="name">'+esc(u.username)+'</div><div class="meta">e-mail: '+esc(email)+' | atribuicao: '+esc(roleLabel(u))+' | empresas: '+esc(emp)+' | hospitais: '+esc(hosp)+'</div></div><div class="actions">'+(plus(u)?'<span class="badge plus">admin+</span>':'')+'<span class="badge '+(active?'ok':'err')+'">'+(active?'ativo':'inativo')+'</span><button class="light" data-edit="'+u.id+'">Editar</button><button class="red" data-del="'+u.id+'">Deletar</button></div></div>'+(editing===Number(u.id)?editor(u):'')+'</article>';
   }).join(''):'<div class="empty">Nenhum usuario cadastrado.</div>';
 }
 
 function editor(u){
-  return '<div class="editor"><div class="grid3"><div><label>Usuario</label><input data-username value="'+esc(u.username)+'"></div><div><label>Atribuicao</label><select data-role>'+roleOpts(u.role)+'</select></div><div><label>Status</label><select data-ativo><option value="1" '+(Number(u.ativo)!==0?'selected':'')+'>Ativo</option><option value="0" '+(Number(u.ativo)===0?'selected':'')+'>Inativo</option></select></div></div><label>Nova senha</label><input data-password type="password" placeholder="Vazio mantem a senha atual"><label>Hospitais</label><div class="checks">'+hospitalChecks('editHospital',ids(u))+'</div><div class="row"><button class="green" data-save="'+u.id+'">Salvar</button><button class="light" data-cancel="'+u.id+'">Cancelar</button></div></div>';
+  return '<div class="editor"><div class="grid3"><div><label>Usuario</label><input data-username value="'+esc(u.username)+'"></div><div><label>Atribuicao</label><select data-role>'+roleOpts(u.role)+'</select></div><div><label>Status</label><select data-ativo><option value="1" '+(Number(u.ativo)!==0?'selected':'')+'>Ativo</option><option value="0" '+(Number(u.ativo)===0?'selected':'')+'>Inativo</option></select></div></div><label>E-mail para recuperar senha</label><input data-email type="email" value="'+esc(u.email||'')+'" placeholder="nome@hospital.com.br"><label>Nova senha</label><input data-password type="password" placeholder="Vazio mantem a senha atual"><label>Empresas</label><div class="checks">'+companyChecks('editCompany',companyIds(u))+'</div><label>Hospitais especificos</label><div class="checks">'+hospitalChecks('editHospital',ids(u))+'</div><div class="row"><button class="green" data-save="'+u.id+'">Salvar</button><button class="light" data-cancel="'+u.id+'">Cancelar</button></div></div>';
 }
 
 $('addForm').onsubmit=async ev=>{
   ev.preventDefault();
   try{
-    await postUsers({username:$('newUser').value.trim(),password:$('newPass').value,role:$('newRole').value,ativo:$('newAtivo').value,hospital_ids:checked('newHospital')});
-    $('newUser').value='';$('newPass').value='';
+    await postUsers({username:$('newUser').value.trim(),password:$('newPass').value,email:$('newEmail').value.trim(),role:$('newRole').value,ativo:$('newAtivo').value,empresa_ids:checked('newCompany'),hospital_ids:checked('newHospital')});
+    $('newUser').value='';$('newPass').value='';$('newEmail').value='';
     await load();
     setStatus('Usuario adicionado.','ok');
   }catch(e){setStatus(e.message,'err')}
@@ -164,7 +194,7 @@ $('list').onclick=async ev=>{
 async function saveUser(id){
   try{
     const card=document.querySelector('[data-id="'+id+'"]');
-    await postUsers({id,username:card.querySelector('[data-username]').value.trim(),role:card.querySelector('[data-role]').value,ativo:card.querySelector('[data-ativo]').value,password:card.querySelector('[data-password]').value,hospital_ids:checked('editHospital',card)});
+    await postUsers({id,username:card.querySelector('[data-username]').value.trim(),email:card.querySelector('[data-email]').value.trim(),role:card.querySelector('[data-role]').value,ativo:card.querySelector('[data-ativo]').value,password:card.querySelector('[data-password]').value,empresa_ids:checked('editCompany',card),hospital_ids:checked('editHospital',card)});
     editing=null;await load();setStatus('Usuario atualizado.','ok');
   }catch(e){setStatus(e.message,'err')}
 }
@@ -178,7 +208,7 @@ async function deleteUser(id){
   }catch(e){setStatus(e.message,'err')}
 }
 
-$('logout').onclick=async()=>{await fetch('/api/logout',{method:'POST'});location.href='/login.html'};
+$('logoutTop').onclick=async()=>{ $('logoutTop').textContent='Saindo...'; $('logoutTop').disabled=true; await fetch('/api/logout',{method:'POST'});location.href='/login.html?logout=1'};
 load();
 </script>
 </body>

@@ -13,18 +13,49 @@ header{color:white;padding:28px 18px 22px}
 .brand{font-size:13px;font-weight:800;letter-spacing:.18em;text-transform:uppercase;color:#a7b4c6}
 h1{margin:8px 0 6px;font-size:34px;line-height:1.05}
 .sub{color:#c8d2df;font-size:14px}
-.actions{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+.actions{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;align-items:center}
 button,a.btn{border:0;border-radius:12px;background:var(--blue);color:white;font-weight:900;padding:11px 14px;text-decoration:none;cursor:pointer;font:inherit;display:inline-flex;align-items:center;justify-content:center}
 button.light,a.light{background:#ffffff14;border:1px solid #ffffff33;color:white}
 button.dark,a.dark{background:#172033;color:white}
+.userMenu{position:relative}
+.userButton{gap:9px;background:#ffffff14;border:1px solid #ffffff33;color:white;border-radius:999px;padding:7px 10px 7px 7px;min-height:42px}
+.avatar{width:28px;height:28px;border-radius:50%;display:inline-grid;place-items:center;background:#e0f2fe;color:#0f172a;font-size:12px;font-weight:1000}
+.userName{font-size:13px;font-weight:900;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.chevron{font-size:12px;color:#cbd5e1}
+.menuPanel{position:absolute;right:0;top:calc(100% + 8px);width:250px;background:white;border:1px solid var(--line);border-radius:16px;padding:8px;box-shadow:0 20px 60px #0005;color:var(--text);z-index:30;display:none}
+.menuPanel.open{display:block}
+.menuIdentity{padding:10px;border-bottom:1px solid var(--line);margin-bottom:6px}
+.menuIdentity strong{display:block;font-size:14px}.menuIdentity span{display:block;color:var(--muted);font-size:12px;margin-top:3px}
+.menuItem{width:100%;border:0;background:white;color:var(--text);border-radius:10px;padding:10px;text-align:left;font-weight:900;cursor:pointer}
+.menuItem:hover{background:#f2f4f7}
+.menuItem.danger{color:#b42318}
 main{background:var(--panel);border-radius:24px 24px 0 0;min-height:calc(100vh - 148px);padding:18px}
 .wrap{max-width:1100px;margin:0 auto}
-.toolbar{display:grid;grid-template-columns:1fr auto;gap:12px;align-items:end;margin-bottom:14px}
+.reception{display:grid;grid-template-columns:1.35fr .9fr;gap:14px;margin-bottom:14px}
+.welcomeCard{background:linear-gradient(135deg,#ffffff,#eef7ff);border:1px solid var(--line);border-radius:20px;padding:18px;box-shadow:0 12px 32px #1018280d}
+.eyebrow{font-size:12px;font-weight:1000;color:#175cd3;text-transform:uppercase;letter-spacing:.08em}
+.welcomeCard h2{font-size:26px;line-height:1.05;margin:8px 0 8px;color:#101828}
+.welcomeCopy{color:var(--muted);font-size:14px;line-height:1.45;max-width:660px}
+.quickStats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:14px}
+.quickStat{background:#fff;border:1px solid var(--line);border-radius:14px;padding:11px}
+.quickStat b{display:block;font-size:22px}.quickStat span{color:var(--muted);font-size:11px;font-weight:900;text-transform:uppercase}
+.nextSteps{background:#fff;border:1px solid var(--line);border-radius:20px;padding:16px;box-shadow:0 12px 32px #1018280d}
+.nextSteps h2{font-size:16px;margin:0 0 10px}.stepList{display:grid;gap:8px}
+.step{display:flex;gap:10px;align-items:flex-start;border:1px solid var(--line);border-radius:14px;padding:10px;background:#fbfdff}
+.stepNumber{width:24px;height:24px;border-radius:50%;background:#e0f2fe;color:#075985;display:grid;place-items:center;font-size:12px;font-weight:1000;flex:0 0 auto}
+.step strong{display:block;font-size:13px}.step span{display:block;color:var(--muted);font-size:12px;margin-top:2px;line-height:1.35}
+.sectionTitle{display:flex;justify-content:space-between;gap:12px;align-items:flex-end;margin:16px 0 10px}
+.sectionTitle h2{margin:0;font-size:18px}.sectionTitle span{color:var(--muted);font-size:13px}
+.toolbar{display:grid;grid-template-columns:1fr 1fr auto;gap:12px;align-items:end;margin-bottom:14px}
 label{display:block;font-size:12px;font-weight:900;color:var(--muted);margin-bottom:5px;text-transform:uppercase}
 input{width:100%;border:1px solid var(--line);border-radius:12px;padding:12px;background:white;font:inherit}
+select{width:100%;border:1px solid var(--line);border-radius:12px;padding:12px;background:white;font:inherit}
 .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px}
 .card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:15px;box-shadow:0 8px 22px #1018280a}
 .card h2{margin:0 0 8px;font-size:18px}
+.cardTop{display:flex;gap:10px;justify-content:space-between;align-items:flex-start}
+.hospitalIcon{width:38px;height:38px;border-radius:12px;background:#eef4ff;color:#2454ff;display:grid;place-items:center;font-weight:1000;flex:0 0 auto}
+.cardAction{width:100%;margin-top:2px}
 .meta{font-size:13px;color:var(--muted);line-height:1.45}
 .pill{display:inline-flex;border-radius:999px;padding:5px 9px;font-size:11px;font-weight:900;margin:10px 6px 12px 0;border:1px solid var(--line);background:#f8fafc;color:#344054}
 .pill.edit{background:#ecfdf3;color:#067647;border-color:#abefc6}
@@ -33,7 +64,13 @@ input{width:100%;border:1px solid var(--line);border-radius:12px;padding:12px;ba
 .empty{border:1px dashed #b9c4d2;border-radius:16px;padding:20px;text-align:center;color:var(--muted);background:#fff}
 .status{margin-top:12px;padding:10px;border-radius:12px;background:#eff6ff;color:#1d4ed8;font-size:13px;font-weight:800;white-space:pre-wrap}
 .status.err{background:#fff1f2;color:#be123c}
-@media(max-width:680px){.head,.toolbar{grid-template-columns:1fr}.actions{justify-content:flex-start}h1{font-size:28px}main{border-radius:18px 18px 0 0}}
+.adminPanel{display:none;margin-bottom:14px}
+.adminPanel.show{display:block}
+.adminGrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
+.adminCard{display:block;background:#fff;border:1px solid var(--line);border-radius:16px;padding:15px;text-decoration:none;color:var(--text);box-shadow:0 8px 22px #1018280a}
+.adminCard strong{display:block;font-size:17px;margin-bottom:6px}.adminCard span{color:var(--muted);font-size:13px;line-height:1.4}
+@media(max-width:820px){.reception{grid-template-columns:1fr}.quickStats{grid-template-columns:repeat(3,1fr)}}
+@media(max-width:680px){.head,.toolbar{grid-template-columns:1fr}.actions{justify-content:flex-start}.menuPanel{left:0;right:auto;width:min(280px,calc(100vw - 36px))}h1{font-size:28px}main{border-radius:18px 18px 0 0}.welcomeCard h2{font-size:22px}.quickStats{grid-template-columns:1fr}.sectionTitle{display:block}}
 </style>
 <link rel="stylesheet" href="/mapacc-theme.css">
 </head>
@@ -46,19 +83,78 @@ input{width:100%;border:1px solid var(--line);border-radius:12px;padding:12px;ba
       <div class="sub" id="welcome">Carregando sua central de hospitais...</div>
     </div>
     <div class="actions">
-      <a class="btn light" href="/reg.html" id="adminLink" style="display:none">Acessos</a>
+      <a class="btn light" href="/usuarios.html" id="adminLink" style="display:none">Usuarios</a>
       <a class="btn light" href="/admin_clinicas.html" id="clinicasLink" style="display:none">Clinicas</a>
-      <button class="light" id="btnLogout">Sair</button>
+      <div class="userMenu">
+        <button class="userButton" id="userMenuButton" type="button" aria-haspopup="true" aria-expanded="false">
+          <span class="avatar" id="userAvatar">--</span>
+          <span class="userName" id="userName">Conta</span>
+          <span class="chevron">v</span>
+        </button>
+        <div class="menuPanel" id="userMenuPanel" role="menu">
+          <div class="menuIdentity">
+            <strong id="menuUserName">Conta</strong>
+            <span id="menuUserRole">Perfil</span>
+          </div>
+          <button class="menuItem" id="btnMinhaSala" type="button">Minha sala</button>
+          <button class="menuItem danger" id="btnLogout" type="button">Sair da conta</button>
+        </div>
+      </div>
     </div>
   </div>
 </header>
 
 <main>
   <div class="wrap">
+    <section class="reception">
+      <div class="welcomeCard">
+        <div class="eyebrow" id="receptionEyebrow">Recepcao operacional</div>
+        <h2 id="receptionTitle">Bom plantao.</h2>
+        <div class="welcomeCopy" id="receptionCopy">Estamos preparando os hospitais e empresas disponiveis para seu perfil.</div>
+        <div class="quickStats">
+          <div class="quickStat"><b id="statHospitais">0</b><span>Hospitais</span></div>
+          <div class="quickStat"><b id="statEmpresas">0</b><span>Empresas</span></div>
+          <div class="quickStat"><b id="statEditaveis">0</b><span>Editaveis</span></div>
+        </div>
+      </div>
+      <div class="nextSteps">
+        <h2>Seu caminho agora</h2>
+        <div class="stepList" id="stepList">
+          <div class="step"><span class="stepNumber">1</span><div><strong>Escolha a data</strong><span>Use a data operacional para encontrar o plantao correto.</span></div></div>
+          <div class="step"><span class="stepNumber">2</span><div><strong>Filtre a empresa</strong><span>Quando houver mais de uma empresa, escolha a que deseja acessar.</span></div></div>
+          <div class="step"><span class="stepNumber">3</span><div><strong>Abra o painel</strong><span>Entre no hospital disponivel para visualizar ou editar o mapa.</span></div></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="adminPanel" id="adminPanel">
+      <div class="adminGrid">
+        <a class="adminCard" href="/usuarios.html">
+          <strong>Usuarios e logins</strong>
+          <span>Adicionar usuarios, ajustar perfil e vincular empresas/hospitais.</span>
+        </a>
+        <a class="adminCard" href="/admin_clinicas.html">
+          <strong>Empresas e hospitais</strong>
+          <span>Cadastrar empresas, hospitais, salas e configurar chave OpenAI.</span>
+        </a>
+      </div>
+    </section>
+
+    <div class="sectionTitle">
+      <div>
+        <h2>Escolha seu acesso</h2>
+        <span>Os hospitais abaixo respeitam seu perfil e seu plantao.</span>
+      </div>
+    </div>
+
     <div class="toolbar">
       <div>
         <label>Data operacional</label>
         <input id="dataSala" type="date">
+      </div>
+      <div>
+        <label>Empresa</label>
+        <select id="empresaSala"><option value="">Todas</option></select>
       </div>
       <button class="dark" id="btnAtualizar">Sincronizar sala</button>
     </div>
@@ -90,6 +186,30 @@ function status(msg, cls=''){
   $('status').textContent=msg;
 }
 
+function greeting(){
+  const hour = new Date().getHours();
+  if(hour < 12) return 'Bom dia';
+  if(hour < 18) return 'Boa tarde';
+  return 'Boa noite';
+}
+
+function isAdmin(user){
+  return !!user && (user.role === 'admin' || user.admin_plus);
+}
+
+function initials(name){
+  const clean = String(name || '').trim();
+  if(!clean) return '--';
+  return clean.split(/\s+/).slice(0,2).map(p => p[0]).join('').toUpperCase();
+}
+
+function setUserMenu(user){
+  $('userAvatar').textContent = initials(user.username);
+  $('userName').textContent = user.username || 'Conta';
+  $('menuUserName').textContent = user.username || 'Conta';
+  $('menuUserRole').textContent = roleLabel(user);
+}
+
 async function api(url,opt={}){
   const r = await fetch(url,{headers:{'Content-Type':'application/json'},cache:'no-store',...opt});
   const data = await r.json().catch(()=>({}));
@@ -101,9 +221,11 @@ function cardHospital(h){
   const edit = Number(h.pode_editar) === 1;
   const papel = h.papel_dia || 'visualizacao';
   const data = $('dataSala').value;
+  const empresa = h.empresas || 'sem empresa';
   return `
     <div class="card">
       <h2>${escapeHtml(h.nome)}</h2>
+      <div class="meta">${escapeHtml(empresa)}</div>
       <div class="meta">${escapeHtml(h.tipo || 'hospital')} · ${escapeHtml(brDate(data))}</div>
       <div>
         <span class="pill ${edit ? 'edit' : 'view'}">${edit ? 'pode editar' : 'somente leitura'}</span>
@@ -112,6 +234,58 @@ function cardHospital(h){
       <a class="btn" href="/index_graf.html?hospital_id=${encodeURIComponent(h.id)}&data=${encodeURIComponent(data)}">Abrir painel</a>
     </div>
   `;
+}
+
+function cardHospitalReception(h){
+  const edit = Number(h.pode_editar) === 1;
+  const papel = h.papel_dia || 'visualizacao';
+  const data = $('dataSala').value;
+  const empresa = h.empresas || 'sem empresa';
+  return `
+    <div class="card">
+      <div class="cardTop">
+        <div>
+          <h2>${escapeHtml(h.nome)}</h2>
+          <div class="meta">${escapeHtml(empresa)}</div>
+        </div>
+        <div class="hospitalIcon">CC</div>
+      </div>
+      <div class="meta">${escapeHtml(h.tipo || 'hospital')} / ${escapeHtml(brDate(data))}</div>
+      <div>
+        <span class="pill ${edit ? 'edit' : 'view'}">${edit ? 'pode editar' : 'somente leitura'}</span>
+        <span class="pill ${papel === 'visualizacao' ? 'warn' : ''}">${escapeHtml(papel)}</span>
+      </div>
+      <a class="btn cardAction" href="/index_graf.html?hospital_id=${encodeURIComponent(h.id)}&data=${encodeURIComponent(data)}">${edit ? 'Abrir e editar mapa' : 'Abrir mapa'}</a>
+    </div>
+  `;
+}
+
+function updateReception({user, hospitais, empresas}){
+  const role = roleLabel(user);
+  $('receptionTitle').textContent = greeting()+', '+(user.username || 'bem-vindo')+'.';
+  $('receptionEyebrow').textContent = role === 'admin+' || role === 'admin' ? 'Recepcao administrativa' : 'Recepcao operacional';
+  $('receptionCopy').textContent = roleDescription(user);
+  $('statHospitais').textContent = hospitais.length;
+  $('statEmpresas').textContent = empresas.length || '-';
+  $('statEditaveis').textContent = hospitais.filter(h => Number(h.pode_editar) === 1).length;
+  const steps = role === 'admin' || role === 'admin+'
+    ? [
+      ['1','Revise empresas','Mantenha empresas, hospitais e salas organizados antes do plantao.'],
+      ['2','Ajuste usuarios','Vincule anestesistas, coordenadores e escaladores aos acessos corretos.'],
+      ['3','Abra um mapa','Entre em um hospital para acompanhar a operacao.']
+    ]
+    : role === 'escalador'
+      ? [
+        ['1','Escolha a empresa','Use o filtro para focar nos hospitais da empresa.'],
+        ['2','Confira amanha','Seu acesso de edicao fica voltado ao dia seguinte.'],
+        ['3','Monte a escala','Abra o mapa para preparar salas e equipes.']
+      ]
+      : [
+        ['1','Confirme a data','A lista mostra apenas o que esta liberado para o plantao.'],
+        ['2','Escolha o hospital','Entre no mapa do hospital em que esta atuando.'],
+        ['3','Acompanhe o fluxo','Visualize o andamento e edite quando seu perfil permitir.']
+      ];
+  $('stepList').innerHTML = steps.map(s => '<div class="step"><span class="stepNumber">'+s[0]+'</span><div><strong>'+escapeHtml(s[1])+'</strong><span>'+escapeHtml(s[2])+'</span></div></div>').join('');
 }
 
 async function load(){
@@ -123,12 +297,24 @@ async function load(){
       resp = await api('/api/me?data='+encodeURIComponent($('dataSala').value));
     }
     me = resp.user;
-    $('welcome').textContent = 'Logado como '+me.username+' · perfil '+roleLabel(me);
-    $('adminLink').style.display = (me.role === 'admin' || me.admin_plus) ? 'inline-flex' : 'none';
-    $('clinicasLink').style.display = (me.role === 'admin' || me.admin_plus) ? 'inline-flex' : 'none';
-    const hospitais = resp.hospitais || [];
+    const admin = isAdmin(me);
+    setUserMenu(me);
+    $('welcome').textContent = 'Logado como '+me.username+' · '+roleDescription(me);
+    $('adminLink').style.display = admin ? 'inline-flex' : 'none';
+    $('clinicasLink').style.display = admin ? 'inline-flex' : 'none';
+    $('adminPanel').classList.toggle('show', admin);
+    const empresas = resp.empresas || [];
+    const currentEmpresa = $('empresaSala').value;
+    $('empresaSala').innerHTML = '<option value="">Todas</option>' + empresas.map(e => '<option value="'+escapeHtml(e.id)+'">'+escapeHtml(e.nome)+'</option>').join('');
+    if(currentEmpresa) $('empresaSala').value = currentEmpresa;
+    const selectedEmpresa = Number($('empresaSala').value || 0);
+    const hospitais = (resp.hospitais || []).filter(h => {
+      if(!selectedEmpresa) return true;
+      return String(h.empresa_ids || '').split(',').map(Number).includes(selectedEmpresa);
+    });
+    updateReception({user:me, hospitais, empresas});
     $('hospitais').innerHTML = hospitais.length
-      ? hospitais.map(cardHospital).join('')
+      ? hospitais.map(cardHospitalReception).join('')
       : '<div class="empty">Nenhum hospital disponivel para esta data.</div>';
     status(hospitais.length+' hospital(is) disponivel(is) em '+brDate(data)+'.','');
   }catch(e){
@@ -145,14 +331,42 @@ function roleLabel(user){
   return user && (user.admin_plus || String(user.username || '').trim().toLowerCase() === 'godofredo') ? 'admin+' : String((user && user.role) || '');
 }
 
+function roleDescription(user){
+  const role = roleLabel(user);
+  if(role === 'admin' || role === 'admin+') return 'perfil admin: empresas, usuarios, hospitais e mapas liberados';
+  if(role === 'coordenador') return 'perfil coordenador: hospital em que estiver de plantao no dia';
+  if(role === 'escalador') return 'perfil escalador: hospitais das empresas vinculadas, com edicao do dia seguinte';
+  return 'perfil plantonista: empresa/hospital liberado no plantao do dia';
+}
+
 const params = new URLSearchParams(location.search);
 $('dataSala').value = params.get('data') || todayISO();
 $('btnAtualizar').onclick = load;
 $('dataSala').onchange = load;
-$('btnLogout').onclick = async ()=>{
-  await fetch('/api/logout',{method:'POST'});
-  location.href='/login.html';
+$('empresaSala').onchange = load;
+$('userMenuButton').onclick = ()=>{
+  const panel = $('userMenuPanel');
+  const open = !panel.classList.contains('open');
+  panel.classList.toggle('open', open);
+  $('userMenuButton').setAttribute('aria-expanded', open ? 'true' : 'false');
 };
+$('btnMinhaSala').onclick = ()=>{
+  $('userMenuPanel').classList.remove('open');
+  $('userMenuButton').setAttribute('aria-expanded','false');
+  $('dataSala').focus();
+};
+$('btnLogout').onclick = async ()=>{
+  $('btnLogout').textContent = 'Saindo...';
+  $('btnLogout').disabled = true;
+  await fetch('/api/logout',{method:'POST'});
+  location.href='/login.html?logout=1';
+};
+document.addEventListener('click', e=>{
+  if(!e.target.closest('.userMenu')){
+    $('userMenuPanel').classList.remove('open');
+    $('userMenuButton').setAttribute('aria-expanded','false');
+  }
+});
 load();
 </script>
 </body>

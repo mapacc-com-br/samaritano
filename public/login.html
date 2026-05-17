@@ -18,10 +18,21 @@ h1{margin:12px 0 10px;font-size:48px;line-height:1;letter-spacing:0}
 .metric b{display:block;font-size:22px}.metric span{display:block;color:#b9c7d7;font-size:12px;margin-top:3px}
 .card{background:var(--card);border:1px solid #ffffff66;border-radius:24px;padding:24px;box-shadow:0 24px 70px #0008}
 .card h2{margin:0 0 6px;font-size:24px}.sub{color:#667085;font-size:13px;margin-bottom:18px}
+.sessionBox{display:none;border:1px solid #abefc6;background:#ecfdf3;border-radius:16px;padding:12px;margin-bottom:16px;color:#075e45}
+.sessionBox.show{display:block}
+.sessionTop{display:flex;gap:10px;align-items:center;margin-bottom:10px}
+.avatar{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;background:#0f8a63;color:white;font-size:13px;font-weight:1000}
+.sessionText strong{display:block;font-size:14px}.sessionText span{display:block;font-size:12px;color:#13795b;margin-top:2px}
+.sessionActions{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 label{font-size:12px;font-weight:900;margin:13px 0 6px;display:block;color:#475467;text-transform:uppercase}
 input{width:100%;border:1px solid var(--line);border-radius:14px;padding:14px;font:inherit;background:#fbfdff;color:var(--text)}
 input:focus{outline:3px solid #dbe7ff;border-color:#8aa8ff;background:white}
 button{width:100%;margin-top:18px;border:0;border-radius:14px;background:linear-gradient(135deg,var(--blue),var(--blue2));color:white;font-weight:900;padding:14px;font:inherit;cursor:pointer}
+button.secondary{margin-top:0;background:white;color:#175cd3;border:1px solid #b2ccff}
+button.ghost{margin-top:0;background:#fff;color:#b42318;border:1px solid #fecdca}
+button:disabled{opacity:.72;cursor:wait}
+.helpLink{display:inline-block;margin-top:12px;color:#175cd3;font-size:13px;font-weight:900;text-decoration:none}
+.helpLink:hover{text-decoration:underline}
 .status{margin-top:14px;padding:11px;border-radius:13px;font-size:13px;font-weight:800;background:#eff6ff;color:#1d4ed8;white-space:pre-wrap}
 .status.err{background:#fff1f2;color:var(--err)}
 @media(max-width:820px){.shell{grid-template-columns:1fr}.intro{padding:4px}.metrics{display:none}h1{font-size:36px}.card{border-radius:20px}}
@@ -44,17 +55,64 @@ button{width:100%;margin-top:18px;border:0;border-radius:14px;background:linear-
   <section class="card">
     <h2>Entrar</h2>
     <div class="sub">Acesse seu painel operacional.</div>
+    <div class="sessionBox" id="sessionBox">
+      <div class="sessionTop">
+        <div class="avatar" id="sessionAvatar">--</div>
+        <div class="sessionText">
+          <strong id="sessionName">Usuario conectado</strong>
+          <span id="sessionRole">Sessao ativa</span>
+        </div>
+      </div>
+      <div class="sessionActions">
+        <button class="secondary" id="btnContinue" type="button">Continuar</button>
+        <button class="ghost" id="btnLogout" type="button">Sair</button>
+      </div>
+    </div>
     <label>Usuario</label>
     <input id="username" autocomplete="username" value="">
     <label>Senha</label>
     <input id="password" type="password" autocomplete="current-password">
     <button id="btnLogin">Entrar no MAPA CC</button>
+    <a class="helpLink" href="/reset_senha.html">Esqueci minha senha</a>
     <div id="status" class="status">Digite usuario e senha.</div>
   </section>
 </div>
 
 <script>
 const $ = id => document.getElementById(id);
+let activeSession = null;
+
+function initials(name){
+  const clean = String(name || '').trim();
+  if(!clean) return '--';
+  return clean.split(/\s+/).slice(0,2).map(p => p[0]).join('').toUpperCase();
+}
+
+function roleLabel(user){
+  if(!user) return '';
+  if(user.admin_plus) return 'admin+';
+  return String(user.role || '');
+}
+
+async function checkSession(){
+  const params = new URLSearchParams(location.search);
+  if(params.get('logout') === '1'){
+    $('status').textContent = 'Voce saiu com seguranca.';
+    return;
+  }
+  try{
+    const r = await fetch('/api/me', {cache:'no-store'});
+    if(!r.ok) return;
+    const data = await r.json();
+    if(!data.ok || !data.user) return;
+    activeSession = data.user;
+    $('sessionBox').classList.add('show');
+    $('sessionAvatar').textContent = initials(activeSession.username);
+    $('sessionName').textContent = activeSession.username;
+    $('sessionRole').textContent = 'Sessao ativa · '+roleLabel(activeSession);
+    $('status').textContent = 'Ja existe uma sessao ativa neste navegador.';
+  }catch(e){}
+}
 
 async function login(){
   const username = $('username').value.trim();
@@ -62,6 +120,7 @@ async function login(){
   const st = $('status');
   st.className = 'status';
   st.textContent = 'Entrando...';
+  $('btnLogin').disabled = true;
 
   try{
     const r = await fetch('/api/login',{
@@ -75,14 +134,29 @@ async function login(){
     const next = new URLSearchParams(location.search).get('next') || '/sala.html';
     location.href = next;
   }catch(e){
+    $('btnLogin').disabled = false;
     st.className = 'status err';
     st.textContent = e.message;
   }
 }
 
 $('btnLogin').onclick = login;
+$('btnContinue').onclick = ()=>{
+  const next = new URLSearchParams(location.search).get('next') || '/sala.html';
+  location.href = next;
+};
+$('btnLogout').onclick = async ()=>{
+  $('btnLogout').disabled = true;
+  $('btnLogout').textContent = 'Saindo...';
+  await fetch('/api/logout',{method:'POST'});
+  activeSession = null;
+  $('sessionBox').classList.remove('show');
+  $('status').textContent = 'Sessao encerrada. Entre com outro usuario.';
+  $('username').focus();
+};
 $('password').addEventListener('keydown', e => { if(e.key === 'Enter') login(); });
 $('username').addEventListener('keydown', e => { if(e.key === 'Enter') $('password').focus(); });
+checkSession();
 </script>
 </body>
 </html>
