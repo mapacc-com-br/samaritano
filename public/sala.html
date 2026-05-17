@@ -47,6 +47,7 @@ input{width:100%;border:1px solid var(--line);border-radius:12px;padding:12px;ba
     </div>
     <div class="actions">
       <a class="btn light" href="/reg.html" id="adminLink" style="display:none">Acessos</a>
+      <a class="btn light" href="/admin_clinicas.html" id="clinicasLink" style="display:none">Clinicas</a>
       <button class="light" id="btnLogout">Sair</button>
     </div>
   </div>
@@ -124,6 +125,7 @@ async function load(){
     me = resp.user;
     $('welcome').textContent = 'Logado como '+me.username+' · perfil '+roleLabel(me);
     $('adminLink').style.display = (me.role === 'admin' || me.admin_plus) ? 'inline-flex' : 'none';
+    $('clinicasLink').style.display = (me.role === 'admin' || me.admin_plus) ? 'inline-flex' : 'none';
     const hospitais = resp.hospitais || [];
     $('hospitais').innerHTML = hospitais.length
       ? hospitais.map(cardHospital).join('')

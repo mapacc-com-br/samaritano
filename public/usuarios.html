@@ -12,7 +12,8 @@ header{position:sticky;top:0;background:#fffffff2;border-bottom:1px solid var(--
 h1{font-size:20px;margin:0}.sub{font-size:12px;color:var(--muted);margin-top:4px}
 .wrap{max-width:980px;margin:0 auto;padding:14px}.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:12px;box-shadow:0 8px 24px #0f172a0d}
 h2{font-size:16px;margin:0 0 10px}label{display:block;font-size:13px;font-weight:800;margin:10px 0 6px}
-input,select{width:100%;border:1px solid var(--line);border-radius:10px;padding:10px;font:inherit;background:#fff}
+input,select,textarea{width:100%;border:1px solid var(--line);border-radius:10px;padding:10px;font:inherit;background:#fff}
+textarea{min-height:96px;resize:vertical}
 button{border:0;border-radius:10px;background:var(--blue);color:#fff;font:inherit;font-weight:900;padding:10px 12px;cursor:pointer}
 button.green{background:var(--green)}button.red{background:var(--red)}button.light{background:#fff;color:var(--text);border:1px solid var(--line)}
 .grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
@@ -63,6 +64,19 @@ button.green{background:var(--green)}button.red{background:var(--red)}button.lig
     </form>
   </section>
 
+  <section class="card" id="hospitalAdminCard" style="display:none">
+    <h2>Novo hospital ou clinica</h2>
+    <form id="hospitalForm">
+      <div class="grid">
+        <div><label>Nome</label><input id="hospitalNome" required placeholder="Ex: Hospital Samaritano"></div>
+        <div><label>Tipo</label><select id="hospitalTipo"><option value="hospital">Hospital</option><option value="clinica">Clinica</option></select></div>
+      </div>
+      <label>Salas iniciais</label>
+      <textarea id="hospitalSalas" placeholder="Uma sala por linha. Ex:&#10;Sala 01&#10;Sala 02&#10;CDI"></textarea>
+      <div class="row"><button class="green" type="submit">Adicionar hospital/clinica</button></div>
+    </form>
+  </section>
+
   <section class="card">
     <h2>Usuarios cadastrados</h2>
     <div id="list"></div>
@@ -79,6 +93,7 @@ function esc(v){return String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<
 function setStatus(msg, cls=''){$('status').className='status '+cls;$('status').textContent=msg}
 async function get(url){const r=await fetch(url,{headers:{'Content-Type':'application/json'},cache:'no-store'});const d=await r.json().catch(()=>({}));if(!r.ok||d.ok===false)throw new Error((d.error||'Erro de API')+' ['+url+']');return d}
 async function postUsers(body){const r=await fetch('/api/users',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body),cache:'no-store'});const d=await r.json().catch(()=>({}));if(!r.ok||d.ok===false)throw new Error((d.error||'Erro ao salvar')+' [/api/users]');return d}
+async function postHospital(body){const r=await fetch('/api/hospitais',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body),cache:'no-store'});const d=await r.json().catch(()=>({}));if(!r.ok||d.ok===false)throw new Error((d.error||'Erro ao salvar hospital')+' [/api/hospitais]');return d}
 function plus(u){return !!u && (u.admin_plus || String(u.username||'').toLowerCase()==='godofredo')}
 function roleLabel(u){return plus(u)?'admin+':String((u&&u.role)||'')}
 function ids(u){return String((u&&u.hospital_ids)||'').split(',').map(Number).filter(Boolean)}
@@ -90,6 +105,7 @@ async function load(){
   try{
     const me=await get('/api/me');
     $('who').textContent='Logado como '+me.user.username+' - '+roleLabel(me.user);
+    $('hospitalAdminCard').style.display=(me.user.role==='admin'||plus(me.user))?'block':'none';
     hospitals=(await get('/api/hospitais')).hospitais||[];
     $('newHospitals').innerHTML=hospitalChecks('newHospital',[]);
     users=(await get('/api/users')).users||[];
@@ -120,6 +136,17 @@ $('addForm').onsubmit=async ev=>{
     $('newUser').value='';$('newPass').value='';
     await load();
     setStatus('Usuario adicionado.','ok');
+  }catch(e){setStatus(e.message,'err')}
+};
+
+$('hospitalForm').onsubmit=async ev=>{
+  ev.preventDefault();
+  try{
+    const salas=$('hospitalSalas').value.split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
+    await postHospital({nome:$('hospitalNome').value.trim(),tipo:$('hospitalTipo').value,salas});
+    $('hospitalNome').value='';$('hospitalTipo').value='hospital';$('hospitalSalas').value='';
+    await load();
+    setStatus('Hospital/clinica adicionado e disponivel para vincular usuarios.','ok');
   }catch(e){setStatus(e.message,'err')}
 };
 

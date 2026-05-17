@@ -1,0 +1,179 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta http-equiv="Cache-Control" content="no-store">
+<title>Clinicas e hospitais - MAPA CC</title>
+<style>
+:root{--bg:#eef2f7;--card:#fff;--line:#d8e0ee;--text:#172033;--muted:#64748b;--blue:#2563eb;--green:#16a34a;--red:#dc2626;--amber:#b45309}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;color:var(--text)}
+header{position:sticky;top:0;z-index:10;background:#fffffff2;border-bottom:1px solid var(--line);padding:14px}
+h1{font-size:20px;margin:0}.sub{font-size:12px;color:var(--muted);margin-top:4px}
+.wrap{max-width:1020px;margin:0 auto;padding:14px}.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:12px;box-shadow:0 8px 24px #0f172a0d}
+h2{font-size:16px;margin:0 0 10px}label{display:block;font-size:13px;font-weight:800;margin:10px 0 6px}
+input,select,textarea{width:100%;border:1px solid var(--line);border-radius:10px;padding:10px;font:inherit;background:#fff;color:var(--text)}
+textarea{min-height:98px;resize:vertical}
+button{border:0;border-radius:10px;background:var(--blue);color:#fff;font:inherit;font-weight:900;padding:10px 12px;cursor:pointer}
+button.green{background:var(--green)}button.red{background:var(--red)}button.light{background:#fff;color:var(--text);border:1px solid var(--line)}
+.grid{display:grid;grid-template-columns:1fr 180px;gap:10px}.grid3{display:grid;grid-template-columns:1fr 170px auto;gap:10px;align-items:end}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:10px}.status{margin-top:10px;border-radius:10px;padding:10px;background:#eff6ff;color:#1e3a8a;font-size:13px;font-weight:800;white-space:pre-wrap}
+.status.ok{background:#dcfce7;color:#166534}.status.err{background:#fee2e2;color:#991b1b}.status.warn{background:#fef3c7;color:#92400e}
+.item{background:#f8fafc;border:1px solid var(--line);border-radius:12px;padding:12px;margin-top:10px}
+.head{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}.name{font-weight:900;font-size:16px}.meta{font-size:13px;color:var(--muted);margin-top:4px}
+.actions{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}.actions button{padding:8px 10px;font-size:13px}
+.badge{display:inline-flex;border-radius:999px;padding:5px 9px;font-size:12px;font-weight:900;background:#e2e8f0;color:#334155}.badge.clinica{background:#ecfdf5;color:#166534}.badge.hospital{background:#eff6ff;color:#1e40af}
+.editor{border-top:1px solid var(--line);margin-top:12px;padding-top:12px}
+.empty{border:1px dashed var(--line);border-radius:12px;padding:16px;color:var(--muted);font-weight:800}
+.mark{position:fixed;right:10px;top:10px;background:#111827;color:#fff;border-radius:999px;padding:7px 10px;font-size:12px;font-weight:900;z-index:50}
+@media(max-width:720px){.grid,.grid3{grid-template-columns:1fr}.head{display:block}.actions{justify-content:flex-start;margin-top:10px}.mark{top:auto;bottom:10px}button{width:100%}}
+</style>
+<link rel="stylesheet" href="/mapacc-theme.css">
+</head>
+<body>
+<div class="mark">MAPA CC</div>
+<header>
+  <h1>Clinicas e hospitais</h1>
+  <div class="sub" id="who">Carregando...</div>
+</header>
+<main class="wrap">
+  <section class="card">
+    <h2>Acoes</h2>
+    <div class="row">
+      <button onclick="location.href='/sala.html'">Abrir sala</button>
+      <button class="light" onclick="load()">Recarregar</button>
+      <button class="red" id="logout">Sair</button>
+    </div>
+    <div class="status" id="status">Carregando...</div>
+  </section>
+
+  <section class="card">
+    <h2>Adicionar hospital ou clinica</h2>
+    <form id="addForm">
+      <div class="grid">
+        <div><label>Nome</label><input id="newNome" required placeholder="Ex: Hospital Samaritano"></div>
+        <div><label>Tipo</label><select id="newTipo"><option value="hospital">Hospital</option><option value="clinica">Clinica</option></select></div>
+      </div>
+      <label>Salas iniciais</label>
+      <textarea id="newSalas" placeholder="Uma sala por linha. Ex:&#10;Sala 01&#10;Sala 02&#10;CDI"></textarea>
+      <div class="row"><button class="green" type="submit">Adicionar</button></div>
+    </form>
+  </section>
+
+  <section class="card">
+    <h2>Cadastrados</h2>
+    <div id="list"></div>
+  </section>
+</main>
+
+<script>
+const $ = id => document.getElementById(id);
+let hospitals = [];
+let editing = null;
+
+function esc(v){return String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function status(msg, cls=''){$('status').className='status '+cls;$('status').textContent=msg}
+function isPlus(u){return !!u && (u.admin_plus || String(u.username||'').toLowerCase()==='godofredo')}
+function roleLabel(u){return isPlus(u)?'admin+':String((u&&u.role)||'')}
+
+async function api(url, opt={}){
+  const r = await fetch(url,{headers:{'Content-Type':'application/json'},cache:'no-store',...opt});
+  const data = await r.json().catch(()=>({}));
+  if(!r.ok || data.ok===false) throw new Error((data.error || 'Erro de API')+' ['+url+']');
+  return data;
+}
+
+function salasFromText(value){
+  return String(value||'').split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
+}
+
+async function load(){
+  try{
+    const me = await api('/api/me');
+    if(!(me.user && (me.user.role === 'admin' || isPlus(me.user)))) throw new Error('Acesso restrito ao admin');
+    $('who').textContent = 'Logado como '+me.user.username+' - '+roleLabel(me.user);
+    hospitals = (await api('/api/admin-hospitais')).hospitais || [];
+    render();
+    status(hospitals.length+' hospital(is)/clinica(s) cadastrados.', 'ok');
+  }catch(e){
+    status(e.message, 'err');
+    if(String(e.message).toLowerCase().includes('autenticado')) location.href='/login.html?next=/admin_clinicas.html';
+  }
+}
+
+function render(){
+  $('list').innerHTML = hospitals.length ? hospitals.map(h => {
+    const id = Number(h.id);
+    return '<article class="item" data-id="'+id+'">'+
+      '<div class="head">'+
+        '<div><div class="name">'+esc(h.nome)+'</div>'+
+        '<div class="meta">slug: '+esc(h.slug || '-')+' | salas: '+Number(h.total_salas || 0)+' | usuarios vinculados: '+Number(h.total_usuarios || 0)+'</div></div>'+
+        '<div class="actions"><span class="badge '+esc(h.tipo || 'hospital')+'">'+esc(h.tipo || 'hospital')+'</span><button class="light" data-edit="'+id+'">Editar</button><button class="red" data-del="'+id+'">Deletar</button></div>'+
+      '</div>'+
+      (editing === id ? editor(h) : '')+
+    '</article>';
+  }).join('') : '<div class="empty">Nenhum hospital ou clinica cadastrado.</div>';
+}
+
+function editor(h){
+  return '<div class="editor">'+
+    '<div class="grid3">'+
+      '<div><label>Nome</label><input data-nome value="'+esc(h.nome)+'"></div>'+
+      '<div><label>Tipo</label><select data-tipo><option value="hospital" '+(h.tipo==='hospital'?'selected':'')+'>Hospital</option><option value="clinica" '+(h.tipo==='clinica'?'selected':'')+'>Clinica</option></select></div>'+
+      '<div class="row"><button class="green" data-save="'+Number(h.id)+'">Salvar</button><button class="light" data-cancel="'+Number(h.id)+'">Cancelar</button></div>'+
+    '</div>'+
+  '</div>';
+}
+
+$('addForm').onsubmit = async ev => {
+  ev.preventDefault();
+  try{
+    await api('/api/hospitais',{
+      method:'POST',
+      body:JSON.stringify({nome:$('newNome').value.trim(),tipo:$('newTipo').value,salas:salasFromText($('newSalas').value)})
+    });
+    $('newNome').value='';$('newTipo').value='hospital';$('newSalas').value='';
+    await load();
+    status('Hospital/clinica adicionado.', 'ok');
+  }catch(e){status(e.message, 'err')}
+};
+
+$('list').onclick = async ev => {
+  const edit = ev.target.closest('[data-edit]');
+  const cancel = ev.target.closest('[data-cancel]');
+  const save = ev.target.closest('[data-save]');
+  const del = ev.target.closest('[data-del]');
+  if(edit){editing=Number(edit.dataset.edit);render();return}
+  if(cancel){editing=null;render();return}
+  if(save){await saveHospital(Number(save.dataset.save));return}
+  if(del){await deleteHospital(Number(del.dataset.del));return}
+};
+
+async function saveHospital(id){
+  try{
+    const card = document.querySelector('[data-id="'+id+'"]');
+    await api('/api/hospitais/'+encodeURIComponent(id),{
+      method:'PUT',
+      body:JSON.stringify({nome:card.querySelector('[data-nome]').value.trim(),tipo:card.querySelector('[data-tipo]').value})
+    });
+    editing=null;
+    await load();
+    status('Hospital/clinica atualizado.', 'ok');
+  }catch(e){status(e.message, 'err')}
+}
+
+async function deleteHospital(id){
+  try{
+    const h = hospitals.find(x => Number(x.id) === id);
+    if(!confirm('Deletar '+(h ? h.nome : 'este cadastro')+'? Ele deixara de aparecer para os usuarios.')) return;
+    await api('/api/hospitais/'+encodeURIComponent(id),{method:'DELETE'});
+    await load();
+    status('Hospital/clinica deletado.', 'ok');
+  }catch(e){status(e.message, 'err')}
+}
+
+$('logout').onclick = async () => {await fetch('/api/logout',{method:'POST'});location.href='/login.html'};
+load();
+</script>
+</body>
+</html>
