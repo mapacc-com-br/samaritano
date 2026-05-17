@@ -4,6 +4,16 @@
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>MAPA CC - Legado</title>
+<script>
+(async function(){
+  try{
+    const r = await fetch('/api/me', {cache:'no-store'});
+    if(!r.ok) location.replace('/login.html?next=/index.html');
+  }catch(e){
+    location.replace('/login.html?next=/index.html');
+  }
+})();
+</script>
 
 <style>
 *{box-sizing:border-box}

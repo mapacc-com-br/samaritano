@@ -87,6 +87,42 @@ textarea.compact{min-height:96px}
 .toprow{grid-template-columns:minmax(140px,1fr) minmax(180px,1.2fr) auto auto}
 .toprow button{white-space:nowrap}
 
+/* ===== PATCH mobile UX: mapa mais respirado e botoes sem estouro ===== */
+.mapCommand{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:start}
+.mapSubbar{display:grid;grid-template-columns:auto minmax(0,1fr);gap:10px;align-items:center;margin-top:10px}
+.mapLegend{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+.legendChip{display:inline-flex;align-items:center;border-radius:999px;padding:5px 8px;font-size:11px;font-weight:900;border:1px solid var(--line);background:#f8fafc;color:#334155;white-space:nowrap}
+.legendAssigned{background:#dcfce7;color:#166534;border-color:#86efac}.legendPending{background:#dbeafe;color:#1d4ed8;border-color:#93c5fd}.legendConflict{background:#fee2e2;color:#991b1b;border-color:#fecaca}.legendExternal{background:#f3e8ff;color:#6b21a8;border-color:#d8b4fe}.legendVirtual{background:#fef3c7;color:#92400e;border-color:#fcd34d}
+@media(max-width:640px){
+  header{padding:10px 10px 8px}
+  .title{font-size:17px}.sub{font-size:11px}
+  .toprow{grid-template-columns:1fr 1fr;gap:7px}
+  .toprow input,.toprow select{padding:10px;border-radius:12px;font-size:13px;min-width:0}
+  .toprow button{padding:10px 8px;border-radius:12px;font-size:12px;min-width:0;white-space:normal;line-height:1.05}
+  .tabs{gap:5px}.tabs button{padding:9px 4px;font-size:11px;border-radius:11px}
+  .wrap{padding:10px;max-width:none}.card{border-radius:14px;padding:11px;margin-bottom:10px}
+  .summaryGrid{gap:6px}.stat{padding:7px 5px}.stat b{font-size:18px}.stat span{font-size:10px}
+  .mapControlCard{padding:10px}
+  .mapCommand{grid-template-columns:1fr;gap:8px}
+  .mapActionRow{display:grid;grid-template-columns:1fr 1fr;gap:7px;width:100%}
+  .mapActionRow button{padding:9px 7px;border-radius:12px;font-size:11px;line-height:1.1;min-width:0;white-space:normal}
+  .mapActionRow button:first-child{grid-column:span 2}
+  .mapSubbar{grid-template-columns:1fr;gap:8px}
+  .quickNav{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;width:100%}
+  .quickNav button{padding:8px 4px;font-size:11px;min-width:0}
+  .mapLegend{justify-content:flex-start;gap:5px}
+  .legendChip{font-size:10px;padding:4px 6px}
+  .mapShell{width:calc(100vw - 12px);margin-left:-4px;border-radius:12px}
+  .bottomMapScroll{width:calc(100vw - 12px);margin-left:-4px}
+  .map{min-width:1320px}
+  .roomLabel{width:96px;font-size:10px}
+}
+@media(max-width:380px){
+  .toprow{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+  .mapActionRow button{font-size:10.5px;padding-left:5px;padding-right:5px}
+  .map{min-width:1380px}
+}
+
 </style>
 <link rel="stylesheet" href="/mapacc-theme.css">
 </head>
