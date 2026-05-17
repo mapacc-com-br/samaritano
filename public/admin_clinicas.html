@@ -64,6 +64,16 @@ button.green{background:var(--green)}button.red{background:var(--red)}button.lig
   </section>
 
   <section class="card">
+    <h2>Chave OpenAI</h2>
+    <div class="status" id="openaiStatus">Carregando configuracao...</div>
+    <form id="openaiForm">
+      <label>Nova chave OpenAI</label>
+      <input id="openaiKey" type="password" placeholder="sk-proj-..." autocomplete="off">
+      <div class="row"><button class="green" type="submit">Salvar chave no banco</button></div>
+    </form>
+  </section>
+
+  <section class="card">
     <h2>Cadastrados</h2>
     <div id="list"></div>
   </section>
@@ -76,6 +86,7 @@ let editing = null;
 
 function esc(v){return String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
 function status(msg, cls=''){$('status').className='status '+cls;$('status').textContent=msg}
+function openaiStatus(msg, cls=''){$('openaiStatus').className='status '+cls;$('openaiStatus').textContent=msg}
 function isPlus(u){return !!u && (u.admin_plus || String(u.username||'').toLowerCase()==='godofredo')}
 function roleLabel(u){return isPlus(u)?'admin+':String((u&&u.role)||'')}
 
@@ -97,10 +108,25 @@ async function load(){
     $('who').textContent = 'Logado como '+me.user.username+' - '+roleLabel(me.user);
     hospitals = (await api('/api/admin-hospitais')).hospitais || [];
     render();
+    await loadOpenAIConfig();
     status(hospitals.length+' hospital(is)/clinica(s) cadastrados.', 'ok');
   }catch(e){
     status(e.message, 'err');
     if(String(e.message).toLowerCase().includes('autenticado')) location.href='/login.html?next=/admin_clinicas.html';
+  }
+}
+
+async function loadOpenAIConfig(){
+  try{
+    const cfg = await api('/api/admin-config/openai');
+    openaiStatus(
+      cfg.configurada
+        ? 'Chave configurada. Origem: '+(cfg.origem || 'desconhecida')+' | tamanho: '+cfg.tamanho+' | modelo: '+cfg.model
+        : 'Chave OpenAI ainda nao configurada.',
+      cfg.configurada ? 'ok' : 'warn'
+    );
+  }catch(e){
+    openaiStatus('Falha ao verificar chave: '+e.message, 'err');
   }
 }
 
@@ -139,6 +165,22 @@ $('addForm').onsubmit = async ev => {
     await load();
     status('Hospital/clinica adicionado.', 'ok');
   }catch(e){status(e.message, 'err')}
+};
+
+$('openaiForm').onsubmit = async ev => {
+  ev.preventDefault();
+  try{
+    const apiKey = $('openaiKey').value.trim();
+    await api('/api/admin-config/openai', {
+      method:'POST',
+      body:JSON.stringify({api_key:apiKey})
+    });
+    $('openaiKey').value = '';
+    await loadOpenAIConfig();
+    status('Chave OpenAI salva no banco persistente.', 'ok');
+  }catch(e){
+    openaiStatus(e.message, 'err');
+  }
 };
 
 $('btnBackup').onclick = () => {
