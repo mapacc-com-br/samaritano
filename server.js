@@ -34,6 +34,7 @@ const PUBLIC_DIR = path.join(ROOT_DIR, "public");
 const IS_RAILWAY = !!(process.env.RAILWAY_ENVIRONMENT || process.env.RAILWAY_PROJECT_ID || process.env.RAILWAY_SERVICE_ID);
 const DEFAULT_HOSPITAL_NOME = "Hospital Samaritano";
 const DEFAULT_HOSPITAL_SLUG = "samaritano";
+const OPENAI_API_KEY = process.env.OPENAI_API_KEY || process.env.MAPACC_OPENAI_API_KEY || "";
 const OPENAI_VISION_MODEL = process.env.OPENAI_VISION_MODEL || "gpt-5.4-mini";
 const MAX_IMPORT_IMAGE_CHARS = 12 * 1024 * 1024;
 const DEFAULT_IMPORT_PROMPT = [
@@ -88,7 +89,7 @@ console.log("==================================");
 console.log("Sistema Mapa de Cirurgias por Dia");
 console.log("DB:", DB_FILE);
 console.log("Railway:", IS_RAILWAY ? "sim" : "nao");
-console.log("OpenAI API key:", process.env.OPENAI_API_KEY ? "configurada" : "nao configurada");
+console.log("OpenAI API key:", OPENAI_API_KEY ? "configurada" : "nao configurada");
 console.log("OpenAI vision model:", OPENAI_VISION_MODEL);
 console.log("PORT:", PORT);
 console.log("==================================");
@@ -733,9 +734,9 @@ function extrairTextoRespostaOpenAI(data) {
 }
 
 async function chamarOpenAIImportacaoFoto({ imageDataUrl, hospital, salas, dataCirurgia }) {
-  const apiKey = process.env.OPENAI_API_KEY;
+  const apiKey = OPENAI_API_KEY;
   if (!apiKey) {
-    const err = new Error("OPENAI_API_KEY nao configurada no servidor.");
+    const err = new Error("OPENAI_API_KEY/MAPACC_OPENAI_API_KEY nao configurada no servidor.");
     err.statusCode = 500;
     throw err;
   }
@@ -871,8 +872,10 @@ app.get("/api/config-check", authRequired, adminRequired, async (req, res) => {
     ok: true,
     railway: IS_RAILWAY,
     database: DB_FILE,
-    openai_api_key_configurada: !!process.env.OPENAI_API_KEY,
-    openai_api_key_tamanho: process.env.OPENAI_API_KEY ? process.env.OPENAI_API_KEY.length : 0,
+    openai_api_key_configurada: !!OPENAI_API_KEY,
+    openai_api_key_tamanho: OPENAI_API_KEY ? OPENAI_API_KEY.length : 0,
+    openai_api_key_nome_usado: process.env.OPENAI_API_KEY ? "OPENAI_API_KEY" : (process.env.MAPACC_OPENAI_API_KEY ? "MAPACC_OPENAI_API_KEY" : ""),
+    mapacc_teste: process.env.MAPACC_TESTE || "",
     openai_vision_model: OPENAI_VISION_MODEL,
     port: PORT
   });
