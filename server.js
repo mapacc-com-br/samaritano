@@ -32,6 +32,7 @@ const PORT = Number(process.env.PORT) || 3000;
 const ROOT_DIR = __dirname;
 const PUBLIC_DIR = path.join(ROOT_DIR, "public");
 const IS_RAILWAY = !!(process.env.RAILWAY_ENVIRONMENT || process.env.RAILWAY_PROJECT_ID || process.env.RAILWAY_SERVICE_ID);
+const CONFIG_CHECK_VERSION = "2026-05-17-openai-db-config-v2";
 const DEFAULT_HOSPITAL_NOME = "Hospital Samaritano";
 const DEFAULT_HOSPITAL_SLUG = "samaritano";
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY || process.env.MAPACC_OPENAI_API_KEY || "";
@@ -69,6 +70,7 @@ const SIRIO_LIBANES_SALAS = [
 const BACKUP_TABLES = [
   "hospitais",
   "hospital_salas",
+  "app_config",
   "users",
   "user_hospitais",
   "hospital_acessos_dia",
@@ -133,6 +135,25 @@ function get(sql, params = []) {
   });
 }
 
+async function getConfigValue(chave) {
+  const row = await get(`SELECT valor FROM app_config WHERE chave = ?`, [chave]);
+  return row ? String(row.valor || "") : "";
+}
+
+async function setConfigValue(chave, valor) {
+  await run(`
+    INSERT INTO app_config(chave, valor, atualizado_em)
+    VALUES(?, ?, datetime('now', 'localtime'))
+    ON CONFLICT(chave) DO UPDATE SET
+      valor = excluded.valor,
+      atualizado_em = datetime('now', 'localtime')
+  `, [chave, valor]);
+}
+
+async function resolverOpenAIKey() {
+  return OPENAI_API_KEY || await getConfigValue("openai_api_key");
+}
+
 function normalizarTextoChave(valor) {
   return String(valor || "")
     .trim()
@@ -150,6 +171,14 @@ async function garantirColuna(nomeTabela, nomeColuna, definicaoSql) {
 }
 
 async function garantirHospitalPadrao() {
+  await run(`
+    CREATE TABLE IF NOT EXISTS app_config (
+      chave TEXT PRIMARY KEY,
+      valor TEXT,
+      atualizado_em TEXT DEFAULT (datetime('now', 'localtime'))
+    )
+  `);
+
   await run(`
     CREATE TABLE IF NOT EXISTS hospitais (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -734,9 +763,9 @@ function extrairTextoRespostaOpenAI(data) {
 }
 
 async function chamarOpenAIImportacaoFoto({ imageDataUrl, hospital, salas, dataCirurgia }) {
-  const apiKey = OPENAI_API_KEY;
+  const apiKey = await resolverOpenAIKey();
   if (!apiKey) {
-    const err = new Error("OPENAI_API_KEY/MAPACC_OPENAI_API_KEY nao configurada no servidor.");
+    const err = new Error("Chave OpenAI nao configurada. Configure em /admin_clinicas.html ou via OPENAI_API_KEY.");
     err.statusCode = 500;
     throw err;
   }
@@ -868,17 +897,49 @@ app.get("/api/health", async (req, res) => {
 });
 
 app.get("/api/config-check", authRequired, adminRequired, async (req, res) => {
+  const dbOpenAIKey = await getConfigValue("openai_api_key");
+  const resolvedKey = await resolverOpenAIKey();
   res.json({
     ok: true,
+    config_check_version: CONFIG_CHECK_VERSION,
     railway: IS_RAILWAY,
     database: DB_FILE,
-    openai_api_key_configurada: !!OPENAI_API_KEY,
-    openai_api_key_tamanho: OPENAI_API_KEY ? OPENAI_API_KEY.length : 0,
-    openai_api_key_nome_usado: process.env.OPENAI_API_KEY ? "OPENAI_API_KEY" : (process.env.MAPACC_OPENAI_API_KEY ? "MAPACC_OPENAI_API_KEY" : ""),
+    openai_api_key_configurada: !!resolvedKey,
+    openai_api_key_tamanho: resolvedKey ? resolvedKey.length : 0,
+    openai_api_key_nome_usado: process.env.OPENAI_API_KEY ? "OPENAI_API_KEY" : (process.env.MAPACC_OPENAI_API_KEY ? "MAPACC_OPENAI_API_KEY" : (dbOpenAIKey ? "app_config" : "")),
+    openai_api_key_no_banco: !!dbOpenAIKey,
     mapacc_teste: process.env.MAPACC_TESTE || "",
     openai_vision_model: OPENAI_VISION_MODEL,
     port: PORT
   });
+});
+
+app.get("/api/admin-config/openai", authRequired, adminRequired, async (req, res) => {
+  try{
+    const dbOpenAIKey = await getConfigValue("openai_api_key");
+    const resolvedKey = await resolverOpenAIKey();
+    res.json({
+      ok:true,
+      configurada:!!resolvedKey,
+      origem:process.env.OPENAI_API_KEY ? "OPENAI_API_KEY" : (process.env.MAPACC_OPENAI_API_KEY ? "MAPACC_OPENAI_API_KEY" : (dbOpenAIKey ? "app_config" : "")),
+      tamanho:resolvedKey ? resolvedKey.length : 0,
+      model:OPENAI_VISION_MODEL
+    });
+  }catch(e){
+    res.status(500).json({ok:false,error:e.message});
+  }
+});
+
+app.post("/api/admin-config/openai", authRequired, adminRequired, async (req, res) => {
+  try{
+    const apiKey = String(req.body.api_key || req.body.openai_api_key || "").trim();
+    if(!apiKey) return res.status(400).json({ok:false,error:"Chave OpenAI vazia"});
+    if(!apiKey.startsWith("sk-")) return res.status(400).json({ok:false,error:"A chave deve comecar com sk-"});
+    await setConfigValue("openai_api_key", apiKey);
+    res.json({ok:true,configurada:true,tamanho:apiKey.length});
+  }catch(e){
+    res.status(500).json({ok:false,error:e.message});
+  }
 });
 
 app.get("/api/dia/:data", async (req, res) => {
