@@ -2038,6 +2038,14 @@ app.get('/sala.html', authRequired, (req,res)=>{
   res.sendFile(path.join(__dirname,'public','sala.html'));
 });
 
+app.get('/', authRequired, (req,res)=>{
+  res.sendFile(path.join(__dirname,'public','index.html'));
+});
+
+app.get('/index.html', authRequired, (req,res)=>{
+  res.sendFile(path.join(__dirname,'public','index.html'));
+});
+
 app.get('/admin_clinicas.html', authRequired, adminRequired, (req,res)=>{
   res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private');
   res.sendFile(path.join(__dirname,'public','admin_clinicas.html'));
@@ -2060,11 +2068,7 @@ app.get('/usuarios.html', authRequired, (req,res)=>{
 // app.use(express.static(path.join(__dirname, 'public'), { extensions: ['html'] }));
 
 
-app.use(express.static(PUBLIC_DIR));
-
-app.get("/", (req, res) => {
-  res.sendFile(path.join(PUBLIC_DIR, "index.html"));
-});
+app.use(express.static(PUBLIC_DIR, { index:false }));
 
 app.use("/api", (req, res) => {
   res.status(404).json({ error:"API não encontrada." });
