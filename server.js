@@ -31,6 +31,7 @@ const app = express();
 const PORT = Number(process.env.PORT) || 3000;
 const ROOT_DIR = __dirname;
 const PUBLIC_DIR = path.join(ROOT_DIR, "public");
+const IS_RAILWAY = !!(process.env.RAILWAY_ENVIRONMENT || process.env.RAILWAY_PROJECT_ID || process.env.RAILWAY_SERVICE_ID);
 const DEFAULT_HOSPITAL_NOME = "Hospital Samaritano";
 const DEFAULT_HOSPITAL_SLUG = "samaritano";
 const OPENAI_VISION_MODEL = process.env.OPENAI_VISION_MODEL || "gpt-5.4-mini";
@@ -52,17 +53,41 @@ const DEFAULT_IMPORT_PROMPT = [
   "- Separar iniciais e idade em colunas diferentes.",
   "- Manter uma linha por cirurgia."
 ].join("\n");
+const SIRIO_LIBANES_SALAS = [
+  ...Array.from({ length: 14 }, (_, i) => `Sala D${String(i + 1).padStart(2, "0")}`),
+  "RPA D",
+  ...Array.from({ length: 12 }, (_, i) => `Sala C${String(i + 1).padStart(2, "0")}`),
+  "RPA C",
+  ...Array.from({ length: 12 }, (_, i) => `EDA ${String(i + 1).padStart(2, "0")}`),
+  "RPA EDA",
+  ...Array.from({ length: 5 }, (_, i) => `RAVA ${String(i + 1).padStart(2, "0")}`),
+  "RNM",
+  "TC",
+  "RPA CDI"
+];
+const BACKUP_TABLES = [
+  "hospitais",
+  "hospital_salas",
+  "users",
+  "user_hospitais",
+  "hospital_acessos_dia",
+  "cirurgias",
+  "anestesistas_dia"
+];
 
-// Railway Volume persistente por padrao; em dev local pode usar DB_FILE=./database.db.
-const DB_FILE = process.env.DB_FILE || "/data/database.db";
+// Railway usa volume persistente em /data; localmente o .env pode usar DB_FILE=./database.db.
+const DB_FILE = IS_RAILWAY && (!process.env.DB_FILE || process.env.DB_FILE === "./database.db")
+  ? "/data/database.db"
+  : (process.env.DB_FILE || "/data/database.db");
 
 try {
-  fs.mkdirSync("/data", { recursive: true });
+  fs.mkdirSync(path.dirname(path.resolve(DB_FILE)), { recursive: true });
 } catch (e) {}
 
 console.log("==================================");
 console.log("Sistema Mapa de Cirurgias por Dia");
 console.log("DB:", DB_FILE);
+console.log("Railway:", IS_RAILWAY ? "sim" : "nao");
 console.log("PORT:", PORT);
 console.log("==================================");
 
@@ -207,6 +232,21 @@ async function garantirHospitalPadrao() {
       INSERT OR IGNORE INTO hospital_salas (hospital_id, nome, setor, bloco, tipo, ordem)
       VALUES (?, ?, ?, ?, ?, ?)
     `, [hospitalId, sala.nome, sala.setor, sala.bloco, sala.tipo, sala.ordem]);
+  }
+
+  await run(
+    `INSERT OR IGNORE INTO hospitais (nome, slug, tipo) VALUES (?, ?, 'hospital')`,
+    ["Hospital Sírio-Libanês", "hospital-sirio-libanes"]
+  );
+  const sirio = await get(`SELECT id FROM hospitais WHERE slug = ?`, ["hospital-sirio-libanes"]);
+  if (sirio && sirio.id) {
+    await run(`UPDATE hospitais SET ativo = 1 WHERE id = ?`, [sirio.id]);
+    for (let i = 0; i < SIRIO_LIBANES_SALAS.length; i++) {
+      await run(`
+        INSERT OR IGNORE INTO hospital_salas (hospital_id, nome, setor, bloco, tipo, ordem)
+        VALUES (?, ?, ?, ?, ?, ?)
+      `, [sirio.id, SIRIO_LIBANES_SALAS[i], "", "", "sala", i + 1]);
+    }
   }
 
   return hospitalId;
@@ -1517,6 +1557,69 @@ app.delete('/api/hospitais/:id', authRequired, adminRequired, async (req,res)=>{
 
     await run(`UPDATE hospitais SET ativo = 0, atualizado_em = datetime('now', 'localtime') WHERE id = ?`, [id]);
     res.json({ok:true,deleted_id:id});
+  }catch(e){
+    res.status(500).json({ok:false,error:e.message});
+  }
+});
+
+app.get('/api/admin-backup', authRequired, adminRequired, async (req,res)=>{
+  try{
+    const backup = {
+      ok:true,
+      versao:1,
+      gerado_em:new Date().toISOString(),
+      database:DB_FILE,
+      tables:{}
+    };
+    for (const table of BACKUP_TABLES) {
+      backup.tables[table] = await all(`SELECT * FROM ${table}`);
+    }
+    res.setHeader('Content-Type', 'application/json; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="mapa-cc-backup-${dataLocalISO()}.json"`);
+    res.json(backup);
+  }catch(e){
+    res.status(500).json({ok:false,error:e.message});
+  }
+});
+
+async function importarTabelaBackup(table, rows) {
+  if (!BACKUP_TABLES.includes(table) || !Array.isArray(rows) || !rows.length) return 0;
+  const colsInfo = await all(`PRAGMA table_info("${table}")`);
+  const validCols = colsInfo.map(c => c.name);
+  let imported = 0;
+  for (const row of rows) {
+    if (!row || typeof row !== "object") continue;
+    const cols = Object.keys(row).filter(c => validCols.includes(c));
+    if (!cols.length) continue;
+    const placeholders = cols.map(() => "?").join(", ");
+    const updates = cols.filter(c => c !== "id").map(c => `${c}=excluded.${c}`).join(", ");
+    const sql = `
+      INSERT INTO ${table} (${cols.join(", ")})
+      VALUES (${placeholders})
+      ${updates ? `ON CONFLICT(id) DO UPDATE SET ${updates}` : "ON CONFLICT(id) DO NOTHING"}
+    `;
+    await run(sql, cols.map(c => row[c]));
+    imported++;
+  }
+  return imported;
+}
+
+app.post('/api/admin-backup/import', authRequired, adminRequired, async (req,res)=>{
+  try{
+    const payload = req.body || {};
+    const tables = payload.tables && typeof payload.tables === "object" ? payload.tables : {};
+    const resumo = {};
+    await run("BEGIN IMMEDIATE");
+    try{
+      for (const table of BACKUP_TABLES) {
+        resumo[table] = await importarTabelaBackup(table, tables[table]);
+      }
+      await run("COMMIT");
+    }catch(e){
+      await run("ROLLBACK").catch(() => {});
+      throw e;
+    }
+    res.json({ok:true,importado:resumo});
   }catch(e){
     res.status(500).json({ok:false,error:e.message});
   }

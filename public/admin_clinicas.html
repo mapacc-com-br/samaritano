@@ -42,8 +42,11 @@ button.green{background:var(--green)}button.red{background:var(--red)}button.lig
     <div class="row">
       <button onclick="location.href='/sala.html'">Abrir sala</button>
       <button class="light" onclick="load()">Recarregar</button>
+      <button class="light" id="btnBackup">Baixar backup JSON</button>
+      <button class="light" id="btnImportBackup">Importar backup</button>
       <button class="red" id="logout">Sair</button>
     </div>
+    <input id="backupFile" type="file" accept="application/json,.json" style="display:none">
     <div class="status" id="status">Carregando...</div>
   </section>
 
@@ -136,6 +139,33 @@ $('addForm').onsubmit = async ev => {
     await load();
     status('Hospital/clinica adicionado.', 'ok');
   }catch(e){status(e.message, 'err')}
+};
+
+$('btnBackup').onclick = () => {
+  location.href = '/api/admin-backup';
+};
+
+$('btnImportBackup').onclick = () => {
+  $('backupFile').click();
+};
+
+$('backupFile').onchange = async ev => {
+  const file = ev.target.files && ev.target.files[0];
+  ev.target.value = '';
+  if(!file) return;
+  if(!confirm('Importar este backup para o banco atual? Registros com o mesmo ID serao atualizados.')) return;
+  try{
+    const text = await file.text();
+    const payload = JSON.parse(text);
+    const resp = await api('/api/admin-backup/import', {
+      method:'POST',
+      body:JSON.stringify(payload)
+    });
+    await load();
+    status('Backup importado: '+JSON.stringify(resp.importado), 'ok');
+  }catch(e){
+    status('Falha ao importar backup: '+e.message, 'err');
+  }
 };
 
 $('list').onclick = async ev => {
