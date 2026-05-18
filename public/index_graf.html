@@ -423,6 +423,7 @@ function canonicalRoomName(name){
   var idx=roomNameToIndex(name);
   return rooms[idx]?rooms[idx].name:(rooms[0]?rooms[0].name:"Nao escaladas");
 }
+function isUnscheduledRoomName(name){return roomNameToIndex(name)===0}
 function html(s){return String(s??"").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;").replaceAll("'","&#039;")}
 function roleLabel(user){return user && (user.admin_plus || String(user.username || '').trim().toLowerCase() === 'godofredo') ? 'admin+' : String((user && user.role) || '')}
 function initials(name){var clean=String(name||'').trim();return clean?clean.split(/\s+/).slice(0,2).map(function(p){return p[0]}).join('').toUpperCase():'--'}
@@ -661,7 +662,7 @@ function dbToItem(r){
     start:start,
     end:start+dur,
     duration:dur,
-    room:r.sala,
+    room:canonicalRoomName(r.sala),
     row:row,
     servico:r.servico||"SMA",
     anest:r.anestesista_escalado||"",

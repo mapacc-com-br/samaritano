@@ -61,6 +61,7 @@ select{width:100%;border:1px solid var(--line);border-radius:12px;padding:12px;b
 .pill.edit{background:#ecfdf3;color:#067647;border-color:#abefc6}
 .pill.view{background:#eff4ff;color:#3538cd;border-color:#c7d7fe}
 .pill.warn{background:#fffaeb;color:#b54708;border-color:#fedf89}
+.pill.lock{background:#fff1f3;color:#b42318;border-color:#fecdd3}
 .empty{border:1px dashed #b9c4d2;border-radius:16px;padding:20px;text-align:center;color:var(--muted);background:#fff}
 .status{margin-top:12px;padding:10px;border-radius:12px;background:#eff6ff;color:#1d4ed8;font-size:13px;font-weight:800;white-space:pre-wrap}
 .status.err{background:#fff1f2;color:#be123c}
@@ -83,7 +84,7 @@ select{width:100%;border:1px solid var(--line);border-radius:12px;padding:12px;b
       <div class="sub" id="welcome">Carregando sua central de hospitais...</div>
     </div>
     <div class="actions">
-      <a class="btn light" href="/usuarios.html" id="adminLink" style="display:none">Usuarios</a>
+      <a class="btn light" href="/reg.html" id="adminLink" style="display:none">Usuarios</a>
       <a class="btn light" href="/admin_clinicas.html" id="clinicasLink" style="display:none">Clinicas</a>
       <div class="userMenu">
         <button class="userButton" id="userMenuButton" type="button" aria-haspopup="true" aria-expanded="false">
@@ -129,7 +130,7 @@ select{width:100%;border:1px solid var(--line);border-radius:12px;padding:12px;b
 
     <section class="adminPanel" id="adminPanel">
       <div class="adminGrid">
-        <a class="adminCard" href="/usuarios.html">
+        <a class="adminCard" href="/reg.html">
           <strong>Usuarios e logins</strong>
           <span>Adicionar usuarios, ajustar perfil e vincular empresas/hospitais.</span>
         </a>
@@ -238,6 +239,7 @@ function cardHospital(h){
 
 function cardHospitalReception(h){
   const edit = Number(h.pode_editar) === 1;
+  const allowed = Number(h.pode_ver) === 1;
   const papel = h.papel_dia || 'visualizacao';
   const data = $('dataSala').value;
   const empresa = h.empresas || 'sem empresa';
@@ -252,10 +254,10 @@ function cardHospitalReception(h){
       </div>
       <div class="meta">${escapeHtml(h.tipo || 'hospital')} / ${escapeHtml(brDate(data))}</div>
       <div>
-        <span class="pill ${edit ? 'edit' : 'view'}">${edit ? 'pode editar' : 'somente leitura'}</span>
+        <span class="pill ${allowed ? (edit ? 'edit' : 'view') : 'lock'}">${allowed ? (edit ? 'pode editar' : 'somente leitura') : 'nao escalado'}</span>
         <span class="pill ${papel === 'visualizacao' ? 'warn' : ''}">${escapeHtml(papel)}</span>
       </div>
-      <a class="btn cardAction" href="/index_graf.html?hospital_id=${encodeURIComponent(h.id)}&data=${encodeURIComponent(data)}">${edit ? 'Abrir e editar mapa' : 'Abrir mapa'}</a>
+      <a class="btn cardAction ${allowed ? '' : 'light'}" href="${allowed ? ('/index_graf.html?hospital_id='+encodeURIComponent(h.id)+'&data='+encodeURIComponent(data)) : ('/sem_escala.html?hospital='+encodeURIComponent(h.nome)+'&data='+encodeURIComponent(data))}">${allowed ? (edit ? 'Abrir e editar mapa' : 'Abrir mapa') : 'Ver orientacao'}</a>
     </div>
   `;
 }
@@ -291,10 +293,10 @@ function updateReception({user, hospitais, empresas}){
 async function load(){
   try{
     const data = $('dataSala').value || todayISO();
-    let resp = await api('/api/me?data='+encodeURIComponent(data));
+    let resp = await api('/api/me?data='+encodeURIComponent(data)+'&recepcao=1');
     if(resp.user && resp.user.role === 'escalador' && !params.get('data') && data === todayISO()){
       $('dataSala').value = todayISO(1);
-      resp = await api('/api/me?data='+encodeURIComponent($('dataSala').value));
+      resp = await api('/api/me?data='+encodeURIComponent($('dataSala').value)+'&recepcao=1');
     }
     me = resp.user;
     const admin = isAdmin(me);

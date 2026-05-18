@@ -86,7 +86,7 @@ function nextUrl(){
   const next = new URLSearchParams(location.search).get('next') || '/sala.html';
   if(!next.startsWith('/')) return '/sala.html';
   const clean = next.split('?')[0];
-  if(clean === '/' || clean === '/index.html' || clean === '/index_graf.html' || clean === '/index_graf_v6.html' || clean === '/logins.html' || clean === '/reg.html') return '/sala.html';
+  if(clean === '/' || clean === '/index.html' || clean === '/index_graf.html' || clean === '/index_graf_v6.html') return '/sala.html';
   return next;
 }
 
