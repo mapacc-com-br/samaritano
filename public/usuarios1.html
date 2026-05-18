@@ -96,10 +96,13 @@ small{color:var(--muted)}
           </select>
         </div>
       </div>
+      <label>Empresas</label>
+      <div class="checks" id="addEmpresas"></div>
       <label>Hospitais</label>
       <div class="checks" id="addHospitals"></div>
       <div class="row">
         <button class="green" type="submit">Adicionar</button>
+        <button class="light" type="button" onclick="location.href='/admin_clinicas.html'">Cadastrar empresa</button>
       </div>
     </form>
   </section>
@@ -113,6 +116,7 @@ small{color:var(--muted)}
 <script>
 const $ = id => document.getElementById(id);
 let hospitals = [];
+let empresas = [];
 let users = [];
 let editing = null;
 
@@ -151,6 +155,10 @@ function ids(user){
   return String((user && user.hospital_ids) || '').split(',').map(Number).filter(Boolean);
 }
 
+function empresaIds(user){
+  return String((user && user.empresa_ids) || '').split(',').map(Number).filter(Boolean);
+}
+
 function displayScaleName(user){
   return String((user && user.nome_escala) || (user && user.username) || '').trim();
 }
@@ -164,8 +172,21 @@ function hospitalChecks(cls, selectedIds){
   }).join('');
 }
 
+function empresaChecks(cls, selectedIds){
+  const selected = new Set(selectedIds || []);
+  if(!empresas.length) return '<small>Nenhuma empresa disponivel.</small>';
+  return empresas.map(e => {
+    const id = Number(e.id);
+    return '<label class="check"><input class="'+cls+'" type="checkbox" value="'+id+'" '+(selected.has(id)?'checked':'')+'> '+esc(e.nome)+'</label>';
+  }).join('');
+}
+
 function checked(cls, root=document){
   return [...root.querySelectorAll('.'+cls+':checked')].map(x => Number(x.value)).filter(Boolean);
+}
+
+function renderAddEmpresas(){
+  $('addEmpresas').innerHTML = empresaChecks('addEmpresa', []);
 }
 
 function renderAddHospitals(){
@@ -180,11 +201,12 @@ function render(){
   $('users').innerHTML = users.map(u => {
     const ativo = Number(u.ativo) !== 0;
     const hosp = u.hospitais || (u.role === 'admin' || isPlus(u) ? 'acesso global' : 'sem hospital');
+    const emp = u.empresas || (u.role === 'admin' || isPlus(u) ? 'acesso global' : 'sem empresa');
     return '<article class="user" data-id="'+Number(u.id)+'">'+
       '<div class="head">'+
         '<div><div class="name">'+esc(u.username)+'</div>'+
         '<div class="scaleName">Nome da escala: '+esc(displayScaleName(u))+'</div>'+
-        '<div class="meta">senha: protegida / trocar no editar | atribuicao: '+esc(roleLabel(u))+' | e-mail: '+esc(u.email || 'nao informado')+' | hospitais: '+esc(hosp)+'</div></div>'+
+        '<div class="meta">senha: protegida / trocar no editar | atribuicao: '+esc(roleLabel(u))+' | e-mail: '+esc(u.email || 'nao informado')+' | empresas: '+esc(emp)+' | hospitais: '+esc(hosp)+'</div></div>'+
         '<div class="actions">'+(isPlus(u)?'<span class="badge plus">admin+</span>':'')+'<span class="badge '+(ativo?'ok':'err')+'">'+(ativo?'ativo':'inativo')+'</span><button class="light" data-edit="'+u.id+'">Editar</button><button class="red" data-del="'+u.id+'">Deletar</button></div>'+
       '</div>'+
       (editing === Number(u.id) ? editor(u) : '')+
@@ -204,6 +226,7 @@ function editor(u){
       '<div><label>Status</label><select data-ativo><option value="1" '+(Number(u.ativo)!==0?'selected':'')+'>Ativo</option><option value="0" '+(Number(u.ativo)===0?'selected':'')+'>Inativo</option></select></div>'+
     '</div>'+
     '<label>Nova senha</label><input data-password type="password" placeholder="Deixe vazio para manter a senha">'+
+    '<label>Empresas</label><div class="checks">'+empresaChecks('editEmpresa', empresaIds(u))+'</div>'+
     '<label>Hospitais</label><div class="checks">'+hospitalChecks('editHospital', ids(u))+'</div>'+
     '<div class="row"><button class="green" data-save="'+u.id+'">Salvar</button><button class="light" data-cancel="'+u.id+'">Cancelar</button></div>'+
   '</div>';
@@ -213,6 +236,9 @@ async function load(){
   try{
     const me = await api('/api/me');
     $('who').textContent = 'Logado como '+me.user.username+' - '+roleLabel(me.user);
+    const emp = await api('/api/admin-empresas');
+    empresas = emp.empresas || [];
+    renderAddEmpresas();
     const h = await api('/api/hospitais');
     hospitals = h.hospitais || [];
     renderAddHospitals();
@@ -237,12 +263,14 @@ $('addForm').onsubmit = async ev => {
       password:$('addPass').value,
       role:$('addRole').value,
       ativo:$('addAtivo').value,
+      empresa_ids:checked('addEmpresa'),
       hospital_ids:checked('addHospital')
     });
     $('addUser').value = '';
     $('addNomeEscala').value = '';
     $('addEmail').value = '';
     $('addPass').value = '';
+    document.querySelectorAll('.addEmpresa:checked').forEach(x => x.checked = false);
     document.querySelectorAll('.addHospital:checked').forEach(x => x.checked = false);
     await load();
     status('Usuario adicionado.', 'ok');
@@ -289,6 +317,7 @@ async function saveUser(id){
       role:card.querySelector('[data-role]').value,
       ativo:card.querySelector('[data-ativo]').value,
       password:card.querySelector('[data-password]').value,
+      empresa_ids:checked('editEmpresa', card),
       hospital_ids:checked('editHospital', card)
     });
     editing = null;
@@ -318,6 +347,6 @@ $('logoutBtn').onclick = async () => {
 
 load();
 </script>
-<script src="/mapacc-version.js?v=20260518-1535"></script>
+<script src="/mapacc-version.js?v=20260518-1545"></script>
 </body>
 </html>

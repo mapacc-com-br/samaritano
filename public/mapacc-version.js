@@ -1,6 +1,6 @@
 (function(){
-  const buildLabel = '18/05/2026 15:35 BRT';
-  const buildId = '2026-05-18-1535';
+  const buildLabel = '18/05/2026 15:45 BRT';
+  const buildId = '2026-05-18-1545';
 
   function showBadge(){
     if(document.getElementById('mapaccUpdateBadge')) return;
