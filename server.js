@@ -32,7 +32,7 @@ const PORT = Number(process.env.PORT) || 3000;
 const ROOT_DIR = __dirname;
 const PUBLIC_DIR = path.join(ROOT_DIR, "public");
 const IS_RAILWAY = !!(process.env.RAILWAY_ENVIRONMENT || process.env.RAILWAY_PROJECT_ID || process.env.RAILWAY_SERVICE_ID);
-const CONFIG_CHECK_VERSION = "2026-05-17-openai-db-config-v2";
+const CONFIG_CHECK_VERSION = "2026-05-17-railway-volume-guard-v3";
 const DEFAULT_HOSPITAL_NOME = "Hospital Samaritano";
 const DEFAULT_HOSPITAL_SLUG = "samaritano";
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY || process.env.MAPACC_OPENAI_API_KEY || "";
@@ -87,19 +87,100 @@ const BACKUP_TABLES = [
   "anestesistas_dia"
 ];
 
-// Railway usa volume persistente em /data; localmente o .env pode usar DB_FILE=./database.db.
-const DB_FILE = IS_RAILWAY && (!process.env.DB_FILE || process.env.DB_FILE === "./database.db")
-  ? "/data/database.db"
-  : (process.env.DB_FILE || "/data/database.db");
+const RAILWAY_DATA_DIR = "/data";
+
+function normalizarCaminho(p) {
+  return path.resolve(String(p || ""));
+}
+
+function estaDentroDoDiretorio(caminho, diretorio) {
+  const absCaminho = normalizarCaminho(caminho);
+  const absDiretorio = normalizarCaminho(diretorio);
+  return absCaminho === absDiretorio || absCaminho.startsWith(absDiretorio + path.sep);
+}
+
+function resolverDbFile() {
+  const envDbFile = String(process.env.DB_FILE || "").trim();
+
+  if (!IS_RAILWAY) {
+    return envDbFile || "/data/database.db";
+  }
+
+  if (envDbFile && !estaDentroDoDiretorio(envDbFile, RAILWAY_DATA_DIR)) {
+    console.warn(`DB_FILE ignorado no Railway porque esta fora de ${RAILWAY_DATA_DIR}: ${envDbFile}`);
+  }
+
+  return envDbFile && estaDentroDoDiretorio(envDbFile, RAILWAY_DATA_DIR)
+    ? envDbFile
+    : path.join(RAILWAY_DATA_DIR, "database.db");
+}
+
+const DB_FILE = resolverDbFile();
+
+function validarVolumeRailway() {
+  if (!IS_RAILWAY) return;
+
+  if (!estaDentroDoDiretorio(DB_FILE, RAILWAY_DATA_DIR)) {
+    console.error(`FATAL: no Railway o banco precisa ficar dentro de ${RAILWAY_DATA_DIR}. DB atual: ${DB_FILE}`);
+    process.exit(1);
+  }
+
+  try {
+    const stat = fs.statSync(RAILWAY_DATA_DIR);
+    if (!stat.isDirectory()) throw new Error(`${RAILWAY_DATA_DIR} nao e um diretorio`);
+    const marker = path.join(RAILWAY_DATA_DIR, ".mapacc-volume-ok");
+    fs.writeFileSync(marker, new Date().toISOString(), "utf8");
+  } catch (err) {
+    console.error(`FATAL: volume ${RAILWAY_DATA_DIR} nao esta montado ou nao esta gravavel:`, err.message);
+    process.exit(1);
+  }
+}
+
+function timestampArquivo() {
+  return new Date().toISOString().replace(/[:.]/g, "-");
+}
+
+function criarBackupBootBanco() {
+  if (!IS_RAILWAY) return null;
+  if (!fs.existsSync(DB_FILE)) return null;
+
+  const backupDir = path.join(RAILWAY_DATA_DIR, "backups");
+  fs.mkdirSync(backupDir, { recursive: true });
+  const stamp = timestampArquivo();
+  const baseNome = path.basename(DB_FILE);
+  const arquivos = [DB_FILE, `${DB_FILE}-wal`, `${DB_FILE}-shm`];
+  const copiados = [];
+
+  for (const arquivo of arquivos) {
+    if (!fs.existsSync(arquivo)) continue;
+    const sufixo = arquivo === DB_FILE ? "" : arquivo.slice(DB_FILE.length);
+    const destino = path.join(backupDir, `boot-${stamp}-${baseNome}${sufixo}`);
+    fs.copyFileSync(arquivo, destino);
+    copiados.push(destino);
+  }
+
+  return copiados;
+}
+
+validarVolumeRailway();
 
 try {
   fs.mkdirSync(path.dirname(path.resolve(DB_FILE)), { recursive: true });
 } catch (e) {}
 
+let BOOT_DB_BACKUP_FILES = null;
+try {
+  BOOT_DB_BACKUP_FILES = criarBackupBootBanco();
+} catch (err) {
+  console.error("Aviso: nao foi possivel criar backup de boot do banco:", err.message);
+}
+
 console.log("==================================");
 console.log("Sistema Mapa de Cirurgias por Dia");
 console.log("DB:", DB_FILE);
 console.log("Railway:", IS_RAILWAY ? "sim" : "nao");
+if (IS_RAILWAY) console.log("Railway volume /data:", "ok");
+if (BOOT_DB_BACKUP_FILES && BOOT_DB_BACKUP_FILES.length) console.log("Backup boot DB:", BOOT_DB_BACKUP_FILES.join(", "));
 console.log("OpenAI API key:", OPENAI_API_KEY ? "configurada" : "nao configurada");
 console.log("OpenAI vision model:", OPENAI_VISION_MODEL);
 console.log("PORT:", PORT);
@@ -333,6 +414,7 @@ async function garantirUsuariosTabela() {
   await run(`CREATE TABLE IF NOT EXISTS users (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     username TEXT NOT NULL UNIQUE,
+    nome_escala TEXT,
     password_hash TEXT NOT NULL,
     email TEXT,
     role TEXT NOT NULL DEFAULT 'plantonista',
@@ -342,6 +424,7 @@ async function garantirUsuariosTabela() {
   )`);
   await garantirColuna("users", "ativo", "INTEGER NOT NULL DEFAULT 1");
   await garantirColuna("users", "email", "TEXT");
+  await garantirColuna("users", "nome_escala", "TEXT");
   await run(`
     CREATE TABLE IF NOT EXISTS password_reset_tokens (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -360,6 +443,7 @@ async function migrarAnestesistasDiaPorHospital(hospitalPadraoId) {
     CREATE TABLE IF NOT EXISTS anestesistas_dia_v2 (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       hospital_id INTEGER NOT NULL DEFAULT ${hospitalPadraoId},
+      user_id INTEGER,
       data_escala TEXT NOT NULL,
       nome_anestesista TEXT NOT NULL,
       horario_escala TEXT,
@@ -375,6 +459,7 @@ async function migrarAnestesistasDiaPorHospital(hospitalPadraoId) {
     INSERT OR IGNORE INTO anestesistas_dia_v2 (
       id,
       hospital_id,
+      user_id,
       data_escala,
       nome_anestesista,
       horario_escala,
@@ -386,6 +471,7 @@ async function migrarAnestesistasDiaPorHospital(hospitalPadraoId) {
     SELECT
       id,
       COALESCE(NULLIF(hospital_id, 0), ?),
+      user_id,
       data_escala,
       nome_anestesista,
       horario_escala,
@@ -468,6 +554,7 @@ async function initDb() {
     CREATE TABLE IF NOT EXISTS anestesistas_dia (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
 
+      user_id INTEGER,
       data_escala TEXT NOT NULL,
       nome_anestesista TEXT NOT NULL,
 
@@ -485,10 +572,13 @@ async function initDb() {
   // Migração segura para bancos já existentes
   await garantirColuna("anestesistas_dia", "horario_escala", "TEXT");
   await garantirColuna("anestesistas_dia", "funcao", "TEXT");
+  await garantirColuna("anestesistas_dia", "user_id", "INTEGER");
   await garantirColuna("anestesistas_dia", "hospital_id", `INTEGER NOT NULL DEFAULT ${hospitalPadraoId}`);
   await run(`UPDATE anestesistas_dia SET hospital_id = ? WHERE hospital_id IS NULL OR hospital_id = 0`, [hospitalPadraoId]);
   await migrarAnestesistasDiaPorHospital(hospitalPadraoId);
+  await garantirColuna("anestesistas_dia", "user_id", "INTEGER");
   await run(`CREATE UNIQUE INDEX IF NOT EXISTS ux_anestesistas_dia_hospital ON anestesistas_dia (hospital_id, data_escala, nome_anestesista)`);
+  await run(`CREATE INDEX IF NOT EXISTS ix_anestesistas_dia_user ON anestesistas_dia (user_id, hospital_id, data_escala)`);
 
   await run(`
     CREATE TRIGGER IF NOT EXISTS trg_update_cirurgias
@@ -648,6 +738,64 @@ async function usuarioTemVinculo(userId, hospitalId) {
   return !!empresa;
 }
 
+async function resolverUsuarioDaEscala({ userId, nomeAnestesista, hospitalId }) {
+  const id = Number(userId || 0);
+  if (Number.isInteger(id) && id > 0) {
+    const user = await get(`SELECT id, username, nome_escala, role, ativo FROM users WHERE id = ?`, [id]);
+    return user && user.ativo !== 0 ? user : null;
+  }
+
+  const nome = String(nomeAnestesista || "").trim();
+  if (!nome) return null;
+  const normalizado = normalizarTextoChave(nome);
+
+  const users = await all(`
+    SELECT
+      u.id,
+      u.username,
+      u.nome_escala,
+      u.role,
+      u.ativo,
+      CASE
+        WHEN lower(COALESCE(NULLIF(u.nome_escala, ''), u.username)) = lower(?) THEN 3
+        WHEN lower(u.username) = lower(?) THEN 2
+        WHEN lower(COALESCE(NULLIF(u.nome_escala, ''), u.username)) LIKE lower(?) THEN 1
+        ELSE 0
+      END AS match_score
+    FROM users u
+    WHERE u.ativo = 1
+      AND (
+        lower(COALESCE(NULLIF(u.nome_escala, ''), u.username)) = lower(?)
+        OR lower(u.username) = lower(?)
+        OR lower(COALESCE(NULLIF(u.nome_escala, ''), u.username)) LIKE lower(?)
+      )
+    ORDER BY match_score DESC, COALESCE(NULLIF(u.nome_escala, ''), u.username) ASC
+  `, [nome, nome, `%${nome}%`, nome, nome, `%${nome}%`]);
+
+  for (const user of users) {
+    const display = normalizarTextoChave(user.nome_escala || user.username);
+    const login = normalizarTextoChave(user.username);
+    if (display === normalizado || login === normalizado) return user;
+  }
+
+  const vinculado = [];
+  for (const user of users) {
+    if (await usuarioTemVinculo(user.id, hospitalId)) vinculado.push(user);
+  }
+  return vinculado[0] || users[0] || null;
+}
+
+async function liberarAcessoPlantaoPorEscala({ userId, hospitalId, data, criadoPor }) {
+  if (!Number.isInteger(Number(userId)) || Number(userId) <= 0) return;
+  await run(`
+    INSERT INTO hospital_acessos_dia(data_acesso, hospital_id, user_id, papel_dia, pode_ver, pode_editar, criado_por)
+    VALUES(?, ?, ?, 'plantonista', 1, 0, ?)
+    ON CONFLICT(data_acesso, hospital_id, user_id) DO UPDATE SET
+      pode_ver = 1,
+      atualizado_em = datetime('now', 'localtime')
+  `, [data, hospitalId, userId, criadoPor || null]);
+}
+
 async function acessoHospitalNoDia(req, hospitalId, data) {
   const user = usuarioAtual(req);
   const dataAcesso = validarDataISO(data) ? data : dataLocalISO();
@@ -763,6 +911,59 @@ async function hospitaisPermitidos(req, data) {
   }
 
   return enriquecidos.filter(h => h.pode_ver);
+}
+
+async function hospitaisRecepcao(req, data) {
+  const user = usuarioAtual(req);
+  if (!user) return [];
+  if (isAdminLike(user) || user.role === "escalador") return hospitaisPermitidos(req, data);
+
+  const hospitais = await all(`
+    SELECT DISTINCT h.*
+    FROM hospitais h
+    LEFT JOIN user_hospitais uh ON uh.hospital_id = h.id AND uh.user_id = ?
+    LEFT JOIN empresa_hospitais eh ON eh.hospital_id = h.id
+    LEFT JOIN user_empresas ue ON ue.empresa_id = eh.empresa_id AND ue.user_id = ?
+    LEFT JOIN empresas e ON e.id = eh.empresa_id AND e.ativo = 1
+    LEFT JOIN hospital_acessos_dia ad ON ad.hospital_id = h.id AND ad.user_id = ? AND ad.data_acesso = ? AND ad.pode_ver = 1
+    WHERE h.ativo = 1
+      AND (uh.id IS NOT NULL OR (ue.id IS NOT NULL AND e.id IS NOT NULL) OR ad.id IS NOT NULL)
+    ORDER BY h.nome
+  `, [user.id, user.id, user.id, data || dataLocalISO()]);
+
+  const enriquecidos = [];
+  for (const hospital of hospitais) {
+    const acesso = await acessoHospitalNoDia(req, hospital.id, data);
+    const empresas = await all(`
+      SELECT e.id, e.nome
+      FROM empresas e
+      JOIN empresa_hospitais eh ON eh.empresa_id = e.id
+      WHERE eh.hospital_id = ? AND e.ativo = 1
+      ORDER BY e.nome
+    `, [hospital.id]);
+    enriquecidos.push({
+      ...hospital,
+      empresa_ids: empresas.map(e => e.id).join(","),
+      empresas: empresas.map(e => e.nome).join(", "),
+      papel_dia: acesso.papel_dia,
+      pode_ver: acesso.pode_ver ? 1 : 0,
+      pode_editar: acesso.pode_editar ? 1 : 0,
+      origem_acesso: acesso.origem
+    });
+  }
+  return enriquecidos;
+}
+
+async function empresasDoUsuario(user) {
+  if (!user) return [];
+  if (isAdminLike(user)) return all(`SELECT id, nome FROM empresas WHERE ativo = 1 ORDER BY nome`);
+  return all(`
+    SELECT DISTINCT e.id, e.nome
+    FROM empresas e
+    JOIN user_empresas ue ON ue.empresa_id = e.id AND ue.user_id = ?
+    WHERE e.ativo = 1
+    ORDER BY e.nome
+  `, [user.id]);
 }
 
 async function podeGerenciarAcessos(req, hospitalId, data) {
@@ -977,14 +1178,45 @@ app.get("/api/health", async (req, res) => {
   }
 });
 
+function statusBancoPersistente() {
+  const info = {
+    data_dir: RAILWAY_DATA_DIR,
+    data_dir_existe: fs.existsSync(RAILWAY_DATA_DIR),
+    data_dir_gravavel: false,
+    database_existe: fs.existsSync(DB_FILE),
+    database_tamanho: 0,
+    database_mtime: null,
+    database_em_volume: estaDentroDoDiretorio(DB_FILE, RAILWAY_DATA_DIR),
+    boot_backup_files: BOOT_DB_BACKUP_FILES || []
+  };
+
+  try {
+    const marker = path.join(RAILWAY_DATA_DIR, ".mapacc-config-check");
+    fs.writeFileSync(marker, new Date().toISOString(), "utf8");
+    info.data_dir_gravavel = true;
+  } catch (e) {
+    info.data_dir_gravavel = false;
+  }
+
+  try {
+    const stat = fs.statSync(DB_FILE);
+    info.database_tamanho = stat.size;
+    info.database_mtime = stat.mtime.toISOString();
+  } catch (e) {}
+
+  return info;
+}
+
 app.get("/api/config-check", authRequired, adminRequired, async (req, res) => {
   const dbOpenAIKey = await getConfigValue("openai_api_key");
   const resolvedKey = await resolverOpenAIKey();
+  const persistencia = statusBancoPersistente();
   res.json({
     ok: true,
     config_check_version: CONFIG_CHECK_VERSION,
     railway: IS_RAILWAY,
     database: DB_FILE,
+    persistencia,
     openai_api_key_configurada: !!resolvedKey,
     openai_api_key_tamanho: resolvedKey ? resolvedKey.length : 0,
     openai_api_key_nome_usado: process.env.OPENAI_API_KEY ? "OPENAI_API_KEY" : (process.env.MAPACC_OPENAI_API_KEY ? "MAPACC_OPENAI_API_KEY" : (dbOpenAIKey ? "app_config" : "")),
@@ -1041,10 +1273,11 @@ app.get("/api/dia/:data", async (req, res) => {
     `, [data, hospitalId]);
 
     const anestesistas = await all(`
-      SELECT *
-      FROM anestesistas_dia
-      WHERE data_escala = ?
-        AND hospital_id = ?
+      SELECT a.*, u.username, u.nome_escala
+      FROM anestesistas_dia a
+      LEFT JOIN users u ON u.id = a.user_id
+      WHERE a.data_escala = ?
+        AND a.hospital_id = ?
       ORDER BY horario_escala ASC, nome_anestesista ASC
     `, [data, hospitalId]);
 
@@ -1287,17 +1520,19 @@ app.get("/api/anestesistas", async (req, res) => {
     if (data) {
       if (!validarDataISO(data)) return res.status(400).json({ error:"Data invalida." });
       rows = await all(`
-        SELECT *
-        FROM anestesistas_dia
-        WHERE data_escala = ?
-          AND hospital_id = ?
+        SELECT a.*, u.username, u.nome_escala
+        FROM anestesistas_dia a
+        LEFT JOIN users u ON u.id = a.user_id
+        WHERE a.data_escala = ?
+          AND a.hospital_id = ?
         ORDER BY horario_escala ASC, nome_anestesista ASC
       `, [data, hospitalId]);
     } else {
       rows = await all(`
-        SELECT *
-        FROM anestesistas_dia
-        WHERE hospital_id = ?
+        SELECT a.*, u.username, u.nome_escala
+        FROM anestesistas_dia a
+        LEFT JOIN users u ON u.id = a.user_id
+        WHERE a.hospital_id = ?
         ORDER BY data_escala DESC, horario_escala ASC, nome_anestesista ASC
       `, [hospitalId]);
     }
@@ -1315,6 +1550,12 @@ app.post("/api/anestesistas", async (req, res) => {
     const v = validarAnestesista(req.body);
     if (!v.ok) return res.status(400).json({ error:v.error });
     if (!await exigirHospital(req, res, hospitalId, true, v.data_escala)) return;
+    const usuarioEscala = await resolverUsuarioDaEscala({
+      userId: req.body.user_id || req.body.userId,
+      nomeAnestesista: v.nome_anestesista,
+      hospitalId: v.hospital_id
+    });
+    const usuarioEscalaId = usuarioEscala ? usuarioEscala.id : null;
 
     const existente = await get(`
       SELECT id
@@ -1327,9 +1568,13 @@ app.post("/api/anestesistas", async (req, res) => {
     if (existente) {
       await run(`
         UPDATE anestesistas_dia
-        SET horario_escala = ?, funcao = ?, observacao = ?
+        SET user_id = ?, horario_escala = ?, funcao = ?, observacao = ?
         WHERE id = ?
-      `, [v.horario_escala, v.funcao, v.observacao, existente.id]);
+      `, [usuarioEscalaId, v.horario_escala, v.funcao, v.observacao, existente.id]);
+
+      if (usuarioEscalaId) {
+        await liberarAcessoPlantaoPorEscala({ userId:usuarioEscalaId, hospitalId:v.hospital_id, data:v.data_escala, criadoPor:req.user && req.user.id });
+      }
 
       const row = await get("SELECT * FROM anestesistas_dia WHERE id = ?", [existente.id]);
 
@@ -1344,21 +1589,27 @@ app.post("/api/anestesistas", async (req, res) => {
     const result = await run(`
       INSERT INTO anestesistas_dia (
         hospital_id,
+        user_id,
         data_escala,
         nome_anestesista,
         horario_escala,
         funcao,
         observacao
       )
-      VALUES (?, ?, ?, ?, ?, ?)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
     `, [
       v.hospital_id,
+      usuarioEscalaId,
       v.data_escala,
       v.nome_anestesista,
       v.horario_escala,
       v.funcao,
       v.observacao
     ]);
+
+    if (usuarioEscalaId) {
+      await liberarAcessoPlantaoPorEscala({ userId:usuarioEscalaId, hospitalId:v.hospital_id, data:v.data_escala, criadoPor:req.user && req.user.id });
+    }
 
     const row = await get("SELECT * FROM anestesistas_dia WHERE id = ?", [result.lastID]);
 
@@ -1384,11 +1635,18 @@ app.put("/api/anestesistas/:id", async (req, res) => {
     const v = validarAnestesista(req.body);
     if (!v.ok) return res.status(400).json({ error:v.error });
     if (!await exigirHospital(req, res, req.body.hospital_id, true, v.data_escala)) return;
+    const usuarioEscala = await resolverUsuarioDaEscala({
+      userId: req.body.user_id || req.body.userId,
+      nomeAnestesista: v.nome_anestesista,
+      hospitalId: v.hospital_id
+    });
+    const usuarioEscalaId = usuarioEscala ? usuarioEscala.id : null;
 
     const result = await run(`
       UPDATE anestesistas_dia
       SET
         hospital_id = ?,
+        user_id = ?,
         data_escala = ?,
         nome_anestesista = ?,
         horario_escala = ?,
@@ -1397,6 +1655,7 @@ app.put("/api/anestesistas/:id", async (req, res) => {
       WHERE id = ?
     `, [
       v.hospital_id,
+      usuarioEscalaId,
       v.data_escala,
       v.nome_anestesista,
       v.horario_escala,
@@ -1406,6 +1665,9 @@ app.put("/api/anestesistas/:id", async (req, res) => {
     ]);
 
     if (result.changes === 0) return res.status(404).json({ error:"Anestesista nao encontrado." });
+    if (usuarioEscalaId) {
+      await liberarAcessoPlantaoPorEscala({ userId:usuarioEscalaId, hospitalId:v.hospital_id, data:v.data_escala, criadoPor:req.user && req.user.id });
+    }
 
     const row = await get("SELECT * FROM anestesistas_dia WHERE id = ?", [id]);
     res.json(row);
@@ -1566,6 +1828,7 @@ db.serialize(() => {
   db.run(`CREATE TABLE IF NOT EXISTS users (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     username TEXT NOT NULL UNIQUE,
+    nome_escala TEXT,
     password_hash TEXT NOT NULL,
     email TEXT,
     role TEXT NOT NULL DEFAULT 'plantonista',
@@ -1575,6 +1838,7 @@ db.serialize(() => {
   )`);
 
   db.run(`ALTER TABLE users ADD COLUMN email TEXT`, () => {});
+  db.run(`ALTER TABLE users ADD COLUMN nome_escala TEXT`, () => {});
   db.run(`ALTER TABLE users ADD COLUMN ativo INTEGER NOT NULL DEFAULT 1`, () => {});
 
   db.get(`SELECT id FROM users WHERE username = ?`, ['godofredo'], (err, row) => {
@@ -1595,7 +1859,7 @@ const getUserByUsername = (username) => new Promise((resolve,reject)=>{
 });
 
 const getUserById = (id) => new Promise((resolve,reject)=>{
-  db.get(`SELECT id, username, role, created_at FROM users WHERE id = ?`, [id], (err,row)=>err?reject(err):resolve(row));
+  db.get(`SELECT id, username, nome_escala, role, created_at FROM users WHERE id = ?`, [id], (err,row)=>err?reject(err):resolve(row));
 });
 
 function authRequired(req,res,next){
@@ -1645,11 +1909,11 @@ app.post('/api/login', async (req,res)=>{
     }
 
     const sid = crypto.randomBytes(32).toString('hex');
-    const sessionUser = {id:user.id, username:user.username, role:user.role, admin_plus:isAdminPlusUser(user)};
+    const sessionUser = {id:user.id, username:user.username, nome_escala:user.nome_escala || user.username, role:user.role, admin_plus:isAdminPlusUser(user)};
     sessions.set(sid, {user:sessionUser, createdAt:Date.now()});
 
     res.setHeader('Set-Cookie', `ccsama_session=${sid}; HttpOnly; Path=/; SameSite=Lax; Max-Age=604800`);
-    res.json({ok:true,user:{username:user.username,role:user.role,admin_plus:isAdminPlusUser(user)}});
+    res.json({ok:true,user:{username:user.username,nome_escala:user.nome_escala || user.username,role:user.role,admin_plus:isAdminPlusUser(user)}});
   }catch(e){
     res.status(500).json({ok:false,error:e.message});
   }
@@ -1727,8 +1991,13 @@ app.post('/api/password-reset/confirm', async (req,res)=>{
 
 app.get('/api/me', authRequired, async (req,res)=>{
   const data = validarDataISO(req.query.data) ? req.query.data : dataLocalISO();
-  const hospitais = await hospitaisPermitidos(req, data);
+  const recepcao = req.query.recepcao === '1' || req.query.reception === '1';
+  const hospitais = recepcao ? await hospitaisRecepcao(req, data) : await hospitaisPermitidos(req, data);
   const mapaEmpresas = new Map();
+  const empresasUsuario = await empresasDoUsuario(req.user);
+  for (const empresa of empresasUsuario) {
+    mapaEmpresas.set(Number(empresa.id), { id:Number(empresa.id), nome:empresa.nome });
+  }
   for (const h of hospitais) {
     const ids = String(h.empresa_ids || '').split(',').map(Number).filter(Boolean);
     const nomes = String(h.empresas || '').split(',').map(s => s.trim()).filter(Boolean);
@@ -2114,7 +2383,7 @@ app.get('/api/acessos-dia', authRequired, async (req,res)=>{
     if(!await exigirHospital(req, res, hospitalId, false, data)) return;
 
     const acessos = await all(`
-      SELECT ad.*, u.username, u.role
+      SELECT ad.*, u.username, u.nome_escala, u.role
       FROM hospital_acessos_dia ad
       JOIN users u ON u.id = ad.user_id
       WHERE ad.data_acesso = ?
@@ -2153,7 +2422,7 @@ app.post('/api/acessos-dia', authRequired, async (req,res)=>{
     `, [data, hospitalId, userId, papelDia, podeVer, podeEditar, req.user.id]);
 
     const acesso = await get(`
-      SELECT ad.*, u.username, u.role
+      SELECT ad.*, u.username, u.nome_escala, u.role
       FROM hospital_acessos_dia ad
       JOIN users u ON u.id = ad.user_id
       WHERE ad.data_acesso = ? AND ad.hospital_id = ? AND ad.user_id = ?
@@ -2198,7 +2467,7 @@ app.post('/api/change-password', authRequired, async (req,res)=>{
 app.get('/api/users', authRequired, async (req,res)=>{
   try{
     const users = await all(`
-      SELECT u.id, u.username, u.email, u.role, u.ativo, u.created_at,
+      SELECT u.id, u.username, u.nome_escala, u.email, u.role, u.ativo, u.created_at,
         CASE WHEN lower(u.username) = 'godofredo' THEN 1 ELSE 0 END AS admin_plus,
         COALESCE(group_concat(DISTINCT h.id), '') AS hospital_ids,
         COALESCE(group_concat(DISTINCT h.nome), '') AS hospitais,
@@ -2221,10 +2490,16 @@ app.get('/api/users', authRequired, async (req,res)=>{
 app.get('/api/usuarios-opcoes', authRequired, async (req,res)=>{
   try{
     const user = usuarioAtual(req);
-    if(!user || (!isAdminLike(user) && user.role !== 'escalador')){
-      return res.status(403).json({ok:false,error:'Acesso restrito ao admin ou escalador'});
+    if(!user || (!isAdminLike(user) && !['escalador','coordenador'].includes(user.role))){
+      return res.status(403).json({ok:false,error:'Acesso restrito ao admin, escalador ou coordenador'});
     }
-    const users = await all(`SELECT id, username, role, CASE WHEN lower(username) = 'godofredo' THEN 1 ELSE 0 END AS admin_plus FROM users ORDER BY username`);
+    const users = await all(`
+      SELECT id, username, nome_escala, email, role,
+        CASE WHEN lower(username) = 'godofredo' THEN 1 ELSE 0 END AS admin_plus
+      FROM users
+      WHERE ativo = 1
+      ORDER BY COALESCE(NULLIF(nome_escala,''), username)
+    `);
     res.json({ok:true,users});
   }catch(e){
     res.status(500).json({ok:false,error:e.message});
@@ -2246,6 +2521,7 @@ app.post('/api/users', authRequired, async (req,res)=>{
 
     if(bodyId > 0){
       const usernamePresente = Object.prototype.hasOwnProperty.call(req.body, 'username');
+      const nomeEscalaPresente = Object.prototype.hasOwnProperty.call(req.body, 'nome_escala') || Object.prototype.hasOwnProperty.call(req.body, 'nome');
       const rolePresente = Object.prototype.hasOwnProperty.call(req.body, 'role');
       const ativoPresente = Object.prototype.hasOwnProperty.call(req.body, 'ativo');
       const senhaPresente = Object.prototype.hasOwnProperty.call(req.body, 'password');
@@ -2253,7 +2529,7 @@ app.post('/api/users', authRequired, async (req,res)=>{
       const emailPresente = Object.prototype.hasOwnProperty.call(req.body, 'email');
       const empresasPresente = Object.prototype.hasOwnProperty.call(req.body, 'empresa_ids');
 
-      if(usernamePresente || rolePresente || ativoPresente || senhaPresente || hospitaisPresente || emailPresente || empresasPresente){
+      if(usernamePresente || nomeEscalaPresente || rolePresente || ativoPresente || senhaPresente || hospitaisPresente || emailPresente || empresasPresente){
         const usuario = await atualizarUsuarioSimples(bodyId, req.body || {});
         return res.json({ok:true,usuario});
       }
@@ -2263,6 +2539,7 @@ app.post('/api/users', authRequired, async (req,res)=>{
     }
 
     const username = String(req.body.username || '').trim();
+    const nomeEscala = String(req.body.nome_escala || req.body.nome || username).trim();
     const email = String(req.body.email || '').trim();
     const password = String(req.body.password || '');
     const roleInput = String(req.body.role || 'plantonista').trim().toLowerCase();
@@ -2272,7 +2549,7 @@ app.post('/api/users', authRequired, async (req,res)=>{
     const empresaIds = Array.isArray(req.body.empresa_ids) ? req.body.empresa_ids.map(Number).filter(n => Number.isInteger(n) && n > 0) : [];
     if(!username) return res.status(400).json({ok:false,error:'Usuario vazio'});
     if(password.length < 4) return res.status(400).json({ok:false,error:'Senha muito curta'});
-    const result = await run(`INSERT INTO users(username,email,password_hash,role,ativo) VALUES(?,?,?,?,?)`, [username, email, hashPassword(password), role, ativo]);
+    const result = await run(`INSERT INTO users(username,nome_escala,email,password_hash,role,ativo) VALUES(?,?,?,?,?,?)`, [username, nomeEscala, email, hashPassword(password), role, ativo]);
     for (const hospitalId of hospitalIds) {
       await run(`INSERT OR IGNORE INTO user_hospitais(user_id, hospital_id, papel) VALUES(?,?,?)`, [result.lastID, hospitalId, role]);
     }
@@ -2292,7 +2569,7 @@ async function atualizarUsuarioSimples(id, body){
     throw err;
   }
 
-  const alvo = await get(`SELECT id, username, email FROM users WHERE id = ?`, [id]);
+  const alvo = await get(`SELECT id, username, nome_escala, email FROM users WHERE id = ?`, [id]);
   if(!alvo) {
     const err = new Error('Usuario nao encontrado');
     err.status = 404;
@@ -2300,6 +2577,7 @@ async function atualizarUsuarioSimples(id, body){
   }
 
   const username = String(body.username ?? alvo.username).trim();
+  const nomeEscala = String(body.nome_escala ?? body.nome ?? alvo.nome_escala ?? username).trim();
   const email = String(body.email ?? alvo.email ?? '').trim();
   if(!username) {
     const err = new Error('Usuario vazio');
@@ -2331,7 +2609,7 @@ async function atualizarUsuarioSimples(id, body){
     ? body.empresa_ids.map(Number).filter(n => Number.isInteger(n) && n > 0)
     : [];
 
-  await run(`UPDATE users SET username = ?, email = ?, role = ?, ativo = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`, [username, email, role, ativo, id]);
+  await run(`UPDATE users SET username = ?, nome_escala = ?, email = ?, role = ?, ativo = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`, [username, nomeEscala, email, role, ativo, id]);
   if(password){
     await run(`UPDATE users SET password_hash = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`, [hashPassword(password), id]);
   }
@@ -2347,11 +2625,11 @@ async function atualizarUsuarioSimples(id, body){
   for (const [sid, session] of sessions.entries()) {
     if(session.user && Number(session.user.id) === id) {
       if(ativo === 0) sessions.delete(sid);
-      else session.user = {...session.user, username, role, admin_plus:isAdminPlusUser({username})};
+      else session.user = {...session.user, username, nome_escala:nomeEscala, role, admin_plus:isAdminPlusUser({username})};
     }
   }
 
-  return {id, username, email, role, ativo};
+  return {id, username, nome_escala:nomeEscala, email, role, ativo};
 }
 
 async function excluirUsuarioSimples(id){
@@ -2502,33 +2780,58 @@ app.delete('/api/users/:id', authRequired, async (req,res)=>{
 
 // Proteja páginas específicas.
 // IMPORTANTE: coloque isto ANTES do express.static.
+function noStore(res) {
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
+}
+
 app.get('/index_graf_v6.html', authRequired, (req,res)=>{
+  noStore(res);
   res.sendFile(path.join(__dirname,'public','index_graf.html'));
 });
 
 app.get('/index_graf.html', authRequired, (req,res)=>{
+  noStore(res);
   res.sendFile(path.join(__dirname,'public','index_graf.html'));
 });
 
 app.get('/sala.html', authRequired, (req,res)=>{
+  noStore(res);
   res.sendFile(path.join(__dirname,'public','sala.html'));
 });
 
+app.get('/sem_escala.html', authRequired, (req,res)=>{
+  noStore(res);
+  res.sendFile(path.join(__dirname,'public','sem_escala.html'));
+});
+
 app.get('/', (req,res)=>{
+  noStore(res);
+  const sid = parseCookies(req).ccsama_session;
+  if(sid && sessions.get(sid)) return res.redirect('/sala.html');
   res.sendFile(path.join(__dirname,'public','index.html'));
 });
 
 app.get('/index.html', (req,res)=>{
+  noStore(res);
+  const sid = parseCookies(req).ccsama_session;
+  if(sid && sessions.get(sid)) return res.redirect('/sala.html');
   res.sendFile(path.join(__dirname,'public','index.html'));
 });
 
+app.get('/login.html', (req,res)=>{
+  noStore(res);
+  res.sendFile(path.join(__dirname,'public','login.html'));
+});
+
 app.get('/reset_senha.html', (req,res)=>{
-  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+  noStore(res);
   res.sendFile(path.join(__dirname,'public','reset_senha.html'));
 });
 
 app.get('/admin_clinicas.html', authRequired, adminRequired, (req,res)=>{
-  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+  noStore(res);
   res.sendFile(path.join(__dirname,'public','admin_clinicas.html'));
 });
 
@@ -2541,7 +2844,7 @@ app.get('/reg.html', authRequired, adminRequired, (req,res)=>{
 });
 
 app.get('/usuarios.html', authRequired, adminRequired, (req,res)=>{
-  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+  noStore(res);
   res.sendFile(path.join(__dirname,'public','usuarios.html'));
 });
 
@@ -2556,6 +2859,9 @@ app.use("/api", (req, res) => {
 });
 
 app.get("*", (req, res) => {
+  noStore(res);
+  const sid = parseCookies(req).ccsama_session;
+  if(sid && sessions.get(sid)) return res.redirect('/sala.html');
   res.sendFile(path.join(PUBLIC_DIR, "index.html"));
 });
 
