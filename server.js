@@ -33,6 +33,7 @@ const ROOT_DIR = __dirname;
 const PUBLIC_DIR = path.join(ROOT_DIR, "public");
 const IS_RAILWAY = !!(process.env.RAILWAY_ENVIRONMENT || process.env.RAILWAY_PROJECT_ID || process.env.RAILWAY_SERVICE_ID);
 const CONFIG_CHECK_VERSION = "2026-05-17-railway-volume-guard-v3";
+const SERVER_BUILD_ID = "2026-05-18-1615-static-public-deploy-info";
 const DEFAULT_HOSPITAL_NOME = "Hospital Samaritano";
 const DEFAULT_HOSPITAL_SLUG = "samaritano";
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY || process.env.MAPACC_OPENAI_API_KEY || "";
@@ -177,6 +178,7 @@ try {
 
 console.log("==================================");
 console.log("Sistema Mapa de Cirurgias por Dia");
+console.log("Server build:", SERVER_BUILD_ID);
 console.log("DB:", DB_FILE);
 console.log("Railway:", IS_RAILWAY ? "sim" : "nao");
 if (IS_RAILWAY) console.log("Railway volume /data:", "ok");
@@ -1196,6 +1198,45 @@ app.get("/api/health", async (req, res) => {
   } catch(err) {
     res.status(500).json({ ok:false, error:err.message });
   }
+});
+
+function arquivoInfo(filePath) {
+  try {
+    const stat = fs.statSync(filePath);
+    return {
+      existe: true,
+      tamanho: stat.size,
+      mtime: stat.mtime.toISOString()
+    };
+  } catch (e) {
+    return {
+      existe: false,
+      tamanho: 0,
+      mtime: null
+    };
+  }
+}
+
+app.get("/api/deploy-info", (req, res) => {
+  noStore(res);
+  const publicFiles = fs.existsSync(PUBLIC_DIR)
+    ? fs.readdirSync(PUBLIC_DIR).filter(name => !name.startsWith(".")).sort()
+    : [];
+
+  res.json({
+    ok: true,
+    server_build_id: SERVER_BUILD_ID,
+    railway: IS_RAILWAY,
+    cwd: process.cwd(),
+    root_dir: ROOT_DIR,
+    public_dir: PUBLIC_DIR,
+    server_js: arquivoInfo(__filename),
+    usuarios_html: arquivoInfo(path.join(PUBLIC_DIR, "usuarios.html")),
+    usuarios1_html: arquivoInfo(path.join(PUBLIC_DIR, "usuarios1.html")),
+    reg_html: arquivoInfo(path.join(PUBLIC_DIR, "reg.html")),
+    mapacc_version_js: arquivoInfo(path.join(PUBLIC_DIR, "mapacc-version.js")),
+    public_files: publicFiles
+  });
 });
 
 function statusBancoPersistente() {
