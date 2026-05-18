@@ -251,6 +251,26 @@ function normalizarTextoChave(valor) {
     .toUpperCase();
 }
 
+function normalizarSemAcento(valor) {
+  return String(valor || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function salaEhNaoEscalada(valor) {
+  const sala = normalizarSemAcento(valor);
+  return sala.includes("nao escalad") || sala.includes("sem sala");
+}
+
+function normalizarSalaCirurgia(valor) {
+  const sala = String(valor || "").trim();
+  if (salaEhNaoEscalada(sala)) return "Não escaladas";
+  return sala;
+}
+
 async function garantirColuna(nomeTabela, nomeColuna, definicaoSql) {
   const cols = await all(`PRAGMA table_info("${nomeTabela}")`);
   const existe = cols.some(c => c.name === nomeColuna);
@@ -633,7 +653,7 @@ function validarCirurgia(body) {
   const nome_cirurgia = String(body.nome_cirurgia || "").trim();
   const nome_cirurgia_key = normalizarTextoChave(nome_cirurgia);
   const duracao = String(body.duracao || "").trim();
-  const sala = String(body.sala || "").trim();
+  const sala = normalizarSalaCirurgia(body.sala);
   const servico = String(body.servico || "").trim();
   const anestesista_escalado = String(body.anestesista_escalado || "").trim();
   const iniciais_paciente = String(body.iniciais_paciente || "").trim().toUpperCase();
@@ -1330,7 +1350,7 @@ app.post("/api/cirurgias", async (req, res) => {
     if (!v.ok) return res.status(400).json({ error:v.error });
     if (!await exigirHospital(req, res, hospitalId, true, v.data_cirurgia)) return;
 
-    const existente = await get(`
+    let existente = await get(`
       SELECT id
       FROM cirurgias
       WHERE hospital_id = ?
@@ -1345,6 +1365,25 @@ app.post("/api/cirurgias", async (req, res) => {
       v.iniciais_paciente,
       v.idade_paciente
     ]);
+
+    if (!existente && salaEhNaoEscalada(v.sala)) {
+      existente = await get(`
+        SELECT id
+        FROM cirurgias
+        WHERE hospital_id = ?
+          AND data_cirurgia = ?
+          AND horario_inicio = ?
+          AND nome_cirurgia_key = ?
+          AND lower(sala) LIKE '%escalad%'
+        ORDER BY id ASC
+        LIMIT 1
+      `, [
+        v.hospital_id,
+        v.data_cirurgia,
+        v.horario_inicio,
+        v.nome_cirurgia_key
+      ]);
+    }
 
     if (existente) {
       await run(`
@@ -2708,46 +2747,10 @@ app.post('/api/users/delete', authRequired, async (req,res)=>{
 app.put('/api/users/:id', authRequired, async (req,res)=>{
   try{
     const id = Number(req.params.id);
-    if(!Number.isInteger(id) || id <= 0) return res.status(400).json({ok:false,error:'ID invalido'});
-
-    const alvo = await get(`SELECT id, username FROM users WHERE id = ?`, [id]);
-    if(!alvo) return res.status(404).json({ok:false,error:'Usuario nao encontrado'});
-
-    let username = String(req.body.username ?? alvo.username).trim();
-    if(!username) return res.status(400).json({ok:false,error:'Usuario vazio'});
-
-    const duplicado = await get(`SELECT id FROM users WHERE lower(username) = lower(?) AND id <> ?`, [username, id]);
-    if(duplicado) return res.status(409).json({ok:false,error:'Ja existe outro usuario com este nome'});
-
-    const roleInput = String(req.body.role || 'plantonista').trim().toLowerCase();
-    const role = ['admin','escalador','coordenador','plantonista'].includes(roleInput) ? roleInput : 'plantonista';
-    let ativo = req.body.ativo === false || req.body.ativo === 0 || req.body.ativo === '0' ? 0 : 1;
-    const password = String(req.body.password || '');
-    if(password && password.length < 4) return res.status(400).json({ok:false,error:'Senha muito curta'});
-
-    const hospitalIds = Array.isArray(req.body.hospital_ids)
-      ? req.body.hospital_ids.map(Number).filter(n => Number.isInteger(n) && n > 0)
-      : [];
-
-    await run(`UPDATE users SET username = ?, role = ?, ativo = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`, [username, role, ativo, id]);
-    if(password){
-      await run(`UPDATE users SET password_hash = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`, [hashPassword(password), id]);
-    }
-    await run(`DELETE FROM user_hospitais WHERE user_id = ?`, [id]);
-    for (const hospitalId of hospitalIds) {
-      await run(`INSERT OR IGNORE INTO user_hospitais(user_id, hospital_id, papel) VALUES(?,?,?)`, [id, hospitalId, role]);
-    }
-
-    for (const [sid, session] of sessions.entries()) {
-      if(session.user && Number(session.user.id) === id) {
-        if(ativo === 0) sessions.delete(sid);
-        else session.user = {...session.user, username, role, admin_plus:isAdminPlusUser({username})};
-      }
-    }
-
-    res.json({ok:true});
+    const usuario = await atualizarUsuarioSimples(id, req.body || {});
+    res.json({ok:true,usuario});
   }catch(e){
-    res.status(500).json({ok:false,error:e.message});
+    res.status(e.status || 500).json({ok:false,error:e.message});
   }
 });
 
