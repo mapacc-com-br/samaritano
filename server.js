@@ -2779,93 +2779,86 @@ app.delete('/api/users/:id', authRequired, async (req,res)=>{
   }
 });
 
-// Proteja
+// Paginas HTML explicitas ficam antes do express.static para aplicar sessao,
+// permissao e no-cache de forma previsivel.
 
 // Proteja páginas específicas.
-// IMPORTANTE: coloque isto ANTES do express.static.
 function noStore(res) {
   res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private');
   res.setHeader('Pragma', 'no-cache');
   res.setHeader('Expires', '0');
 }
 
-app.get('/index_graf_v6.html', authRequired, (req,res)=>{
+function sendPublicPage(res, fileName) {
   noStore(res);
-  res.sendFile(path.join(__dirname,'public','index_graf.html'));
-});
+  const filePath = path.join(PUBLIC_DIR, fileName);
+  if (!fs.existsSync(filePath)) {
+    return res.status(404).type('text/plain').send('Pagina nao encontrada.');
+  }
+  return res.sendFile(filePath);
+}
 
-app.get('/index_graf.html', authRequired, (req,res)=>{
-  noStore(res);
-  res.sendFile(path.join(__dirname,'public','index_graf.html'));
+function sendEntryPage(req, res) {
+  const sid = parseCookies(req).ccsama_session;
+  if (sid && sessions.get(sid)) return res.redirect('/sala.html');
+  return sendPublicPage(res, 'index.html');
+}
+
+app.get(['/index_graf_v6.html','/index_graf.html'], authRequired, (req,res)=>{
+  sendPublicPage(res, 'index_graf.html');
 });
 
 app.get('/sala.html', authRequired, (req,res)=>{
-  noStore(res);
-  res.sendFile(path.join(__dirname,'public','sala.html'));
+  sendPublicPage(res, 'sala.html');
 });
 
 app.get('/sem_escala.html', authRequired, (req,res)=>{
-  noStore(res);
-  res.sendFile(path.join(__dirname,'public','sem_escala.html'));
+  sendPublicPage(res, 'sem_escala.html');
 });
 
-app.get('/', (req,res)=>{
-  noStore(res);
-  const sid = parseCookies(req).ccsama_session;
-  if(sid && sessions.get(sid)) return res.redirect('/sala.html');
-  res.sendFile(path.join(__dirname,'public','index.html'));
-});
-
-app.get('/index.html', (req,res)=>{
-  noStore(res);
-  const sid = parseCookies(req).ccsama_session;
-  if(sid && sessions.get(sid)) return res.redirect('/sala.html');
-  res.sendFile(path.join(__dirname,'public','index.html'));
-});
+app.get(['/','/index.html'], sendEntryPage);
 
 app.get('/login.html', (req,res)=>{
-  noStore(res);
-  res.sendFile(path.join(__dirname,'public','login.html'));
+  sendPublicPage(res, 'login.html');
 });
 
 app.get('/reset_senha.html', (req,res)=>{
-  noStore(res);
-  res.sendFile(path.join(__dirname,'public','reset_senha.html'));
+  sendPublicPage(res, 'reset_senha.html');
 });
 
 app.get('/admin_clinicas.html', authRequired, adminRequired, (req,res)=>{
-  noStore(res);
-  res.sendFile(path.join(__dirname,'public','admin_clinicas.html'));
-});
-
-app.get('/admin_usuarios.html', authRequired, adminRequired, (req,res)=>{
-  res.redirect('/usuarios.html');
+  sendPublicPage(res, 'admin_clinicas.html');
 });
 
 app.get('/reg.html', authRequired, adminRequired, (req,res)=>{
-  res.redirect('/usuarios.html');
+  sendPublicPage(res, 'reg.html');
 });
 
-app.get('/usuarios.html', authRequired, adminRequired, (req,res)=>{
+app.get('/logins.html', authRequired, adminRequired, (req,res)=>{
   noStore(res);
-  res.sendFile(path.join(__dirname,'public','usuarios.html'));
+  res.redirect('/reg.html');
 });
 
-// Depois deste bloco, mantenha:
-// app.use(express.static(path.join(__dirname, 'public'), { extensions: ['html'] }));
+app.get(['/admin_usuarios.html','/usuarios.html'], authRequired, adminRequired, (req,res)=>{
+  noStore(res);
+  res.redirect('/reg.html');
+});
 
-
-app.use(express.static(PUBLIC_DIR, { index:false }));
+app.use(express.static(PUBLIC_DIR, {
+  index:false,
+  setHeaders(res, filePath) {
+    if (filePath.endsWith('.html')) noStore(res);
+  }
+}));
 
 app.use("/api", (req, res) => {
   res.status(404).json({ error:"API não encontrada." });
 });
 
 app.get("*", (req, res) => {
-  noStore(res);
   const sid = parseCookies(req).ccsama_session;
   if(sid && sessions.get(sid)) return res.redirect('/sala.html');
-  res.sendFile(path.join(PUBLIC_DIR, "index.html"));
+  sendPublicPage(res, 'index.html');
 });
 
 initDb()
