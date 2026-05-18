@@ -3,14 +3,14 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Logins e acessos - MAPA CC</title>
+<title>Usuarios e perfis - MAPA CC</title>
 <style>
 :root{--bg:#eef2f7;--card:#fff;--line:#d8e0ee;--text:#172033;--muted:#64748b;--blue:#2563eb;--green:#16a34a;--red:#dc2626}
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;color:var(--text)}
 header{position:sticky;top:0;z-index:10;background:#fffffff0;border-bottom:1px solid var(--line);backdrop-filter:blur(10px);padding:14px}
 h1{font-size:20px;margin:0}.sub{font-size:12px;color:var(--muted);margin-top:4px}
-.wrap{max-width:980px;margin:0 auto;padding:14px}
+.wrap{max-width:1040px;margin:0 auto;padding:14px}
 .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:12px;box-shadow:0 8px 24px #0f172a0d}
 h2{font-size:16px;margin:0 0 10px}
 label{font-size:13px;font-weight:800;margin:10px 0 6px;display:block}
@@ -24,7 +24,7 @@ button.green{background:var(--green)}button.red{background:var(--red)}button.lig
 .mark{position:fixed;right:10px;top:10px;z-index:50;background:#111827;color:#fff;border-radius:999px;padding:7px 10px;font-size:12px;font-weight:900}
 .user{background:#f8fafc;border:1px solid var(--line);border-radius:12px;padding:12px;margin-top:10px}
 .head{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
-.name{font-weight:900;font-size:16px}.meta{font-size:13px;color:var(--muted);margin-top:4px}
+.name{font-weight:900;font-size:16px}.scaleName{font-weight:800;color:#0f766e;margin-top:3px}.meta{font-size:13px;color:var(--muted);margin-top:4px;line-height:1.45}
 .actions{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}.actions button{padding:8px 10px;font-size:13px}
 .badge{display:inline-flex;border-radius:999px;padding:5px 9px;font-size:12px;font-weight:900;background:#e2e8f0;color:#334155}
 .badge.ok{background:#dcfce7;color:#166534}.badge.err{background:#fee2e2;color:#991b1b}.badge.plus{background:#fef3c7;color:#92400e}
@@ -40,7 +40,7 @@ small{color:var(--muted)}
 <body>
 <div class="mark">MAPA CC</div>
 <header>
-  <h1>Logins e acessos</h1>
+  <h1>Usuarios e perfis</h1>
   <div class="sub" id="who">Carregando...</div>
 </header>
 
@@ -56,7 +56,7 @@ small{color:var(--muted)}
   </section>
 
   <section class="card">
-    <h2>Adicionar login</h2>
+    <h2>Novo usuario</h2>
     <form id="addForm">
       <div class="grid2">
         <div>
@@ -64,8 +64,18 @@ small{color:var(--muted)}
           <input id="addUser" required autocomplete="off">
         </div>
         <div>
+          <label>Nome da escala</label>
+          <input id="addNomeEscala" autocomplete="off" placeholder="Como aparece na escala">
+        </div>
+      </div>
+      <div class="grid2">
+        <div>
           <label>Senha</label>
           <input id="addPass" required type="password" autocomplete="new-password">
+        </div>
+        <div>
+          <label>E-mail para recuperar senha</label>
+          <input id="addEmail" type="email" autocomplete="email" placeholder="nome@hospital.com.br">
         </div>
       </div>
       <div class="grid2">
@@ -95,7 +105,7 @@ small{color:var(--muted)}
   </section>
 
   <section class="card">
-    <h2>Logins cadastrados</h2>
+    <h2>Usuarios cadastrados</h2>
     <div id="users"></div>
   </section>
 </main>
@@ -125,19 +135,6 @@ async function api(url, body){
   return data;
 }
 
-async function apiAny(urls, body){
-  let lastError;
-  for(const url of urls){
-    try{
-      return await api(url, body);
-    }catch(e){
-      lastError = e;
-      if(!String(e.message).toLowerCase().includes('api')) throw e;
-    }
-  }
-  throw lastError || new Error('API indisponivel');
-}
-
 function isPlus(u){
   return !!u && (u.admin_plus || String(u.username || '').toLowerCase() === 'godofredo');
 }
@@ -152,6 +149,10 @@ function roleOptions(selected){
 
 function ids(user){
   return String((user && user.hospital_ids) || '').split(',').map(Number).filter(Boolean);
+}
+
+function displayScaleName(user){
+  return String((user && user.nome_escala) || (user && user.username) || '').trim();
 }
 
 function hospitalChecks(cls, selectedIds){
@@ -182,7 +183,8 @@ function render(){
     return '<article class="user" data-id="'+Number(u.id)+'">'+
       '<div class="head">'+
         '<div><div class="name">'+esc(u.username)+'</div>'+
-        '<div class="meta">senha: protegida / trocar no editar | atribuicao: '+esc(roleLabel(u))+' | hospitais: '+esc(hosp)+'</div></div>'+
+        '<div class="scaleName">Nome da escala: '+esc(displayScaleName(u))+'</div>'+
+        '<div class="meta">senha: protegida / trocar no editar | atribuicao: '+esc(roleLabel(u))+' | e-mail: '+esc(u.email || 'nao informado')+' | hospitais: '+esc(hosp)+'</div></div>'+
         '<div class="actions">'+(isPlus(u)?'<span class="badge plus">admin+</span>':'')+'<span class="badge '+(ativo?'ok':'err')+'">'+(ativo?'ativo':'inativo')+'</span><button class="light" data-edit="'+u.id+'">Editar</button><button class="red" data-del="'+u.id+'">Deletar</button></div>'+
       '</div>'+
       (editing === Number(u.id) ? editor(u) : '')+
@@ -192,8 +194,12 @@ function render(){
 
 function editor(u){
   return '<div class="editor">'+
-    '<div class="grid3">'+
+    '<div class="grid2">'+
       '<div><label>Usuario</label><input data-username value="'+esc(u.username)+'"></div>'+
+      '<div><label>Nome da escala</label><input data-nome-escala value="'+esc(displayScaleName(u))+'" placeholder="Como aparece na escala"></div>'+
+    '</div>'+
+    '<div class="grid3">'+
+      '<div><label>E-mail</label><input data-email type="email" value="'+esc(u.email || '')+'" placeholder="nome@hospital.com.br"></div>'+
       '<div><label>Atribuicao</label><select data-role>'+roleOptions(u.role)+'</select></div>'+
       '<div><label>Status</label><select data-ativo><option value="1" '+(Number(u.ativo)!==0?'selected':'')+'>Ativo</option><option value="0" '+(Number(u.ativo)===0?'selected':'')+'>Inativo</option></select></div>'+
     '</div>'+
@@ -213,28 +219,33 @@ async function load(){
     const u = await api('/api/users');
     users = u.users || [];
     render();
-    status('Pronto para adicionar, editar e deletar logins.', 'ok');
+    status('Pronto para adicionar, editar e deletar usuarios.', 'ok');
   }catch(e){
     status(e.message, 'err');
-    if(String(e.message).toLowerCase().includes('autenticado')) location.href = '/login.html?next=/reg.html';
+    if(String(e.message).toLowerCase().includes('autenticado')) location.href = '/login.html?next=/usuarios.html';
   }
 }
 
 $('addForm').onsubmit = async ev => {
   ev.preventDefault();
+  const username = $('addUser').value.trim();
   try{
     await api('/api/users', {
-      username:$('addUser').value.trim(),
+      username,
+      nome_escala:$('addNomeEscala').value.trim() || username,
+      email:$('addEmail').value.trim(),
       password:$('addPass').value,
       role:$('addRole').value,
       ativo:$('addAtivo').value,
       hospital_ids:checked('addHospital')
     });
     $('addUser').value = '';
+    $('addNomeEscala').value = '';
+    $('addEmail').value = '';
     $('addPass').value = '';
     document.querySelectorAll('.addHospital:checked').forEach(x => x.checked = false);
     await load();
-    status('Login adicionado.', 'ok');
+    status('Usuario adicionado.', 'ok');
   }catch(e){
     status(e.message, 'err');
   }
@@ -268,10 +279,13 @@ $('users').onclick = async ev => {
 async function saveUser(id){
   try{
     const card = document.querySelector('[data-id="'+id+'"]');
+    const username = card.querySelector('[data-username]').value.trim();
     await api('/api/users', {
       action:'update',
       id,
-      username:card.querySelector('[data-username]').value.trim(),
+      username,
+      nome_escala:card.querySelector('[data-nome-escala]').value.trim() || username,
+      email:card.querySelector('[data-email]').value.trim(),
       role:card.querySelector('[data-role]').value,
       ativo:card.querySelector('[data-ativo]').value,
       password:card.querySelector('[data-password]').value,
@@ -279,7 +293,7 @@ async function saveUser(id){
     });
     editing = null;
     await load();
-    status('Login atualizado.', 'ok');
+    status('Usuario atualizado.', 'ok');
   }catch(e){
     status(e.message, 'err');
   }
@@ -288,10 +302,10 @@ async function saveUser(id){
 async function deleteUser(id){
   try{
     const user = users.find(u => Number(u.id) === id);
-    if(!confirm('Deletar '+(user ? user.username : 'este login')+'?')) return;
+    if(!confirm('Deletar '+(user ? user.username : 'este usuario')+'?')) return;
     await api('/api/users', {action:'delete', id});
     await load();
-    status('Login deletado.', 'ok');
+    status('Usuario deletado.', 'ok');
   }catch(e){
     status(e.message, 'err');
   }
