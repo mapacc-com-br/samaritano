@@ -82,6 +82,14 @@ button:disabled{opacity:.72;cursor:wait}
 const $ = id => document.getElementById(id);
 let activeSession = null;
 
+function nextUrl(){
+  const next = new URLSearchParams(location.search).get('next') || '/sala.html';
+  if(!next.startsWith('/')) return '/sala.html';
+  const clean = next.split('?')[0];
+  if(clean === '/' || clean === '/index.html' || clean === '/index_graf.html' || clean === '/index_graf_v6.html' || clean === '/logins.html' || clean === '/reg.html') return '/sala.html';
+  return next;
+}
+
 function initials(name){
   const clean = String(name || '').trim();
   if(!clean) return '--';
@@ -131,8 +139,7 @@ async function login(){
     const data = await r.json();
     if(!r.ok || !data.ok) throw new Error(data.error || 'Falha no login');
 
-    const next = new URLSearchParams(location.search).get('next') || '/sala.html';
-    location.href = next;
+    location.href = nextUrl();
   }catch(e){
     $('btnLogin').disabled = false;
     st.className = 'status err';
@@ -142,8 +149,7 @@ async function login(){
 
 $('btnLogin').onclick = login;
 $('btnContinue').onclick = ()=>{
-  const next = new URLSearchParams(location.search).get('next') || '/sala.html';
-  location.href = next;
+  location.href = nextUrl();
 };
 $('btnLogout').onclick = async ()=>{
   $('btnLogout').disabled = true;

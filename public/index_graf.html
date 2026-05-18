@@ -10,7 +10,7 @@
 
 /* ===== PATCH GRÁFICO v4: drag, resize, badges, status ===== */
 .roomRow{overflow:visible}
-.block{cursor:grab;touch-action:none;user-select:none;overflow:visible;padding:0}
+.block{cursor:grab;touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent;overflow:visible;padding:0}
 .block:active{cursor:grabbing}
 .blockText{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;text-overflow:ellipsis;padding:6px 18px 6px 8px;width:100%}
 .block.assigned{background:linear-gradient(135deg,#22c55e,#15803d)}
@@ -19,6 +19,7 @@
 .block.finished{background:linear-gradient(135deg,#94a3b8,#64748b)!important;opacity:.72}
 .anestBadge{position:absolute;top:-16px;left:50%;transform:translateX(-50%);background:#22c55e;color:white;border-radius:8px;padding:3px 9px;font-size:10px;font-weight:900;white-space:nowrap;box-shadow:0 2px 6px #0f172a55;z-index:5;max-width:180px;overflow:hidden;text-overflow:ellipsis}
 .resizeHandle{position:absolute;right:3px;top:7px;width:11px;height:28px;border-radius:8px;background:rgba(255,255,255,.55);box-shadow:inset 0 0 0 1px rgba(255,255,255,.5);cursor:ew-resize;touch-action:none;z-index:6}
+.map,.mapShell,.roomRow,.resizeHandle{user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
 .roomRow.dropHint{background:#eff6ff}
 .case.finished{opacity:.72;background:#f8fafc}
 .case.virtualCase{border-color:#fbbf24;background:#fffbeb}
@@ -83,6 +84,13 @@ select:disabled,input:disabled{background:#f1f5f9;color:#94a3b8}
 /* ===== PATCH v7.1: importador da escala e inputs mobile ===== */
 textarea.compact{min-height:96px}
 .previewMini{max-height:240px;overflow:auto}
+.importEditGrid{display:grid;grid-template-columns:88px 1fr 1.4fr 90px 90px 82px 70px auto;gap:6px;align-items:center}
+.importEditGrid input,.importEditGrid select{padding:8px;border-radius:10px;font-size:12px}
+.importEditHead{font-size:10px;font-weight:900;color:var(--muted);text-transform:uppercase}
+.importRow{border:1px solid var(--line);border-radius:14px;padding:9px;background:#fff;margin-top:8px}
+.importReviewNote{border:1px solid #bfdbfe;background:#eff6ff;color:#1e3a8a;border-radius:12px;padding:9px 10px;font-size:12px;font-weight:800;line-height:1.35;margin-bottom:8px}
+.importRow:focus-within{border-color:#60a5fa;box-shadow:0 0 0 3px #dbeafe}
+@media(max-width:760px){.importEditGrid{grid-template-columns:1fr 1fr}.importEditHead{display:none}.importRow button{width:100%}}
 .shiftGrid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .toprow{grid-template-columns:minmax(140px,1fr) minmax(180px,1.2fr) auto auto}
 .toprow button{white-space:nowrap}
@@ -187,8 +195,8 @@ textarea.compact{min-height:96px}
       <h2>Prévia da importação</h2>
       <div id="importPreview" class="hint">Nenhuma lista processada ainda.</div>
       <div class="row" style="margin-top:10px">
-        <button id="btnSaveImported" class="green">Salvar/atualizar no SQLite</button>
-        <button id="btnAddSurgeryImport" class="light">+ Cirurgia manual</button>
+        <button id="btnSaveImported" class="green">Salvar alteracoes no mapa</button>
+        <button id="btnAddSurgeryImport" class="light">+ Linha para revisao</button>
       </div>
     </div>
     <div class="card" id="photoPromptCard">
@@ -323,6 +331,7 @@ var currentHospital=null;
 var currentUser=null;
 var currentAccess={pode_editar:true,papel_dia:'admin'};
 var usersForAccess=[];
+var registeredUsers=[];
 var dailyAccess=[];
 var items=[];
 var anesthetists=[];
@@ -427,9 +436,17 @@ function uniq(arr){return Array.from(new Set(arr.map(function(x){return String(x
 function getStoredList(key){try{return JSON.parse(localStorage.getItem(key)||'[]')}catch(e){return []}}
 function storeValue(key,val){val=String(val||'').trim();if(!val)return;var list=uniq(getStoredList(key).concat([val]));try{localStorage.setItem(key,JSON.stringify(list.slice(0,200)))}catch(e){}}
 function allProcedureSuggestions(){return uniq(PROCEDURE_SUGGESTIONS.concat(getStoredList('ccsama_procedures')).concat(items.map(function(i){return i.name}))) }
-function allAnesthetistSuggestions(){return uniq(ANESTHETIST_SEEDS.concat(getStoredList('ccsama_anesthetists')).concat(anesthetists.map(function(a){return a.name}))) }
+function userScaleName(u){return String((u&&u.nome_escala)||'').trim() || String((u&&u.username)||'').trim()}
+function allAnesthetistSuggestions(){return uniq(ANESTHETIST_SEEDS.concat(getStoredList('ccsama_anesthetists')).concat(registeredUsers.map(userScaleName)).concat(anesthetists.map(function(a){return a.name}))) }
 function datalistHtml(id,values){return '<datalist id="'+id+'">'+values.map(function(v){return '<option value="'+html(v)+'"></option>'}).join('')+'</datalist>'}
 function refreshAnesDatalist(){var dl=$('anesNameOptions');if(dl)dl.innerHTML=allAnesthetistSuggestions().map(function(v){return '<option value="'+html(v)+'"></option>'}).join('')}
+function findRegisteredUserByName(name){
+  var key=String(name||'').trim().toLowerCase();
+  if(!key)return null;
+  return registeredUsers.find(function(u){
+    return String(userScaleName(u)).trim().toLowerCase()===key || String(u.username||'').trim().toLowerCase()===key;
+  }) || null;
+}
 function status(msg,cls){$('status').textContent=msg;$('status').className="status "+(cls||"")}
 function selectedItem(){return items.find(x=>x.id===selectedId)}
 function canEdit(){
@@ -678,12 +695,15 @@ async function loadDay(){
   items=(data.cirurgias||[]).map(dbToItem);
   anesthetists=(data.anestesistas||[]).map(function(a){return {
     id:a.id,
+    user_id:a.user_id||null,
+    username:a.username||"",
     name:a.nome_anestesista,
     shift:a.horario_escala||"",
     role:a.funcao||"",
     obs:a.observacao||""
   }});
   selectedId=null;
+  await loadRegisteredUsers();
   renderAll();
   applyAccessMode();
   if(canManageAccess())await loadAccessManager();
@@ -761,8 +781,19 @@ function anestByName(name){
   return anesthetists.find(function(a){return normPerson(a.name)===key}) || null;
 }
 function roleSmartText(an){return normSmartText((an&&an.role||'')+' '+(an&&an.obs||''))}
+function hasSmartWord(text,word){return new RegExp('(^|\\s)'+word+'(\\s|$)').test(String(text||''))}
 function isEscaladorAnesthetist(an){return /escal/.test(roleSmartText(an))}
 function isCoordinatorAnesthetist(an){return /coord/.test(roleSmartText(an))}
+function isPreAnesthetist(an){
+  var role=roleSmartText(an);
+  return hasSmartWord(role,'pre') || role.includes('pre anest') || role.includes('pre-anest') || role.includes('consulta pre') || role.includes('preop');
+}
+function isEdaAnesthetist(an){
+  var role=roleSmartText(an);
+  return hasSmartWord(role,'eda') || role.includes('endoscopia');
+}
+function isCdiAnesthetist(an){return hasSmartWord(roleSmartText(an),'cdi')}
+function isCdiCase(it){return normSmartText(it&&it.room||'').includes('cdi')}
 function caseInterval(it){return {start:Number(it&&it.start)||0,end:Number(it&&it.end)||0}}
 function rangesOverlap(a,b){return a.start<b.end && b.start<a.end}
 function shiftRangeFor(an){
@@ -803,23 +834,29 @@ function conflictsForAssignment(anName,it,scheduled){
   var list=[];
   var interval=caseInterval(it);
   if(!an){
-    list.push('Anestesista nao esta na escala deste dia');
+    list.push('Anestesista "'+anName+'" nao esta na escala deste dia');
   }else{
     var shift=shiftRangeFor(an);
     if(!shift){
       list.push('Anestesista sem horario de escala cadastrado');
     }else if(interval.start<shift.start || interval.end>shift.end){
-      list.push('Cirurgia fora do horario da escala do anestesista');
+      list.push('Fora da escala de '+fmtTime(shift.start)+'-'+fmtTime(shift.end)+' para cirurgia '+fmtTime(interval.start)+'-'+fmtTime(interval.end));
+    }
+    if(isEdaAnesthetist(an)){
+      list.push('Anestesista em EDA nao pode ser escalado para cirurgia');
+    }
+    if(isCdiAnesthetist(an) && !isCdiCase(it)){
+      list.push('Anestesista do CDI deve ficar reservado para sala CDI');
     }
     if(isEscaladorAnesthetist(an) && !isEasyCase(it)){
-      list.push('Escalador atribuido em sala');
+      list.push('Escalador em sala somente para caso simples e sem alternativa');
     }
   }
   (scheduled||items).forEach(function(other){
     if(!other || other.id===it.id || !isAssignedSma(other))return;
     if(!samePerson(other.anest,anName))return;
     if(rangesOverlap(interval,caseInterval(other))){
-      list.push('Sobreposicao com '+fmtTime(other.start)+' '+(other.name||'cirurgia'));
+      list.push('Sobreposicao com '+fmtTime(other.start)+'-'+fmtTime(other.end)+' em '+(other.room||'sala')+': '+(other.name||'cirurgia'));
     }
   });
   return uniqueSmartMessages(list);
@@ -847,7 +884,7 @@ function scoreCandidate(an,it,scheduled,allowEscalador){
     return {hard:true,score:-999,name:name,reasons:['preservar escalador fora de sala']};
   }
   var conflicts=conflictsForAssignment(name,it,scheduled).filter(function(msg){
-    return !(allowEscalador && escalador && msg==='Escalador atribuido em sala' && isEasyCase(it));
+    return !(allowEscalador && escalador && msg.includes('Escalador em sala') && isEasyCase(it));
   });
   if(conflicts.length)return {hard:true,score:-999,name:name,reasons:conflicts};
 
@@ -869,6 +906,9 @@ function scoreCandidate(an,it,scheduled,allowEscalador){
   if(/sala/.test(role)){score+=12;reasons.push('cargo de sala')}
   if(/noturno/.test(role) && it.start>=19*60){score+=8;reasons.push('plantao noturno')}
   if(/estendido/.test(role) && it.end>19*60){score+=6;reasons.push('cobre horario estendido')}
+  if(isPreAnesthetist(an)){score-=45;reasons.push('ultimo recurso: esta no Pre')}
+  if(isCdiCase(it) && isCdiAnesthetist(an)){score+=35;reasons.push('reservado para CDI')}
+  else if(isCdiCase(it)){score-=12;reasons.push('sala CDI sem reserva dedicada')}
   if(isCoordinatorAnesthetist(an)){score-=18;reasons.push('preserva coordenador')}
   if(escalador){score-=55;reasons.push('uso excepcional do escalador')}
   if(isComplexCase(it) && isCoordinatorAnesthetist(an)){score-=8}
@@ -1040,6 +1080,7 @@ function renderMap(){
     bindBlockDrag(el);
     el.addEventListener('click',function(e){
       if(e.target.classList.contains('resizeHandle'))return;
+      if(el.dataset.skipClick==='1'){el.dataset.skipClick='0';return}
       if(el.dataset.moved==='1'){el.dataset.moved='0';return}
       selectedId=Number(el.dataset.id);
       openBlockActions(selectedId);
@@ -1107,10 +1148,12 @@ function rowFromClientY(clientY){
 function bindBlockDrag(el){
   var startX=0,startY=0,origStart=0,origRow=0,it=null,dragging=false,moved=false,armed=false,holdTimer=null;
   var HOLD_MS=360;
+  el.addEventListener('contextmenu',function(e){e.preventDefault()});
   el.addEventListener('pointerdown',function(e){
     if(e.target.classList.contains('resizeHandle'))return;
     it=items.find(function(x){return x.id===Number(el.dataset.id)});
     if(!it || isFinished(it) || !canEdit())return;
+    e.preventDefault();
     startX=e.clientX;startY=e.clientY;origStart=it.start;origRow=it.row;
     selectedId=it.id;moved=false;armed=false;dragging=true;
     el.setPointerCapture(e.pointerId);
@@ -1118,6 +1161,7 @@ function bindBlockDrag(el){
   });
   el.addEventListener('pointermove',function(e){
     if(!dragging||!it)return;
+    e.preventDefault();
     var dx=e.clientX-startX,dy=e.clientY-startY;
     if(!armed){
       if(Math.abs(dx)>10||Math.abs(dy)>10){clearTimeout(holdTimer);dragging=false;el.classList.remove('longPressReady')}
@@ -1135,10 +1179,16 @@ function bindBlockDrag(el){
     clearTimeout(holdTimer);
     el.classList.remove('longPressReady','dragging');
     if(!dragging||!it)return;
+    e.preventDefault();
     dragging=false;
     document.querySelectorAll('.roomRow').forEach(function(r){r.classList.remove('dropHint')});
     if(!armed){
       el.style.transform='';
+      if(!moved){
+        el.dataset.skipClick='1';
+        selectedId=it.id;
+        openBlockActions(it.id);
+      }
       return;
     }
     var dx=e.clientX-startX;
@@ -1150,6 +1200,10 @@ function bindBlockDrag(el){
       el.dataset.moved='1';
       try{await saveItemToDb(it);status('Cirurgia movida para '+it.room+' às '+fmtTime(it.start)+'.','ok')}
       catch(err){status('Erro ao salvar movimento: '+err.message,'err')}
+    }else{
+      el.dataset.skipClick='1';
+      selectedId=it.id;
+      openBlockActions(it.id);
     }
     el.style.transform='';
     renderAll();
@@ -1262,12 +1316,25 @@ function renderAnes(){
   list.querySelectorAll('[data-dela]').forEach(b=>b.onclick=()=>deleteAnes(Number(b.dataset.dela)));
 }
 
+async function loadRegisteredUsers(){
+  try{
+    var usersResp=await api('/api/usuarios-opcoes');
+    registeredUsers=usersResp.users||[];
+    usersForAccess=registeredUsers.map(function(u){return {...u, username:(userScaleName(u)||u.username)+' / '+u.username}});
+    refreshAnesDatalist();
+    return registeredUsers;
+  }catch(err){
+    registeredUsers=[];
+    refreshAnesDatalist();
+    return [];
+  }
+}
+
 async function loadAccessManager(){
   if(!canManageAccess() || !currentHospitalId)return;
   try{
     if(!usersForAccess.length){
-      var usersResp=await api('/api/usuarios-opcoes');
-      usersForAccess=usersResp.users||[];
+      await loadRegisteredUsers();
       var select=$('accessUser');
       if(select)select.innerHTML=usersForAccess.map(function(u){return '<option value="'+html(u.id)+'">'+html(u.username+' · '+roleLabel(u))+'</option>'}).join('');
     }
@@ -1285,7 +1352,8 @@ function renderAccessList(){
   if(!list)return;
   if(!dailyAccess.length){list.innerHTML='<div class="hint">Nenhum acesso diario definido para esta data.</div>';return}
   list.innerHTML=dailyAccess.map(function(a){
-    return '<div class="case"><div class="caseTop"><div><div class="caseName">'+html(a.username)+'</div>'+
+    return '<div class="case"><div class="caseTop"><div><div class="caseName">'+html(a.nome_escala||a.username)+'</div>'+
+      '<div class="caseMeta">login: '+html(a.username)+'</div>'+
       '<div class="caseMeta">'+html(a.papel_dia)+' · '+(Number(a.pode_editar)===1?'pode editar':'somente leitura')+'</div></div>'+
       '<button class="red small" data-del-access="'+a.id+'">Remover</button></div></div>';
   }).join('');
@@ -1363,7 +1431,14 @@ async function saveImportedAnes(){
   var ok=0,errors=0,msgs=[];
   status('Salvando '+parsedAnesImport.length+' anestesista(s) no SQLite...','warn');
   for(var i=0;i<parsedAnesImport.length;i++){
-    try{storeValue('ccsama_anesthetists',parsedAnesImport[i].nome_anestesista);await api('/api/anestesistas',{method:'POST',body:JSON.stringify(parsedAnesImport[i])});ok++}
+    try{
+      var item=Object.assign({},parsedAnesImport[i]);
+      var linkedUser=findRegisteredUserByName(item.nome_anestesista);
+      if(linkedUser)item.user_id=linkedUser.id;
+      storeValue('ccsama_anesthetists',item.nome_anestesista);
+      await api('/api/anestesistas',{method:'POST',body:JSON.stringify(item)});
+      ok++;
+    }
     catch(err){errors++;msgs.push((i+1)+': '+err.message)}
   }
   status('Escala salva: '+ok+' anestesista(s). Erros: '+errors+(msgs.length?'\n'+msgs.slice(0,5).join('\n'):''), errors?'warn':'ok');
@@ -1423,9 +1498,74 @@ function renderImportPreview(){
   }).join('')+'</div>';
 }
 
+function renderImportPreviewEditable(){
+  var box=$('importPreview');
+  if(!parsedImport.length){box.innerHTML='Nenhuma lista processada ainda.';return}
+  var roomsOpts=rooms.map(function(r){return '<option value="'+html(r.name)+'">'+html(r.name)+'</option>'}).join('');
+  box.innerHTML='<div class="importReviewNote">Revise cada campo abaixo. Essas linhas ainda nao entraram no mapa; elas so serao gravadas quando voce clicar em "Salvar alteracoes no mapa".</div>'+
+    '<div class="importEditGrid importEditHead"><span>Inicio</span><span>Sala</span><span>Cirurgia</span><span>Duracao</span><span>Servico</span><span>Iniciais</span><span>Idade</span><span></span></div>'+
+    parsedImport.map(function(c,i){
+      return '<div class="importRow" data-import-row="'+i+'"><div class="importEditGrid">'+
+        '<input data-import-field="horario_inicio" value="'+html(c.horario_inicio||'')+'" placeholder="07:00">'+
+        '<select data-import-field="sala">'+roomsOpts+'</select>'+
+        '<input data-import-field="nome_cirurgia" value="'+html(c.nome_cirurgia||'')+'" placeholder="Cirurgia">'+
+        '<input data-import-field="duracao" value="'+html(c.duracao||'01:00')+'" placeholder="01:00">'+
+        '<select data-import-field="servico"><option value="SMA">SMA</option><option value="Particular">Particular</option></select>'+
+        '<input data-import-field="iniciais_paciente" value="'+html(c.iniciais_paciente||'NI')+'" placeholder="AB">'+
+        '<input data-import-field="idade_paciente" type="number" min="0" value="'+html(c.idade_paciente||0)+'">'+
+        '<button class="red small" data-import-remove="'+i+'" type="button">Remover</button>'+
+      '</div></div>';
+    }).join('');
+  parsedImport.forEach(function(c,i){
+    var row=box.querySelector('[data-import-row="'+i+'"]');
+    if(!row)return;
+    var sala=row.querySelector('[data-import-field="sala"]');
+    if(sala)sala.value=c.sala||canonicalRoomName(c.sala||'Nao escaladas');
+    var serv=row.querySelector('[data-import-field="servico"]');
+    if(serv)serv.value=c.servico||'SMA';
+  });
+}
+
+renderImportPreview = renderImportPreviewEditable;
+
+function syncImportPreview(){
+  $('importPreview').querySelectorAll('[data-import-row]').forEach(function(row){
+    var i=Number(row.dataset.importRow);
+    if(!parsedImport[i])return;
+    row.querySelectorAll('[data-import-field]').forEach(function(el){
+      var field=el.dataset.importField;
+      parsedImport[i][field]=field==='idade_paciente'?Number(el.value||0):el.value;
+    });
+  });
+}
+
+function addImportReviewRow(){
+  if(!requireEdit())return;
+  syncImportPreview();
+  var last=parsedImport.length?parsedImport[parsedImport.length-1]:null;
+  parsedImport.push({
+    data_cirurgia:currentDate,
+    horario_inicio:last && last.horario_inicio ? last.horario_inicio : '07:00',
+    sala:last && last.sala ? last.sala : (rooms[0] ? rooms[0].name : 'Nao escaladas'),
+    nome_cirurgia:'',
+    duracao:'01:00',
+    servico:'SMA',
+    iniciais_paciente:'NI',
+    idade_paciente:0,
+    observacao:''
+  });
+  renderImportPreview();
+  var rows=$('importPreview').querySelectorAll('[data-import-row]');
+  var row=rows[rows.length-1];
+  var input=row && row.querySelector('[data-import-field="nome_cirurgia"]');
+  if(input)input.focus();
+  status('Linha adicionada para revisao antes de salvar.','ok');
+}
+
 async function saveImported(){
   if(!requireEdit())return;
   if(!parsedImport.length){status("Nada para importar.","warn");return}
+  syncImportPreview();
   var ok=0, errors=0, msgs=[];
   status("Salvando "+parsedImport.length+" cirurgia(s) no SQLite...","warn");
   for(var i=0;i<parsedImport.length;i++){
@@ -1506,8 +1646,11 @@ function openBlockActions(id){
   var it=items.find(function(x){return x.id===id}); if(!it)return;
   selectedId=id;
   var finished=isFinished(it);
+  var conflicts=conflictsForItem(it,items);
+  var conflictHtml=conflicts.length?'<div class="conflictNote">'+html(conflicts.join(' | '))+'</div>':'';
   openModal('<h2>'+html(fmtTime(it.start)+' · '+it.name)+'</h2>'+ 
     '<div class="hint">'+html(it.room)+' · '+html(durToText(it.duration))+' · Anest: '+html(it.anest||'não definido')+'</div>'+ 
+    conflictHtml+
     '<div class="actionGrid">'+
       '<button class="purple" id="actAssign">Escalar / alterar</button>'+ 
       '<button class="gray" id="actUnassign">Desescalar</button>'+ 
@@ -1533,7 +1676,8 @@ function openAssignModal(id){
   if(!suggestions.length && isEasyCase(it))suggestions=suggestionsForItem(it,items,6,true);
   var conflictHtml=conflicts.length?'<div class="conflictNote">'+html(conflicts.join(' | '))+'</div>':'';
   var sugHtml=suggestions.length?suggestions.map(function(c,idx){
-    var cls='suggestionBtn '+(idx===0?'best':'')+(c.reasons.join(' ').includes('excepcional')?' warn':'');
+    var reasonText=c.reasons.join(' ');
+    var cls='suggestionBtn '+(idx===0?'best':'')+((reasonText.includes('excepcional')||reasonText.includes('ultimo recurso'))?' warn':'');
     return '<button class="'+cls+'" data-suggest-an="'+html(c.name)+'">'+
       '<span><span class="suggestionName">'+html(c.name)+'</span><div class="suggestionMeta">'+html(c.reasons.join(' | '))+'</div></span>'+
       '<span class="suggestionScore">'+html(c.score)+'</span>'+
@@ -1617,9 +1761,10 @@ async function addAnes(){
   storeValue('ccsama_anesthetists',name);
   var shift=(($('anesShiftStart').value||'07:00')+'-'+($('anesShiftEnd').value||'19:00'));
   $('anesShift').value=shift;
-  var payload={data_escala:currentDate,nome_anestesista:name,horario_escala:shift,funcao:$('anesRole').value,observacao:$('anesObs').value};
+  var linkedUser=findRegisteredUserByName(name);
+  var payload={data_escala:currentDate,nome_anestesista:name,horario_escala:shift,funcao:$('anesRole').value,observacao:$('anesObs').value,user_id:linkedUser?linkedUser.id:null};
   var resp=await api('/api/anestesistas',{method:'POST',body:JSON.stringify(payload)});
-  status(resp.message||"Anestesista salvo.","ok");
+  status((resp.message||"Anestesista salvo.")+(linkedUser?' Acesso liberado para o login '+linkedUser.username+'.':''),"ok");
   $('anesName').value='';$('anesShiftStart').value='07:00';$('anesShiftEnd').value='19:00';$('anesShift').value='';$('anesRole').value='';$('anesObs').value='';
   await loadDay();
 }
@@ -1677,9 +1822,18 @@ function bind(){
   $('btnExample').onclick=function(){$('surgeryText').value='07:00 | Oeste 03 | Colecistectomia | 120 | SMA | FC | 30\n09:30 | Lane 02 | Herniorrafia inguinal | 90 | Particular | AB | 44';parseImport()};
   $('btnClearText').onclick=function(){$('surgeryText').value='';parsedImport=[];renderImportPreview()};
   $('btnSaveImported').onclick=saveImported;
+  $('importPreview').onclick=function(ev){
+    var btn=ev.target.closest('[data-import-remove]');
+    if(!btn)return;
+    syncImportPreview();
+    parsedImport.splice(Number(btn.dataset.importRemove),1);
+    renderImportPreview();
+  };
+  $('importPreview').onchange=syncImportPreview;
+  $('importPreview').oninput=syncImportPreview;
   $('btnAddSurgery').onclick=()=>openSurgeryModal();
   $('btnAddSurgery2').onclick=()=>openSurgeryModal();
-  $('btnAddSurgeryImport').onclick=()=>openSurgeryModal();
+  $('btnAddSurgeryImport').onclick=addImportReviewRow;
   if($('btnAnalyzeSchedule'))$('btnAnalyzeSchedule').onclick=analyzeSchedule;
   if($('btnAnalyzeSchedule2'))$('btnAnalyzeSchedule2').onclick=analyzeSchedule;
   if($('btnAutoSuggest'))$('btnAutoSuggest').onclick=applySmartSuggestions;
