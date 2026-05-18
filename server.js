@@ -1906,7 +1906,7 @@ function authRequired(req,res,next){
   const session = sid && sessions.get(sid);
   if(!session){
     if(req.path.startsWith('/api/')) return res.status(401).json({ok:false,error:'Não autenticado'});
-    return res.redirect('/login.html?next='+encodeURIComponent(req.originalUrl));
+    return res.status(401).type('text/plain').send('Nao autenticado.');
   }
   req.user = session.user;
   next();
@@ -2779,75 +2779,19 @@ app.delete('/api/users/:id', authRequired, async (req,res)=>{
   }
 });
 
-// Paginas HTML explicitas ficam antes do express.static para aplicar sessao,
-// permissao e no-cache de forma previsivel.
+// Servidor de paginas: cada URL aponta diretamente para um arquivo em public.
+// Caminhos desconhecidos retornam 404, sem redirecionamento automatico.
 
-// Proteja páginas específicas.
 function noStore(res) {
   res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private');
   res.setHeader('Pragma', 'no-cache');
   res.setHeader('Expires', '0');
 }
 
-function sendPublicPage(res, fileName) {
-  noStore(res);
-  const filePath = path.join(PUBLIC_DIR, fileName);
-  if (!fs.existsSync(filePath)) {
-    return res.status(404).type('text/plain').send('Pagina nao encontrada.');
-  }
-  return res.sendFile(filePath);
-}
-
-function sendEntryPage(req, res) {
-  const sid = parseCookies(req).ccsama_session;
-  if (sid && sessions.get(sid)) return res.redirect('/sala.html');
-  return sendPublicPage(res, 'index.html');
-}
-
-app.get(['/index_graf_v6.html','/index_graf.html'], authRequired, (req,res)=>{
-  sendPublicPage(res, 'index_graf.html');
-});
-
-app.get('/sala.html', authRequired, (req,res)=>{
-  sendPublicPage(res, 'sala.html');
-});
-
-app.get('/sem_escala.html', authRequired, (req,res)=>{
-  sendPublicPage(res, 'sem_escala.html');
-});
-
-app.get(['/','/index.html'], sendEntryPage);
-
-app.get('/login.html', (req,res)=>{
-  sendPublicPage(res, 'login.html');
-});
-
-app.get('/reset_senha.html', (req,res)=>{
-  sendPublicPage(res, 'reset_senha.html');
-});
-
-app.get('/admin_clinicas.html', authRequired, adminRequired, (req,res)=>{
-  sendPublicPage(res, 'admin_clinicas.html');
-});
-
-app.get('/reg.html', authRequired, adminRequired, (req,res)=>{
-  sendPublicPage(res, 'reg.html');
-});
-
-app.get('/logins.html', authRequired, adminRequired, (req,res)=>{
-  noStore(res);
-  res.redirect('/reg.html');
-});
-
-app.get(['/admin_usuarios.html','/usuarios.html'], authRequired, adminRequired, (req,res)=>{
-  noStore(res);
-  res.redirect('/reg.html');
-});
-
 app.use(express.static(PUBLIC_DIR, {
-  index:false,
+  index:'index.html',
   setHeaders(res, filePath) {
-    if (filePath.endsWith('.html')) noStore(res);
+    if (filePath.endsWith('.html') || filePath.endsWith('mapacc-version.js')) noStore(res);
   }
 }));
 
@@ -2855,10 +2799,9 @@ app.use("/api", (req, res) => {
   res.status(404).json({ error:"API não encontrada." });
 });
 
-app.get("*", (req, res) => {
-  const sid = parseCookies(req).ccsama_session;
-  if(sid && sessions.get(sid)) return res.redirect('/sala.html');
-  sendPublicPage(res, 'index.html');
+app.use((req, res) => {
+  noStore(res);
+  res.status(404).type('text/plain').send('Pagina nao encontrada.');
 });
 
 initDb()
