@@ -70,6 +70,8 @@ button.green{background:var(--green)}button.red{background:var(--red)}button.lig
         <div><label>Usuario</label><input id="newUser" required></div>
         <div><label>Senha</label><input id="newPass" type="password" required></div>
       </div>
+      <label>Nome na escala</label>
+      <input id="newNomeEscala" placeholder="Nome que aparece na escala do dia">
       <label>E-mail para recuperar senha</label>
       <input id="newEmail" type="email" placeholder="nome@hospital.com.br">
       <div class="grid">
@@ -150,20 +152,21 @@ function render(){
     const active=Number(u.ativo)!==0;
     const hosp=u.hospitais||(u.role==='admin'||plus(u)?'acesso global':'sem hospital');
     const emp=u.empresas||(u.role==='admin'||plus(u)?'todas':'sem empresa');
+    const nomeEscala=u.nome_escala||u.username;
     const email=u.email||'sem e-mail';
-    return '<article class="user" data-id="'+Number(u.id)+'"><div class="head"><div><div class="name">'+esc(u.username)+'</div><div class="meta">e-mail: '+esc(email)+' | atribuicao: '+esc(roleLabel(u))+' | empresas: '+esc(emp)+' | hospitais: '+esc(hosp)+'</div></div><div class="actions">'+(plus(u)?'<span class="badge plus">admin+</span>':'')+'<span class="badge '+(active?'ok':'err')+'">'+(active?'ativo':'inativo')+'</span><button class="light" data-edit="'+u.id+'">Editar</button><button class="red" data-del="'+u.id+'">Deletar</button></div></div>'+(editing===Number(u.id)?editor(u):'')+'</article>';
+    return '<article class="user" data-id="'+Number(u.id)+'"><div class="head"><div><div class="name">'+esc(nomeEscala)+'</div><div class="meta">login: '+esc(u.username)+' | e-mail: '+esc(email)+' | atribuicao: '+esc(roleLabel(u))+' | empresas: '+esc(emp)+' | hospitais: '+esc(hosp)+'</div></div><div class="actions">'+(plus(u)?'<span class="badge plus">admin+</span>':'')+'<span class="badge '+(active?'ok':'err')+'">'+(active?'ativo':'inativo')+'</span><button class="light" data-edit="'+u.id+'">Editar</button><button class="red" data-del="'+u.id+'">Deletar</button></div></div>'+(editing===Number(u.id)?editor(u):'')+'</article>';
   }).join(''):'<div class="empty">Nenhum usuario cadastrado.</div>';
 }
 
 function editor(u){
-  return '<div class="editor"><div class="grid3"><div><label>Usuario</label><input data-username value="'+esc(u.username)+'"></div><div><label>Atribuicao</label><select data-role>'+roleOpts(u.role)+'</select></div><div><label>Status</label><select data-ativo><option value="1" '+(Number(u.ativo)!==0?'selected':'')+'>Ativo</option><option value="0" '+(Number(u.ativo)===0?'selected':'')+'>Inativo</option></select></div></div><label>E-mail para recuperar senha</label><input data-email type="email" value="'+esc(u.email||'')+'" placeholder="nome@hospital.com.br"><label>Nova senha</label><input data-password type="password" placeholder="Vazio mantem a senha atual"><label>Empresas</label><div class="checks">'+companyChecks('editCompany',companyIds(u))+'</div><label>Hospitais especificos</label><div class="checks">'+hospitalChecks('editHospital',ids(u))+'</div><div class="row"><button class="green" data-save="'+u.id+'">Salvar</button><button class="light" data-cancel="'+u.id+'">Cancelar</button></div></div>';
+  return '<div class="editor"><div class="grid3"><div><label>Login</label><input data-username value="'+esc(u.username)+'"></div><div><label>Atribuicao</label><select data-role>'+roleOpts(u.role)+'</select></div><div><label>Status</label><select data-ativo><option value="1" '+(Number(u.ativo)!==0?'selected':'')+'>Ativo</option><option value="0" '+(Number(u.ativo)===0?'selected':'')+'>Inativo</option></select></div></div><label>Nome na escala</label><input data-nome-escala value="'+esc(u.nome_escala||u.username)+'" placeholder="Nome que aparece na escala do dia"><label>E-mail para recuperar senha</label><input data-email type="email" value="'+esc(u.email||'')+'" placeholder="nome@hospital.com.br"><label>Nova senha</label><input data-password type="password" placeholder="Vazio mantem a senha atual"><label>Empresas</label><div class="checks">'+companyChecks('editCompany',companyIds(u))+'</div><label>Hospitais especificos</label><div class="checks">'+hospitalChecks('editHospital',ids(u))+'</div><div class="row"><button class="green" data-save="'+u.id+'">Salvar</button><button class="light" data-cancel="'+u.id+'">Cancelar</button></div></div>';
 }
 
 $('addForm').onsubmit=async ev=>{
   ev.preventDefault();
   try{
-    await postUsers({username:$('newUser').value.trim(),password:$('newPass').value,email:$('newEmail').value.trim(),role:$('newRole').value,ativo:$('newAtivo').value,empresa_ids:checked('newCompany'),hospital_ids:checked('newHospital')});
-    $('newUser').value='';$('newPass').value='';$('newEmail').value='';
+    await postUsers({username:$('newUser').value.trim(),nome_escala:$('newNomeEscala').value.trim(),password:$('newPass').value,email:$('newEmail').value.trim(),role:$('newRole').value,ativo:$('newAtivo').value,empresa_ids:checked('newCompany'),hospital_ids:checked('newHospital')});
+    $('newUser').value='';$('newPass').value='';$('newNomeEscala').value='';$('newEmail').value='';
     await load();
     setStatus('Usuario adicionado.','ok');
   }catch(e){setStatus(e.message,'err')}
@@ -194,7 +197,7 @@ $('list').onclick=async ev=>{
 async function saveUser(id){
   try{
     const card=document.querySelector('[data-id="'+id+'"]');
-    await postUsers({id,username:card.querySelector('[data-username]').value.trim(),email:card.querySelector('[data-email]').value.trim(),role:card.querySelector('[data-role]').value,ativo:card.querySelector('[data-ativo]').value,password:card.querySelector('[data-password]').value,empresa_ids:checked('editCompany',card),hospital_ids:checked('editHospital',card)});
+    await postUsers({id,username:card.querySelector('[data-username]').value.trim(),nome_escala:card.querySelector('[data-nome-escala]').value.trim(),email:card.querySelector('[data-email]').value.trim(),role:card.querySelector('[data-role]').value,ativo:card.querySelector('[data-ativo]').value,password:card.querySelector('[data-password]').value,empresa_ids:checked('editCompany',card),hospital_ids:checked('editHospital',card)});
     editing=null;await load();setStatus('Usuario atualizado.','ok');
   }catch(e){setStatus(e.message,'err')}
 }
