@@ -211,6 +211,36 @@ button:disabled{
   margin-top:12px;
   flex-wrap:wrap;
 }
+.mapZoomControls{
+  display:flex;
+  gap:6px;
+  align-items:center;
+  flex-wrap:wrap;
+}
+.mapZoomControls button{
+  min-width:42px;
+  padding:8px 9px!important;
+  border-radius:999px!important;
+  font-size:12px!important;
+}
+.mapZoomControls button.active{
+  background:#e0f2fe!important;
+  color:#075985!important;
+  border-color:#93c5fd!important;
+}
+.mapZoomLabel{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  min-width:54px;
+  border:1px solid var(--line);
+  border-radius:999px;
+  padding:8px 9px;
+  background:#fff;
+  color:#334155;
+  font-size:11px;
+  font-weight:900;
+}
 .mapLegend{display:flex;gap:7px;align-items:center;flex-wrap:wrap}
 .legendChip{
   display:inline-flex;
@@ -348,7 +378,7 @@ button:disabled{
 .block.compact .blockName{font-size:10px}
 .block.roomy .blockName{font-size:12px}
 .anestBadge{top:-15px!important}
-.resizeHandle{top:8px!important;height:32px!important}
+.resizeHandle{top:8px!important;bottom:8px!important;height:auto!important;min-height:24px!important}
 .case.virtualCase{background:linear-gradient(180deg,#fff8e8,#fdf0cf)!important;border-color:#f0d79a!important}
 .case.externalCase{background:linear-gradient(180deg,#f8f6ff,#eeeaff)!important;border-color:#d7d0fb!important}
 .case.conflictCase{background:linear-gradient(180deg,#fff4f5,#ffe4e7)!important;border-color:#f4b5bd!important}
@@ -373,4 +403,6 @@ button:disabled{
   .opsInsights{grid-template-columns:1fr}
   .mapCommand{grid-template-columns:1fr}
   .mapActionRow{justify-content:flex-start}
+  .mapZoomControls{display:grid;grid-template-columns:repeat(6,1fr);gap:5px;width:100%}
+  .mapZoomControls button,.mapZoomLabel{min-width:0;padding:8px 4px!important;font-size:10.5px!important}
 }
