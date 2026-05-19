@@ -33,7 +33,7 @@ const ROOT_DIR = __dirname;
 const PUBLIC_DIR = path.join(ROOT_DIR, "public");
 const IS_RAILWAY = !!(process.env.RAILWAY_ENVIRONMENT || process.env.RAILWAY_PROJECT_ID || process.env.RAILWAY_SERVICE_ID);
 const CONFIG_CHECK_VERSION = "2026-05-17-railway-volume-guard-v3";
-const SERVER_BUILD_ID = "2026-05-18-1615-static-public-deploy-info";
+const SERVER_BUILD_ID = "2026-05-18-2120-map-zoom-ux";
 const DEFAULT_HOSPITAL_NOME = "Hospital Samaritano";
 const DEFAULT_HOSPITAL_SLUG = "samaritano";
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY || process.env.MAPACC_OPENAI_API_KEY || "";
@@ -2832,7 +2832,7 @@ function noStore(res) {
 app.use(express.static(PUBLIC_DIR, {
   index:'index.html',
   setHeaders(res, filePath) {
-    if (filePath.endsWith('.html') || filePath.endsWith('mapacc-version.js')) noStore(res);
+    if (filePath.endsWith('.html') || filePath.endsWith('mapacc-version.js') || filePath.endsWith('mapacc-theme.css')) noStore(res);
   }
 }));
 
