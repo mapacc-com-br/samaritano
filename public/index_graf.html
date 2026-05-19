@@ -97,19 +97,14 @@ textarea.compact{min-height:96px}
 
 /* ===== PATCH mobile UX: mapa mais respirado e botoes sem estouro ===== */
 .mapCommand{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:start}
-.mapSubbar{display:grid;grid-template-columns:auto auto minmax(0,1fr);gap:10px;align-items:center;margin-top:10px}
+.mapSubbar{display:grid;grid-template-columns:auto minmax(0,1fr);gap:10px;align-items:center;margin-top:10px}
 .mapLegend{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
 .legendChip{display:inline-flex;align-items:center;border-radius:999px;padding:5px 8px;font-size:11px;font-weight:900;border:1px solid var(--line);background:#f8fafc;color:#334155;white-space:nowrap}
 .legendAssigned{background:#dcfce7;color:#166534;border-color:#86efac}.legendPending{background:#dbeafe;color:#1d4ed8;border-color:#93c5fd}.legendConflict{background:#fee2e2;color:#991b1b;border-color:#fecaca}.legendExternal{background:#f3e8ff;color:#6b21a8;border-color:#d8b4fe}.legendVirtual{background:#fef3c7;color:#92400e;border-color:#fcd34d}
-.mapZoomControls{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
-.mapZoomControls button{min-width:42px;padding:8px 9px;border-radius:999px;font-size:12px}
-.mapZoomControls button.active{background:#e0f2fe;color:#075985;border-color:#93c5fd}
-.mapZoomLabel{display:inline-flex;align-items:center;justify-content:center;min-width:54px;border:1px solid var(--line);border-radius:999px;padding:8px 9px;background:#fff;color:#334155;font-size:11px;font-weight:900}
 .mapShell{overscroll-behavior:contain;touch-action:pan-x pan-y}
 body.mapInteracting,body.mapInteracting *{user-select:none!important;-webkit-user-select:none!important;-webkit-touch-callout:none!important}
 body.mapInteracting .mapShell{touch-action:none}
 .block,.block *,.resizeHandle,.nowLine,.nowLabel{-webkit-user-drag:none;user-select:none!important;-webkit-user-select:none!important;-webkit-touch-callout:none!important;-webkit-tap-highlight-color:transparent}
-.map .block{height:var(--map-block-h,42px)!important}
 .resizeHandle{bottom:7px!important;height:auto!important;min-height:24px}
 @media(max-width:640px){
   header{padding:10px 10px 8px}
@@ -128,8 +123,6 @@ body.mapInteracting .mapShell{touch-action:none}
   .mapSubbar{grid-template-columns:1fr;gap:8px}
   .quickNav{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;width:100%}
   .quickNav button{padding:8px 4px;font-size:11px;min-width:0}
-  .mapZoomControls{display:grid;grid-template-columns:repeat(6,1fr);gap:5px;width:100%}
-  .mapZoomControls button,.mapZoomLabel{min-width:0;padding:8px 4px;font-size:10.5px}
   .mapLegend{justify-content:flex-start;gap:5px}
   .legendChip{font-size:10px;padding:4px 6px}
   .mapShell{width:calc(100vw - 12px);margin-left:-4px;border-radius:12px}
@@ -144,7 +137,7 @@ body.mapInteracting .mapShell{touch-action:none}
 }
 
 </style>
-<link rel="stylesheet" href="/mapacc-theme.css?v=20260518-2120">
+<link rel="stylesheet" href="/mapacc-theme.css?v=20260518-2210">
 </head>
 <body>
 <header>
@@ -242,14 +235,6 @@ body.mapInteracting .mapShell{touch-action:none}
           <button id="btnGo19" class="light">19h</button>
           <button id="btnGoNow" class="light">Agora</button>
         </div>
-        <div class="mapZoomControls" aria-label="Zoom do mapa">
-          <button id="btnMapZoomOut" class="light" type="button" title="Diminuir zoom">-</button>
-          <button id="btnMapZoom50" class="light" type="button">50%</button>
-          <button id="btnMapZoom75" class="light" type="button">75%</button>
-          <button id="btnMapZoom100" class="light" type="button">100%</button>
-          <button id="btnMapZoomIn" class="light" type="button" title="Aumentar zoom">+</button>
-          <span id="mapZoomLabel" class="mapZoomLabel">100%</span>
-        </div>
         <div class="mapLegend">
           <span class="legendChip legendAssigned">Escalada</span>
           <span class="legendChip legendPending">Pendente</span>
@@ -344,10 +329,7 @@ body.mapInteracting .mapShell{touch-action:none}
 'use strict';
 
 var rooms=[];
-var startHour=5,endHour=31;
-var baseHourW=64,baseLabelW=132,baseRowH=66,hourW=64,labelW=132,rowH=66;
-var mapZoom=1;
-try{mapZoom=Number(localStorage.getItem('ccsama_map_zoom')||'1')}catch(e){}
+var startHour=5,endHour=31,hourW=64,labelW=132,rowH=66;
 var currentDate="";
 var currentHospitalId=null;
 var currentHospital=null;
@@ -361,6 +343,7 @@ var anesthetists=[];
 var selectedId=null;
 var parsedImport=[];
 var parsedAnesImport=[];
+var savingImport=false;
 var timelineMin=null;
 var timelineCustom=false;
 var PROCEDURE_SUGGESTIONS=[
@@ -502,14 +485,6 @@ function nowPlantaoMin(){
 }
 function getTimelineMin(){return timelineMin==null?nowPlantaoMin():timelineMin}
 function minToX(min){return labelW+((min-startHour*60)/60)*hourW}
-function clamp(v,min,max){return Math.max(min,Math.min(max,v))}
-function setMapZoomNumbers(){
-  mapZoom=clamp(Number(mapZoom)||1,0.45,1.2);
-  hourW=Math.round(baseHourW*mapZoom);
-  labelW=Math.round(clamp(baseLabelW*(0.72+0.28*mapZoom),96,baseLabelW));
-  rowH=Math.round(clamp(baseRowH*(0.76+0.24*mapZoom),50,baseRowH));
-}
-function currentMapTotalWidth(){return labelW+(endHour-startHour)*hourW}
 function clearTextSelection(){
   try{
     var sel=window.getSelection&&window.getSelection();
@@ -523,97 +498,6 @@ function beginMapInteraction(){
 function endMapInteraction(){
   document.body.classList.remove('mapInteracting');
   clearTextSelection();
-}
-function syncMapZoomControls(){
-  var pct=Math.round(mapZoom*100);
-  var label=$('mapZoomLabel');
-  if(label)label.textContent=pct+'%';
-  [
-    ['btnMapZoom50',0.5],
-    ['btnMapZoom75',0.75],
-    ['btnMapZoom100',1]
-  ].forEach(function(pair){
-    var el=$(pair[0]);
-    if(el)el.classList.toggle('active',Math.abs(mapZoom-pair[1])<0.04);
-  });
-}
-function applyMapZoom(nextZoom,opt){
-  opt=opt||{};
-  var shell=$('mapShell');
-  var oldTotal=currentMapTotalWidth();
-  var centerRatio=0;
-  if(shell && oldTotal>0)centerRatio=(shell.scrollLeft+(shell.clientWidth/2))/oldTotal;
-  mapZoom=clamp(Number(nextZoom)||1,0.45,1.2);
-  try{localStorage.setItem('ccsama_map_zoom',String(mapZoom))}catch(e){}
-  setMapZoomNumbers();
-  syncMapZoomControls();
-  if(!opt.noRender && $('map') && $('map').innerHTML){
-    renderMap();
-    shell=$('mapShell');
-    if(shell){
-      var newTotal=currentMapTotalWidth();
-      shell.scrollLeft=Math.max(0,(centerRatio*newTotal)-(shell.clientWidth/2));
-      setupMapScrollSync(newTotal);
-    }
-  }
-  if(!opt.silent)status('Zoom do mapa: '+Math.round(mapZoom*100)+'%.','ok');
-}
-function touchDistance(a,b){
-  var dx=a.clientX-b.clientX,dy=a.clientY-b.clientY;
-  return Math.sqrt(dx*dx+dy*dy);
-}
-function bindMapPinchZoom(){
-  var shell=$('mapShell');
-  if(!shell || shell.dataset.mapZoomBound==='1')return;
-  shell.dataset.mapZoomBound='1';
-  var startDistance=0,startZoom=mapZoom,raf=0,nextZoom=mapZoom;
-  function scheduleZoom(value){
-    nextZoom=value;
-    if(raf)return;
-    raf=requestAnimationFrame(function(){
-      raf=0;
-      applyMapZoom(nextZoom,{silent:true});
-    });
-  }
-  shell.addEventListener('touchstart',function(ev){
-    if(ev.touches && ev.touches.length===2){
-      beginMapInteraction();
-      startDistance=touchDistance(ev.touches[0],ev.touches[1]);
-      startZoom=mapZoom;
-    }
-  },{passive:false});
-  shell.addEventListener('touchmove',function(ev){
-    if(ev.touches && ev.touches.length===2 && startDistance>0){
-      ev.preventDefault();
-      clearTextSelection();
-      scheduleZoom(startZoom*(touchDistance(ev.touches[0],ev.touches[1])/startDistance));
-    }
-  },{passive:false});
-  function finish(){
-    startDistance=0;
-    if(raf){cancelAnimationFrame(raf);raf=0}
-    endMapInteraction();
-    syncMapZoomControls();
-  }
-  shell.addEventListener('touchend',function(ev){if(!ev.touches || ev.touches.length<2)finish()},{passive:true});
-  shell.addEventListener('touchcancel',finish,{passive:true});
-}
-function bindMapZoomControls(){
-  var pairs=[
-    ['btnMapZoomOut',function(){applyMapZoom(mapZoom-0.1)}],
-    ['btnMapZoom50',function(){applyMapZoom(0.5)}],
-    ['btnMapZoom75',function(){applyMapZoom(0.75)}],
-    ['btnMapZoom100',function(){applyMapZoom(1)}],
-    ['btnMapZoomIn',function(){applyMapZoom(mapZoom+0.1)}]
-  ];
-  pairs.forEach(function(pair){
-    var el=$(pair[0]);
-    if(el && el.dataset.bound!=='1'){
-      el.dataset.bound='1';
-      el.addEventListener('click',pair[1]);
-    }
-  });
-  syncMapZoomControls();
 }
 function updateStickyRulerTop(){
   var h=document.querySelector('header');
@@ -1158,18 +1042,12 @@ function updateItemRoomAndTime(it,newRow,newStart){
 
 function renderMap(){
   var map=$('map'); if(!map)return;
-  setMapZoomNumbers();
   var totalHours=endHour-startHour;
   var totalW=labelW+totalHours*hourW;
-  var blockTop=Math.max(6,Math.round(9*mapZoom));
-  var blockH=Math.max(32,Math.round(42*mapZoom));
-  var virtualLaneGap=Math.max(42,Math.round(58*mapZoom));
-  var minBlockW=Math.max(38,Math.round(46*mapZoom));
   var htmlMap='';
   var virtualItems=items.filter(function(it){return it.row===0 && !isFinished(it)});
   var virtualLane=calcVirtualLanes(virtualItems);
-  var rowHeights=rooms.map(function(r,idx){return idx===0?Math.max(rowH,(blockTop*2)+virtualLane.count*virtualLaneGap):rowH});
-  map.style.setProperty('--map-block-h',blockH+'px');
+  var rowHeights=rooms.map(function(r,idx){return idx===0?Math.max(rowH,20+virtualLane.count*58):rowH});
 
   htmlMap+='<div class="timeHeader" style="grid-template-columns:'+labelW+'px repeat('+totalHours+','+hourW+'px);width:'+totalW+'px">';
   htmlMap+='<div></div>';
@@ -1193,8 +1071,8 @@ function renderMap(){
     }
     items.filter(function(it){return it.row===idx}).forEach(function(it){
       var x=labelW+((it.start-startHour*60)/60)*hourW;
-      var w=Math.max(minBlockW,((it.end-it.start)/60)*hourW);
-      var laneTop=idx===0 ? blockTop + (virtualLane.byId[it.id]||0)*virtualLaneGap : blockTop;
+      var w=Math.max(46,((it.end-it.start)/60)*hourW);
+      var laneTop=idx===0 ? 9 + (virtualLane.byId[it.id]||0)*58 : 9;
       var cls=getBlockClass(it,idx);
       if(w<124)cls+=' compact';
       if(w>220)cls+=' roomy';
@@ -1218,8 +1096,6 @@ function renderMap(){
   buildFixedTimeRuler(totalW,totalHours);
   setupMapScrollSync(totalW);
   updateStickyRulerTop();
-  syncMapZoomControls();
-  bindMapPinchZoom();
 
   map.querySelectorAll('.block').forEach(function(el){
     bindBlockDrag(el);
@@ -1383,7 +1259,7 @@ function bindResize(handle){
     var deltaMin=Math.round((dx/hourW)*4)*15;
     var newEnd=Math.max(it.start+15,Math.min(endHour*60,origEnd+deltaMin));
     var block=handle.closest('.block');
-    if(block)block.style.width=Math.max(Math.max(38,Math.round(46*mapZoom)),((newEnd-it.start)/60)*hourW)+'px';
+    if(block)block.style.width=Math.max(46,((newEnd-it.start)/60)*hourW)+'px';
   });
   handle.addEventListener('pointerup',async function(e){
     clearTimeout(holdTimer);
@@ -1695,6 +1571,48 @@ function syncImportPreview(){
   });
 }
 
+function importIdentityText(value){
+  return String(value||'')
+    .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+    .toUpperCase()
+    .replace(/[^A-Z0-9]+/g,' ')
+    .replace(/\s+/g,' ')
+    .trim();
+}
+function importInitialsKey(value){
+  return String(value||'')
+    .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+    .toUpperCase()
+    .replace(/[^A-Z0-9]+/g,'')
+    .trim();
+}
+function importDuplicateKey(item){
+  return [
+    item.data_cirurgia||currentDate,
+    importIdentityText(item.nome_cirurgia),
+    importInitialsKey(item.iniciais_paciente),
+    Number(item.idade_paciente||0)
+  ].join('|');
+}
+function removeDuplicateImportRows(){
+  var seen={}, unique=[], skipped=0;
+  parsedImport.forEach(function(item){
+    var key=importDuplicateKey(item);
+    if(!importIdentityText(item.nome_cirurgia) || !importInitialsKey(item.iniciais_paciente)){
+      unique.push(item);
+      return;
+    }
+    if(seen[key]){
+      skipped++;
+      return;
+    }
+    seen[key]=true;
+    unique.push(item);
+  });
+  parsedImport=unique;
+  return skipped;
+}
+
 function addImportReviewRow(){
   if(!requireEdit())return;
   syncImportPreview();
@@ -1720,22 +1638,37 @@ function addImportReviewRow(){
 
 async function saveImported(){
   if(!requireEdit())return;
+  if(savingImport)return;
   if(!parsedImport.length){status("Nada para importar.","warn");return}
   syncImportPreview();
-  var ok=0, errors=0, msgs=[];
+  var skipped=removeDuplicateImportRows();
+  renderImportPreview();
+  var btn=$('btnSaveImported');
+  savingImport=true;
+  if(btn){btn.disabled=true;btn.textContent='Salvando...'}
+  var ok=0, inserted=0, updated=0, errors=0, msgs=[];
+  try{
   status("Salvando "+parsedImport.length+" cirurgia(s) no SQLite...","warn");
   for(var i=0;i<parsedImport.length;i++){
     try{
-      await api('/api/cirurgias',{method:'POST',body:JSON.stringify(parsedImport[i])});
+      var resp=await api('/api/cirurgias',{method:'POST',body:JSON.stringify(parsedImport[i])});
       ok++;
+      if(resp && resp.action==='updated_existing')updated++;
+      else inserted++;
     }catch(err){
       errors++;
       msgs.push((i+1)+': '+err.message);
     }
   }
   status("Importação salva: "+ok+" cirurgia(s). Erros: "+errors+(msgs.length?'\n'+msgs.slice(0,5).join('\n'):''), errors?'warn':'ok');
+  status("Importacao salva: "+ok+" cirurgia(s). Novas: "+inserted+". Atualizadas: "+updated+". Duplicadas ignoradas: "+skipped+". Erros: "+errors+(msgs.length?'\n'+msgs.slice(0,5).join('\n'):''), errors?'warn':'ok');
   if(ok){parsedImport=[];$('surgeryText').value="";}
   await loadDay();
+  status("Importacao salva: "+ok+" cirurgia(s). Novas: "+inserted+". Atualizadas: "+updated+". Duplicadas ignoradas: "+skipped+". Erros: "+errors+(msgs.length?'\n'+msgs.slice(0,5).join('\n'):''), errors?'warn':'ok');
+  }finally{
+    savingImport=false;
+    if(btn){btn.disabled=false;btn.textContent='Salvar alteracoes no mapa'}
+  }
 }
 
 function openModal(htmlContent){$('modal').innerHTML=htmlContent;$('modalBg').style.display='flex'}
@@ -1949,11 +1882,7 @@ function setTab(tab){
   document.querySelectorAll('.tab').forEach(b=>b.classList.toggle('active',b.dataset.tab===tab));
   document.querySelectorAll('.screen').forEach(s=>s.classList.add('hidden'));
   $('tab-'+tab).classList.remove('hidden');
-  if(tab==='mapa'){
-    bindMapPinchZoom();
-    syncMapZoomControls();
-    setTimeout(function(){setupMapScrollSync(currentMapTotalWidth());updateStickyRulerTop()},0);
-  }
+  if(tab==='mapa')setTimeout(updateStickyRulerTop,0);
 }
 
 function bind(){
@@ -2004,8 +1933,6 @@ function bind(){
   $('btnGo13').onclick=function(){goHour(13)};
   $('btnGo19').onclick=function(){goHour(19)};
   $('btnGoNow').onclick=function(){var m=getTimelineMin();goHour(Math.floor(m/60))};
-  bindMapZoomControls();
-  bindMapPinchZoom();
   $('btnExport').onclick=exportJson;
   $('btnAddAnes').onclick=addAnes;
   $('btnParseAnes').onclick=parseAnesImport;
@@ -2028,7 +1955,6 @@ async function boot(){
   timelineMin=nowPlantaoMin();
   timelineCustom=false;
   $('dateInput').value=currentDate;
-  setMapZoomNumbers();
   bind();
   try{
     await loadHospitals();
@@ -2045,6 +1971,6 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 
 })();
 </script>
-<script src="/mapacc-version.js?v=20260518-2120"></script>
+<script src="/mapacc-version.js?v=20260518-2210"></script>
 </body>
 </html>

@@ -33,7 +33,7 @@ const ROOT_DIR = __dirname;
 const PUBLIC_DIR = path.join(ROOT_DIR, "public");
 const IS_RAILWAY = !!(process.env.RAILWAY_ENVIRONMENT || process.env.RAILWAY_PROJECT_ID || process.env.RAILWAY_SERVICE_ID);
 const CONFIG_CHECK_VERSION = "2026-05-17-railway-volume-guard-v3";
-const SERVER_BUILD_ID = "2026-05-18-2120-map-zoom-ux";
+const SERVER_BUILD_ID = "2026-05-18-2210-revert-map-zoom";
 const DEFAULT_HOSPITAL_NOME = "Hospital Samaritano";
 const DEFAULT_HOSPITAL_SLUG = "samaritano";
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY || process.env.MAPACC_OPENAI_API_KEY || "";
@@ -253,6 +253,16 @@ function normalizarTextoChave(valor) {
     .toUpperCase();
 }
 
+function normalizarIdentidadeCirurgia(valor) {
+  return String(valor || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toUpperCase()
+    .replace(/[^A-Z0-9]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 function normalizarSemAcento(valor) {
   return String(valor || "")
     .normalize("NFD")
@@ -271,6 +281,15 @@ function normalizarSalaCirurgia(valor) {
   const sala = String(valor || "").trim();
   if (salaEhNaoEscalada(sala)) return "Não escaladas";
   return sala;
+}
+
+function normalizarIniciaisPaciente(valor) {
+  return String(valor || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toUpperCase()
+    .replace(/[^A-Z0-9]+/g, "")
+    .trim();
 }
 
 async function garantirColuna(nomeTabela, nomeColuna, definicaoSql) {
@@ -658,7 +677,7 @@ function validarCirurgia(body) {
   const sala = normalizarSalaCirurgia(body.sala);
   const servico = String(body.servico || "").trim();
   const anestesista_escalado = String(body.anestesista_escalado || "").trim();
-  const iniciais_paciente = String(body.iniciais_paciente || "").trim().toUpperCase();
+  const iniciais_paciente = normalizarIniciaisPaciente(body.iniciais_paciente);
   const idade_paciente = Number(body.idade_paciente);
   const observacao = String(body.observacao || "").trim();
   const finalizada = body.finalizada === true || body.finalizada === 1 || body.finalizada === "1" ? 1 : 0;
@@ -1383,6 +1402,91 @@ app.get("/api/cirurgias", async (req, res) => {
 // UPSERT:
 
 // UPSERT: se data + nome + iniciais + idade já existir, atualiza em vez de duplicar.
+async function encontrarCirurgiaExistente(v) {
+  const existenteExato = await get(`
+    SELECT id
+    FROM cirurgias
+    WHERE hospital_id = ?
+      AND data_cirurgia = ?
+      AND nome_cirurgia_key = ?
+      AND iniciais_paciente = ?
+      AND idade_paciente = ?
+    ORDER BY id ASC
+    LIMIT 1
+  `, [
+    v.hospital_id,
+    v.data_cirurgia,
+    v.nome_cirurgia_key,
+    v.iniciais_paciente,
+    v.idade_paciente
+  ]);
+  if (existenteExato) return existenteExato;
+
+  const nomeIdentidade = normalizarIdentidadeCirurgia(v.nome_cirurgia);
+  const iniciaisIdentidade = normalizarIniciaisPaciente(v.iniciais_paciente);
+  const candidatos = await all(`
+    SELECT id, horario_inicio, sala, nome_cirurgia, nome_cirurgia_key, iniciais_paciente
+    FROM cirurgias
+    WHERE hospital_id = ?
+      AND data_cirurgia = ?
+      AND idade_paciente = ?
+    ORDER BY
+      CASE WHEN horario_inicio = ? THEN 0 ELSE 1 END,
+      CASE WHEN lower(sala) LIKE '%escalad%' OR lower(sala) LIKE '%sem sala%' THEN 0 ELSE 1 END,
+      id ASC
+    LIMIT 120
+  `, [
+    v.hospital_id,
+    v.data_cirurgia,
+    v.idade_paciente,
+    v.horario_inicio
+  ]);
+
+  return candidatos.find(row => {
+    const mesmoNome =
+      normalizarIdentidadeCirurgia(row.nome_cirurgia) === nomeIdentidade ||
+      normalizarIdentidadeCirurgia(row.nome_cirurgia_key) === nomeIdentidade;
+    const mesmasIniciais = normalizarIniciaisPaciente(row.iniciais_paciente) === iniciaisIdentidade;
+    return mesmoNome && mesmasIniciais;
+  }) || null;
+}
+
+async function atualizarCirurgiaExistente(id, v) {
+  await run(`
+    UPDATE cirurgias
+    SET
+      hospital_id = ?,
+      horario_inicio = ?,
+      nome_cirurgia = ?,
+      nome_cirurgia_key = ?,
+      duracao = ?,
+      sala = ?,
+      servico = ?,
+      anestesista_escalado = ?,
+      iniciais_paciente = ?,
+      idade_paciente = ?,
+      observacao = ?,
+      finalizada = ?
+    WHERE id = ?
+  `, [
+    v.hospital_id,
+    v.horario_inicio,
+    v.nome_cirurgia,
+    v.nome_cirurgia_key,
+    v.duracao,
+    v.sala,
+    v.servico,
+    v.anestesista_escalado,
+    v.iniciais_paciente,
+    v.idade_paciente,
+    v.observacao,
+    v.finalizada,
+    id
+  ]);
+
+  return get("SELECT * FROM cirurgias WHERE id = ?", [id]);
+}
+
 app.post("/api/cirurgias", async (req, res) => {
   try {
     const hospitalId = await hospitalDaRequisicao(req);
@@ -1391,60 +1495,40 @@ app.post("/api/cirurgias", async (req, res) => {
     if (!v.ok) return res.status(400).json({ error:v.error });
     if (!await exigirHospital(req, res, hospitalId, true, v.data_cirurgia)) return;
 
-    let existente = await get(`
-      SELECT id
-      FROM cirurgias
-      WHERE hospital_id = ?
-        AND data_cirurgia = ?
-        AND nome_cirurgia_key = ?
-        AND iniciais_paciente = ?
-        AND idade_paciente = ?
-    `, [
-      v.hospital_id,
-      v.data_cirurgia,
-      v.nome_cirurgia_key,
-      v.iniciais_paciente,
-      v.idade_paciente
-    ]);
+    const existente = await encontrarCirurgiaExistente(v);
+    if (existente) {
+      const row = await atualizarCirurgiaExistente(existente.id, v);
 
-    if (!existente && salaEhNaoEscalada(v.sala)) {
-      existente = await get(`
-        SELECT id
-        FROM cirurgias
-        WHERE hospital_id = ?
-          AND data_cirurgia = ?
-          AND horario_inicio = ?
-          AND nome_cirurgia_key = ?
-          AND lower(sala) LIKE '%escalad%'
-        ORDER BY id ASC
-        LIMIT 1
+      return res.json({
+        ok:true,
+        action:"updated_existing",
+        message:"Cirurgia ja existia neste hospital; dados atualizados.",
+        cirurgia: row
+      });
+    }
+
+    let result;
+    try {
+      result = await run(`
+        INSERT INTO cirurgias (
+          hospital_id,
+          data_cirurgia,
+          horario_inicio,
+          nome_cirurgia,
+          nome_cirurgia_key,
+          duracao,
+          sala,
+          servico,
+          anestesista_escalado,
+          iniciais_paciente,
+          idade_paciente,
+          observacao,
+          finalizada
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `, [
         v.hospital_id,
         v.data_cirurgia,
-        v.horario_inicio,
-        v.nome_cirurgia_key
-      ]);
-    }
-
-    if (existente) {
-      await run(`
-        UPDATE cirurgias
-        SET
-          hospital_id = ?,
-          horario_inicio = ?,
-          nome_cirurgia = ?,
-          nome_cirurgia_key = ?,
-          duracao = ?,
-          sala = ?,
-          servico = ?,
-          anestesista_escalado = ?,
-          iniciais_paciente = ?,
-          idade_paciente = ?,
-          observacao = ?,
-          finalizada = ?
-        WHERE id = ?
-      `, [
-        v.hospital_id,
         v.horario_inicio,
         v.nome_cirurgia,
         v.nome_cirurgia_key,
@@ -1455,52 +1539,23 @@ app.post("/api/cirurgias", async (req, res) => {
         v.iniciais_paciente,
         v.idade_paciente,
         v.observacao,
-        v.finalizada,
-        existente.id
+        v.finalizada
       ]);
-
-      const row = await get("SELECT * FROM cirurgias WHERE id = ?", [existente.id]);
-
-      return res.json({
-        ok:true,
-        action:"updated_existing",
-        message:"Cirurgia ja existia neste hospital; dados atualizados.",
-        cirurgia: row
-      });
+    } catch (insertErr) {
+      if (String(insertErr.message || "").includes("UNIQUE")) {
+        const existenteAposConflito = await encontrarCirurgiaExistente(v);
+        if (existenteAposConflito) {
+          const row = await atualizarCirurgiaExistente(existenteAposConflito.id, v);
+          return res.json({
+            ok:true,
+            action:"updated_existing",
+            message:"Cirurgia ja existia neste hospital; dados atualizados.",
+            cirurgia: row
+          });
+        }
+      }
+      throw insertErr;
     }
-
-    const result = await run(`
-      INSERT INTO cirurgias (
-        hospital_id,
-        data_cirurgia,
-        horario_inicio,
-        nome_cirurgia,
-        nome_cirurgia_key,
-        duracao,
-        sala,
-        servico,
-        anestesista_escalado,
-        iniciais_paciente,
-        idade_paciente,
-        observacao,
-        finalizada
-      )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `, [
-      v.hospital_id,
-      v.data_cirurgia,
-      v.horario_inicio,
-      v.nome_cirurgia,
-      v.nome_cirurgia_key,
-      v.duracao,
-      v.sala,
-      v.servico,
-      v.anestesista_escalado,
-      v.iniciais_paciente,
-      v.idade_paciente,
-      v.observacao,
-      v.finalizada
-    ]);
 
     const row = await get("SELECT * FROM cirurgias WHERE id = ?", [result.lastID]);
 
