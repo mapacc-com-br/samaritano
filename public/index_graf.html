@@ -136,8 +136,27 @@ body.mapInteracting .mapShell{touch-action:none}
   .map{min-width:1380px}
 }
 
+/* ===== PATCH v8: pre feito e modo expandido do mapa ===== */
+.block.preDone{box-shadow:0 0 0 2px rgba(20,184,166,.45),0 6px 16px #0f172a33}
+.preBadge{position:absolute;left:6px;bottom:-15px;z-index:8;border-radius:999px;padding:3px 7px;background:#0f766e;color:#fff;font-size:9.5px;font-weight:1000;white-space:nowrap;box-shadow:0 3px 8px #0f172a33}
+.pill.pre{background:#ccfbf1;color:#115e59;border-color:#5eead4}
+.case.preDone{border-color:#5eead4;background:#f0fdfa}
+.preMeta{display:inline-flex;align-items:center;border-radius:999px;padding:3px 7px;margin-left:4px;background:#ccfbf1;color:#115e59;font-size:10px;font-weight:1000}
+body.mapExpanded{overflow:hidden}
+#tab-mapa.mapExpandedView{position:fixed;inset:0;z-index:60;overflow:auto;background:var(--bg);padding:10px 12px 26px;display:block!important}
+#tab-mapa.mapExpandedView .mapControlCard{margin-bottom:8px;border-radius:14px}
+#tab-mapa.mapExpandedView .mapToolbarSticky{top:0!important;z-index:35}
+#tab-mapa.mapExpandedView .mapShell{height:calc(100vh - 190px);min-height:360px;width:100%;margin-left:0;border-radius:14px}
+#tab-mapa.mapExpandedView .bottomMapScroll{width:100%;margin-left:0}
+#btnExpandMap.active{background:#0f766e;color:#fff;border-color:#0f766e}
+@media(max-width:640px){
+  #tab-mapa.mapExpandedView{padding:6px 6px 24px}
+  #tab-mapa.mapExpandedView .mapShell{height:calc(100vh - 220px);min-height:300px}
+  #tab-mapa.mapExpandedView .mapActionRow button:first-child{grid-column:auto}
+}
+
 </style>
-<link rel="stylesheet" href="/mapacc-theme.css?v=20260518-2210">
+<link rel="stylesheet" href="/mapacc-theme.css?v=20260520-1332">
 </head>
 <body>
 <header>
@@ -226,6 +245,7 @@ body.mapInteracting .mapShell{touch-action:none}
           <button id="btnAddSurgery" class="green">+ Cirurgia</button>
           <button id="btnAnalyzeSchedule" class="light">Analisar conflitos</button>
           <button id="btnAutoSuggest" class="purple">Inserir sugestoes</button>
+          <button id="btnExpandMap" class="light" type="button">Expandir</button>
         </div>
       </div>
       <div class="mapSubbar">
@@ -346,6 +366,7 @@ var parsedAnesImport=[];
 var savingImport=false;
 var timelineMin=null;
 var timelineCustom=false;
+var mapExpanded=false;
 var PROCEDURE_SUGGESTIONS=[
   "Colecistectomia videolaparoscópica","Herniorrafia inguinal","Herniorrafia umbilical","Apendicectomia videolaparoscópica","Gastrectomia","Colectomia","Retossigmoidectomia","Hemorroidectomia","Fistulectomia anal","Colonoscopia","Endoscopia digestiva alta",
   "Artroscopia de joelho","Artroplastia de quadril","Artroplastia de joelho","Reconstrução de LCA","Tenorrafia","Redução de fratura","Osteossíntese",
@@ -503,6 +524,21 @@ function updateStickyRulerTop(){
   var h=document.querySelector('header');
   var px=h?Math.ceil(h.getBoundingClientRect().height)+6:132;
   document.documentElement.style.setProperty('--mapRulerTop',px+'px');
+}
+function setMapExpanded(expanded){
+  mapExpanded=!!expanded;
+  var tab=$('tab-mapa');
+  var btn=$('btnExpandMap');
+  document.body.classList.toggle('mapExpanded',mapExpanded);
+  if(tab)tab.classList.toggle('mapExpandedView',mapExpanded);
+  if(btn){
+    btn.textContent=mapExpanded?'Recolher':'Expandir';
+    btn.classList.toggle('active',mapExpanded);
+  }
+  setTimeout(function(){
+    updateStickyRulerTop();
+    setupMapScrollSync(labelW+(endHour-startHour)*hourW);
+  },0);
 }
 
 async function api(url,opt){
@@ -689,7 +725,11 @@ function dbToItem(r){
     initials:r.iniciais_paciente||"",
     age:r.idade_paciente ?? "",
     obs:r.observacao||"",
-    finalizado: r.finalizada===1 || r.finalizada===true || r.finalizado===1 || r.finalizado===true || String(r.status||'').toLowerCase().includes('final')
+    finalizado: r.finalizada===1 || r.finalizada===true || r.finalizado===1 || r.finalizado===true || String(r.status||'').toLowerCase().includes('final'),
+    preFeito: r.pre_feito===1 || r.pre_feito===true || r.preFeito===1 || r.preFeito===true || String(r.pre_feito||'')==='1',
+    preFeitoPor: r.pre_feito_por || r.preFeitoPor || "",
+    preFeitoUserId: r.pre_feito_user_id || r.preFeitoUserId || null,
+    preFeitoEm: r.pre_feito_em || r.preFeitoEm || ""
   }
 }
 
@@ -705,7 +745,11 @@ function itemToPayload(it){
     iniciais_paciente:String(it.initials||"").toUpperCase(),
     idade_paciente:Number(it.age),
     finalizada:isFinished(it)?1:0,
-    observacao:it.obs||""
+    observacao:it.obs||"",
+    pre_feito:isPreFeito(it)?1:0,
+    pre_feito_por:it.preFeitoPor||"",
+    pre_feito_user_id:it.preFeitoUserId||null,
+    pre_feito_em:it.preFeitoEm||""
   }
 }
 
@@ -783,6 +827,23 @@ function isFinished(it){
     String(it.status||'').toLowerCase().includes('final') ||
     String(it.obs||'').toUpperCase().includes('[FINALIZADA]')
   ));
+}
+function isPreFeito(it){
+  return !!(it && (
+    it.preFeito === true || it.preFeito === 1 ||
+    it.pre_feito === true || it.pre_feito === 1 ||
+    String(it.preFeito||'') === '1' ||
+    String(it.pre_feito||'') === '1'
+  ));
+}
+function userMatchesAnesthetistName(name){
+  if(!currentUser || !name)return false;
+  var target=normPerson(name);
+  return [currentUser.nome_escala,currentUser.username].some(function(v){return normPerson(v)===target});
+}
+function canTogglePreFeito(it){
+  if(canEdit())return true;
+  return !!(currentUser && currentUser.role==='plantonista' && it && userMatchesAnesthetistName(it.anest));
 }
 function isExternalCase(it){
   var s=String(it && it.servico || '').toLowerCase();
@@ -1007,6 +1068,7 @@ function getBlockClass(it,idx){
   if(isExternalCase(it)) cls+=' ext';
   if(idx===0) cls+=' virtual';
   if(isFinished(it)) cls+=' finished';
+  if(isPreFeito(it)) cls+=' preDone';
   if(conflictsForItem(it,items).length) cls+=' conflict';
   if(it.id===selectedId) cls+=' selected';
   return cls;
@@ -1076,10 +1138,13 @@ function renderMap(){
       var cls=getBlockClass(it,idx);
       if(w<124)cls+=' compact';
       if(w>220)cls+=' roomy';
+      var preDone=isPreFeito(it);
       var blockStatus=conflictsForItem(it,items).length?'Conflito':(isFinished(it)?'Finalizada':(isExternalCase(it)?'Externo':(it.anest?'Escalada':'Pendente')));
       var badge=(it.anest && !isExternalCase(it) && !isFinished(it))?'<div class="anestBadge">'+html(it.anest)+'</div>':'';
+      var preBadge=preDone?'<div class="preBadge" title="'+html('Pre feito'+(it.preFeitoPor?' por '+it.preFeitoPor:''))+'">Pre ok</div>':'';
       htmlMap+='<div class="block '+cls+'" title="'+html(fmtTime(it.start)+'-'+fmtTime(it.end)+' · '+it.room+' · '+blockStatus)+'" style="left:'+x+'px;top:'+laneTop+'px;width:'+w+'px" data-id="'+it.id+'">'+
         badge+
+        preBadge+
         '<div class="blockText"><div class="blockTopLine"><span>'+html(fmtTime(it.start)+'-'+fmtTime(it.end))+'</span><span>'+html(durToText(it.duration))+'</span></div><div class="blockName">'+html(it.name)+'</div><div class="blockSub">'+html(it.anest||blockStatus)+'</div></div>'+ 
         '<div class="resizeHandle" data-resize="'+it.id+'"></div>'+ 
       '</div>';
@@ -1314,23 +1379,27 @@ function renderList(){
   if(!items.length){list.innerHTML='<div class="card hint">Nenhuma cirurgia cadastrada para este dia.</div>';return}
   list.innerHTML=items.map(function(it){
     var conflicts=conflictsForItem(it,items);
-    var caseCls=(isFinished(it)?' finished':'')+(it.row===0?' virtualCase':'')+(isExternalCase(it)?' externalCase':'')+(conflicts.length?' conflictCase':'');
+    var preDone=isPreFeito(it);
+    var caseCls=(isFinished(it)?' finished':'')+(it.row===0?' virtualCase':'')+(isExternalCase(it)?' externalCase':'')+(conflicts.length?' conflictCase':'')+(preDone?' preDone':'');
     var pillCls=conflicts.length?'conflict':(isFinished(it)?'fin':(isExternalCase(it)?'ext':(it.anest?'sma':'pend')));
     var pillText=conflicts.length?'Conflito':(isFinished(it)?'Finalizada':(isExternalCase(it)?'Externo':(it.anest?'SMA escalada':'Pendente')));
+    var preHtml=preDone?'<span class="preMeta" title="'+html(it.preFeitoPor?'Marcado por '+it.preFeitoPor:'Pre feito marcado')+'">Pre ok</span>':'';
     var conflictHtml=conflicts.length?'<div class="conflictNote">'+html(conflicts.join(' | '))+'</div>':'';
     return '<div class="case '+caseCls+'">'+
       '<div class="caseTop"><div><div class="caseName">'+html(fmtTime(it.start)+' · '+it.name)+'</div>'+
       '<div class="caseMeta">'+html(it.room)+' · '+html(durToText(it.duration))+' · '+html(it.initials)+' · '+html(it.age)+' anos</div></div>'+
       '<span class="pill '+pillCls+'">'+html(pillText)+'</span></div>'+
+      preHtml+
       '<div class="caseMeta">Anest: <b>'+html(it.anest||'não definido')+'</b> '+(it.obs?('· '+html(it.obs)):'')+'</div>'+
       conflictHtml+
-      '<div class="tools"><button class="light" data-edit="'+it.id+'">Editar</button><button class="purple" data-assign="'+it.id+'">Escalar</button><button class="gray" data-unassign="'+it.id+'">Desescalar</button><button class="gray" data-finish="'+it.id+'">Finalizar</button><button class="red" data-del="'+it.id+'">Deletar</button></div>'+
+      '<div class="tools"><button class="light" data-edit="'+it.id+'">Editar</button><button class="purple" data-assign="'+it.id+'">Escalar</button><button class="gray" data-unassign="'+it.id+'">Desescalar</button><button class="light" data-pre="'+it.id+'">'+(preDone?'Desfazer pre':'Pre feito')+'</button><button class="gray" data-finish="'+it.id+'">Finalizar</button><button class="red" data-del="'+it.id+'">Deletar</button></div>'+
     '</div>'
   }).join('');
 
   list.querySelectorAll('[data-edit]').forEach(b=>b.onclick=()=>openSurgeryModal(Number(b.dataset.edit)));
   list.querySelectorAll('[data-assign]').forEach(b=>b.onclick=()=>openAssignModal(Number(b.dataset.assign)));
   list.querySelectorAll('[data-unassign]').forEach(b=>b.onclick=()=>unassignSurgery(Number(b.dataset.unassign)));
+  list.querySelectorAll('[data-pre]').forEach(b=>b.onclick=()=>togglePreFeito(Number(b.dataset.pre)));
   list.querySelectorAll('[data-finish]').forEach(b=>b.onclick=()=>finishSurgery(Number(b.dataset.finish)));
   list.querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>deleteSurgery(Number(b.dataset.del)));
 }
@@ -1735,6 +1804,7 @@ function openBlockActions(id){
   var it=items.find(function(x){return x.id===id}); if(!it)return;
   selectedId=id;
   var finished=isFinished(it);
+  var preDone=isPreFeito(it);
   var conflicts=conflictsForItem(it,items);
   var conflictHtml=conflicts.length?'<div class="conflictNote">'+html(conflicts.join(' | '))+'</div>':'';
   openModal('<h2>'+html(fmtTime(it.start)+' · '+it.name)+'</h2>'+ 
@@ -1744,6 +1814,7 @@ function openBlockActions(id){
       '<button class="purple" id="actAssign">Escalar / alterar</button>'+ 
       '<button class="gray" id="actUnassign">Desescalar</button>'+ 
       '<button class="green" id="actEdit">Editar cirurgia</button>'+ 
+      '<button class="light" id="actPre">'+(preDone?'Desfazer pre feito':'Marcar pre feito')+'</button>'+ 
       '<button class="gray" id="actFinish">'+(finished?'Desfazer finalização':'Finalizar')+'</button>'+ 
       '<button class="red" id="actDelete">Deletar</button>'+ 
       '<button class="light" id="actClose">Fechar</button>'+ 
@@ -1752,6 +1823,7 @@ function openBlockActions(id){
   $('actAssign').onclick=function(){closeModal();openAssignModal(id)};
   $('actUnassign').onclick=function(){closeModal();unassignSurgery(id)};
   $('actEdit').onclick=function(){closeModal();openSurgeryModal(id)};
+  $('actPre').onclick=function(){closeModal();togglePreFeito(id)};
   $('actFinish').onclick=function(){closeModal(); if(finished)unfinishSurgery(id); else finishSurgery(id)};
   $('actDelete').onclick=function(){closeModal();deleteSurgery(id)};
   $('actClose').onclick=closeModal;
@@ -1803,6 +1875,21 @@ function openAssignModal(id){
   };
 }
 
+async function togglePreFeito(id){
+  var it=items.find(function(x){return x.id===id}); if(!it)return;
+  if(!canTogglePreFeito(it)){
+    status('Somente o coordenador/escalador ou o anestesista escalado pode marcar o pre feito.','warn');
+    return;
+  }
+  var next=!isPreFeito(it);
+  try{
+    await api('/api/cirurgias/'+id+'/pre-feito',{method:'POST',body:JSON.stringify({pre_feito:next?1:0})});
+    status(next?'Pre feito marcado.':'Pre feito desfeito.','ok');
+    await loadDay();
+  }catch(err){
+    status('Erro ao atualizar pre feito: '+err.message,'err');
+  }
+}
 
 async function unassignSurgery(id){
   if(!requireEdit())return;
@@ -1879,6 +1966,7 @@ function exportJson(){
 }
 
 function setTab(tab){
+  if(tab!=='mapa' && mapExpanded)setMapExpanded(false);
   document.querySelectorAll('.tab').forEach(b=>b.classList.toggle('active',b.dataset.tab===tab));
   document.querySelectorAll('.screen').forEach(s=>s.classList.add('hidden'));
   $('tab-'+tab).classList.remove('hidden');
@@ -1928,6 +2016,7 @@ function bind(){
   if($('btnAnalyzeSchedule2'))$('btnAnalyzeSchedule2').onclick=analyzeSchedule;
   if($('btnAutoSuggest'))$('btnAutoSuggest').onclick=applySmartSuggestions;
   if($('btnAutoSuggest2'))$('btnAutoSuggest2').onclick=applySmartSuggestions;
+  if($('btnExpandMap'))$('btnExpandMap').onclick=function(){setMapExpanded(!mapExpanded)};
   function goHour(h){var sh=$('mapShell');if(sh)sh.scrollLeft=Math.max(0,labelW+(h-startHour)*hourW-80)}
   $('btnGo7').onclick=function(){goHour(7)};
   $('btnGo13').onclick=function(){goHour(13)};
@@ -1947,6 +2036,9 @@ function bind(){
     await fetch('/api/logout',{method:'POST'});
     location.href='/login.html?logout=1';
   };
+  document.addEventListener('keydown',function(ev){
+    if(ev.key==='Escape' && mapExpanded)setMapExpanded(false);
+  });
 }
 
 async function boot(){
@@ -1971,6 +2063,6 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 
 })();
 </script>
-<script src="/mapacc-version.js?v=20260518-2210"></script>
+<script src="/mapacc-version.js?v=20260520-1332"></script>
 </body>
 </html>

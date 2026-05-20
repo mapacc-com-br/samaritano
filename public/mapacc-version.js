@@ -1,6 +1,6 @@
 (function(){
-  const buildLabel = '18/05/2026 22:10 BRT';
-  const buildId = '2026-05-18-2210-revert-map-zoom';
+  const buildLabel = '20/05/2026 13:32 BRT';
+  const buildId = '2026-05-20-1332-pre-expand-ai-duration';
 
   function showBadge(){
     if(document.getElementById('mapaccUpdateBadge')) return;
