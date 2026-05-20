@@ -33,7 +33,7 @@ const ROOT_DIR = __dirname;
 const PUBLIC_DIR = path.join(ROOT_DIR, "public");
 const IS_RAILWAY = !!(process.env.RAILWAY_ENVIRONMENT || process.env.RAILWAY_PROJECT_ID || process.env.RAILWAY_SERVICE_ID);
 const CONFIG_CHECK_VERSION = "2026-05-17-railway-volume-guard-v3";
-const SERVER_BUILD_ID = "2026-05-18-2210-revert-map-zoom";
+const SERVER_BUILD_ID = "2026-05-20-1332-pre-expand-ai-duration";
 const DEFAULT_HOSPITAL_NOME = "Hospital Samaritano";
 const DEFAULT_HOSPITAL_SLUG = "samaritano";
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY || process.env.MAPACC_OPENAI_API_KEY || "";
@@ -563,6 +563,10 @@ async function initDb() {
   await garantirColuna("cirurgias", "hospital_id", `INTEGER NOT NULL DEFAULT ${hospitalPadraoId}`);
   await garantirColuna("cirurgias", "observacao", "TEXT");
   await garantirColuna("cirurgias", "finalizada", "INTEGER NOT NULL DEFAULT 0");
+  await garantirColuna("cirurgias", "pre_feito", "INTEGER NOT NULL DEFAULT 0");
+  await garantirColuna("cirurgias", "pre_feito_por", "TEXT");
+  await garantirColuna("cirurgias", "pre_feito_user_id", "INTEGER");
+  await garantirColuna("cirurgias", "pre_feito_em", "TEXT");
   await run(`UPDATE cirurgias SET hospital_id = ? WHERE hospital_id IS NULL OR hospital_id = 0`, [hospitalPadraoId]);
 
   const antigas = await all(`
@@ -667,6 +671,14 @@ function normalizarPapelDia(papel) {
   return "plantonista";
 }
 
+function campoPresente(body, ...nomes) {
+  return nomes.some(nome => Object.prototype.hasOwnProperty.call(body || {}, nome));
+}
+
+function boolBanco(valor) {
+  return valor === true || valor === 1 || valor === "1" || String(valor || "").toLowerCase() === "true" ? 1 : 0;
+}
+
 function validarCirurgia(body) {
   const hospital_id = Number(body.hospital_id || body.hospitalId || 0);
   const data_cirurgia = String(body.data_cirurgia || "").trim();
@@ -681,6 +693,15 @@ function validarCirurgia(body) {
   const idade_paciente = Number(body.idade_paciente);
   const observacao = String(body.observacao || "").trim();
   const finalizada = body.finalizada === true || body.finalizada === 1 || body.finalizada === "1" ? 1 : 0;
+  const pre_feito_presente = campoPresente(body, "pre_feito", "preFeito");
+  const pre_feito_por_presente = campoPresente(body, "pre_feito_por", "preFeitoPor");
+  const pre_feito_user_id_presente = campoPresente(body, "pre_feito_user_id", "preFeitoUserId");
+  const pre_feito_em_presente = campoPresente(body, "pre_feito_em", "preFeitoEm");
+  const pre_feito = pre_feito_presente ? boolBanco(body.pre_feito ?? body.preFeito) : null;
+  const pre_feito_por = pre_feito_por_presente ? String(body.pre_feito_por ?? body.preFeitoPor ?? "").trim() : null;
+  const preFeitoUserRaw = body.pre_feito_user_id ?? body.preFeitoUserId;
+  const pre_feito_user_id = pre_feito_user_id_presente && Number.isInteger(Number(preFeitoUserRaw)) && Number(preFeitoUserRaw) > 0 ? Number(preFeitoUserRaw) : null;
+  const pre_feito_em = pre_feito_em_presente ? String(body.pre_feito_em ?? body.preFeitoEm ?? "").trim() : null;
 
   if (!Number.isInteger(hospital_id) || hospital_id <= 0) return { ok:false, error:"Hospital invalido." };
   if (!validarDataISO(data_cirurgia)) return { ok:false, error:"Data da cirurgia invalida." };
@@ -713,7 +734,15 @@ function validarCirurgia(body) {
     iniciais_paciente,
     idade_paciente,
     observacao,
-    finalizada
+    finalizada,
+    pre_feito,
+    pre_feito_por,
+    pre_feito_user_id,
+    pre_feito_em,
+    pre_feito_presente,
+    pre_feito_por_presente,
+    pre_feito_user_id_presente,
+    pre_feito_em_presente
   };
 }
 
@@ -1056,17 +1085,27 @@ function normalizarItemFoto(item, currentDate) {
   const servicoOriginal = String(item.servico_original || item.servico || "").trim();
   const observacoes = [];
   const obs = String(item.observacao || "").trim();
+  const duracaoInformada = String(item.duracao_informada || item.duracao_original || "").trim();
+  const duracaoEstimadaIa = String(item.duracao_estimada_ia || item.duracao_ia || "").trim();
+  const tempoCirurgicoIa = Number(item.tempo_cirurgico_estimado_min || 0);
+  const tempoGiroSala = Number(item.tempo_giro_sala_min || 0);
+  const justificativaIa = String(item.estimativa_ia_justificativa || "").trim();
   if (obs) observacoes.push(obs);
   if (servicoOriginal && servicoOriginal !== normalizarServicoExtraido(servicoOriginal)) {
     observacoes.push("Servico original: " + servicoOriginal);
   }
+  if (duracaoInformada) observacoes.push("Duracao informada: " + duracaoInformada);
+  if (duracaoEstimadaIa) observacoes.push("Estimativa IA: " + duracaoEstimadaIa);
+  if (tempoCirurgicoIa > 0) observacoes.push("Tempo cirurgico IA: " + tempoCirurgicoIa + " min");
+  if (tempoGiroSala > 0) observacoes.push("Giro de sala IA: " + tempoGiroSala + " min");
+  if (justificativaIa) observacoes.push("Justificativa IA: " + justificativaIa);
 
   return {
     data_cirurgia: currentDate,
     horario_inicio: String(item.horario_inicio || item.inicio || "").trim(),
     sala: String(item.sala || "Nao escaladas").trim(),
     nome_cirurgia: String(item.nome_cirurgia || item.cirurgia || item.nome || "").trim(),
-    duracao: String(item.duracao || "01:00").trim(),
+    duracao: String(item.duracao || duracaoEstimadaIa || duracaoInformada || "01:00").trim(),
     servico: normalizarServicoExtraido(item.servico || item.servico_original),
     iniciais_paciente: String(item.iniciais_paciente || item.iniciais || "NI").replace(/\W/g, "").toUpperCase() || "NI",
     idade_paciente: Number(item.idade_paciente ?? item.idade ?? 0),
@@ -1109,6 +1148,11 @@ async function chamarOpenAIImportacaoFoto({ imageDataUrl, hospital, salas, dataC
             sala: { type: "string" },
             nome_cirurgia: { type: "string" },
             duracao: { type: "string" },
+            duracao_informada: { type: "string" },
+            duracao_estimada_ia: { type: "string" },
+            tempo_cirurgico_estimado_min: { type: "integer" },
+            tempo_giro_sala_min: { type: "integer" },
+            estimativa_ia_justificativa: { type: "string" },
             servico: { type: "string" },
             servico_original: { type: "string" },
             iniciais_paciente: { type: "string" },
@@ -1122,6 +1166,11 @@ async function chamarOpenAIImportacaoFoto({ imageDataUrl, hospital, salas, dataC
             "sala",
             "nome_cirurgia",
             "duracao",
+            "duracao_informada",
+            "duracao_estimada_ia",
+            "tempo_cirurgico_estimado_min",
+            "tempo_giro_sala_min",
+            "estimativa_ia_justificativa",
             "servico",
             "servico_original",
             "iniciais_paciente",
@@ -1147,6 +1196,10 @@ async function chamarOpenAIImportacaoFoto({ imageDataUrl, hospital, salas, dataC
     "Use apenas dados visiveis ou inferencias diretamente justificaveis pela imagem.",
     "Se algum campo estiver incerto, preencha o melhor valor possivel e explique em aviso.",
     "A duracao deve sair como HH:MM quando possivel. Se estiver em minutos, converta.",
+    "Para duracao, use a melhor estimativa operacional: tempo cirurgico provavel do procedimento + tempo de giro de sala.",
+    "Se a imagem trouxer uma duracao informada pela enfermagem, preserve esse valor em duracao_informada, mas deixe duracao como a melhor estimativa final.",
+    "Preencha duracao_estimada_ia, tempo_cirurgico_estimado_min, tempo_giro_sala_min e estimativa_ia_justificativa com uma justificativa curta e conservadora.",
+    "Quando nao der para estimar com seguranca, use a duracao informada; se tambem nao houver, use 01:00 e explique em aviso.",
     "Para sala, prefira exatamente um dos nomes da lista de salas do hospital quando houver correspondencia clara.",
     "Servico no JSON final deve ser SMA ou Particular; preserve termos como Anestesista Particular em servico_original.",
     "Data alvo da importacao: " + dataCirurgia + ".",
@@ -1466,7 +1519,11 @@ async function atualizarCirurgiaExistente(id, v) {
       iniciais_paciente = ?,
       idade_paciente = ?,
       observacao = ?,
-      finalizada = ?
+      finalizada = ?,
+      pre_feito = CASE WHEN ? THEN ? ELSE pre_feito END,
+      pre_feito_por = CASE WHEN ? THEN ? ELSE pre_feito_por END,
+      pre_feito_user_id = CASE WHEN ? THEN ? ELSE pre_feito_user_id END,
+      pre_feito_em = CASE WHEN ? THEN ? ELSE pre_feito_em END
     WHERE id = ?
   `, [
     v.hospital_id,
@@ -1481,6 +1538,14 @@ async function atualizarCirurgiaExistente(id, v) {
     v.idade_paciente,
     v.observacao,
     v.finalizada,
+    v.pre_feito_presente ? 1 : 0,
+    v.pre_feito,
+    v.pre_feito_por_presente ? 1 : 0,
+    v.pre_feito_por,
+    v.pre_feito_user_id_presente ? 1 : 0,
+    v.pre_feito_user_id,
+    v.pre_feito_em_presente ? 1 : 0,
+    v.pre_feito_em,
     id
   ]);
 
@@ -1523,9 +1588,13 @@ app.post("/api/cirurgias", async (req, res) => {
           iniciais_paciente,
           idade_paciente,
           observacao,
-          finalizada
+          finalizada,
+          pre_feito,
+          pre_feito_por,
+          pre_feito_user_id,
+          pre_feito_em
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `, [
         v.hospital_id,
         v.data_cirurgia,
@@ -1539,7 +1608,11 @@ app.post("/api/cirurgias", async (req, res) => {
         v.iniciais_paciente,
         v.idade_paciente,
         v.observacao,
-        v.finalizada
+        v.finalizada,
+        v.pre_feito_presente ? v.pre_feito : 0,
+        v.pre_feito_por_presente ? v.pre_feito_por : null,
+        v.pre_feito_user_id_presente ? v.pre_feito_user_id : null,
+        v.pre_feito_em_presente ? v.pre_feito_em : null
       ]);
     } catch (insertErr) {
       if (String(insertErr.message || "").includes("UNIQUE")) {
@@ -1597,7 +1670,11 @@ app.put("/api/cirurgias/:id", async (req, res) => {
         iniciais_paciente = ?,
         idade_paciente = ?,
         observacao = ?,
-        finalizada = ?
+        finalizada = ?,
+        pre_feito = CASE WHEN ? THEN ? ELSE pre_feito END,
+        pre_feito_por = CASE WHEN ? THEN ? ELSE pre_feito_por END,
+        pre_feito_user_id = CASE WHEN ? THEN ? ELSE pre_feito_user_id END,
+        pre_feito_em = CASE WHEN ? THEN ? ELSE pre_feito_em END
       WHERE id = ?
     `, [
       v.hospital_id,
@@ -1613,6 +1690,14 @@ app.put("/api/cirurgias/:id", async (req, res) => {
       v.idade_paciente,
       v.observacao,
       v.finalizada,
+      v.pre_feito_presente ? 1 : 0,
+      v.pre_feito,
+      v.pre_feito_por_presente ? 1 : 0,
+      v.pre_feito_por,
+      v.pre_feito_user_id_presente ? 1 : 0,
+      v.pre_feito_user_id,
+      v.pre_feito_em_presente ? 1 : 0,
+      v.pre_feito_em,
       id
     ]);
 
@@ -1624,6 +1709,68 @@ app.put("/api/cirurgias/:id", async (req, res) => {
     if (String(err.message || "").includes("UNIQUE")) {
       return res.status(400).json({ error:"Ja existe outra cirurgia nesse hospital e dia com mesmo nome, iniciais e idade." });
     }
+    res.status(500).json({ error:err.message });
+  }
+});
+
+function usuarioPodeMarcarPreFeito(user, cirurgia, acesso) {
+  if (!user || !cirurgia || !acesso || !acesso.pode_ver) return false;
+  if (isAdminLike(user) || acesso.pode_editar) return true;
+  if (user.role !== "plantonista") return false;
+
+  const anest = normalizarTextoChave(cirurgia.anestesista_escalado || "");
+  if (!anest) return false;
+  const nomesUsuario = [
+    user.nome_escala,
+    user.username
+  ].map(normalizarTextoChave).filter(Boolean);
+  return nomesUsuario.includes(anest);
+}
+
+app.post("/api/cirurgias/:id/pre-feito", async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    if (!Number.isInteger(id) || id <= 0) return res.status(400).json({ error:"ID invalido." });
+
+    const atual = await get("SELECT * FROM cirurgias WHERE id = ?", [id]);
+    if (!atual) return res.status(404).json({ error:"Cirurgia nao encontrada." });
+
+    const user = usuarioAtual(req);
+    if (!user) return res.status(401).json({ ok:false, error:"Nao autenticado" });
+
+    const acesso = await acessoHospitalNoDia(req, atual.hospital_id, atual.data_cirurgia || dataLocalISO());
+    if (!usuarioPodeMarcarPreFeito(user, atual, acesso)) {
+      return res.status(403).json({ ok:false, error:"Voce pode ver esta cirurgia, mas nao pode marcar o pre feito dela." });
+    }
+
+    const marcado = boolBanco(req.body.pre_feito ?? req.body.preFeito);
+    const nomeUsuario = String(user.nome_escala || user.username || "").trim();
+
+    if (marcado) {
+      await run(`
+        UPDATE cirurgias
+        SET
+          pre_feito = 1,
+          pre_feito_por = ?,
+          pre_feito_user_id = ?,
+          pre_feito_em = datetime('now', 'localtime')
+        WHERE id = ?
+      `, [nomeUsuario, user.id || null, id]);
+    } else {
+      await run(`
+        UPDATE cirurgias
+        SET
+          pre_feito = 0,
+          pre_feito_por = NULL,
+          pre_feito_user_id = NULL,
+          pre_feito_em = NULL
+        WHERE id = ?
+      `, [id]);
+    }
+
+    const row = await get("SELECT * FROM cirurgias WHERE id = ?", [id]);
+    res.json({ ok:true, cirurgia:row });
+  } catch(err) {
     res.status(500).json({ error:err.message });
   }
 });

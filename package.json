@@ -1,10 +1,10 @@
 {
   "name": "mapa-cirurgias-escala-funcao",
-  "version": "1.4.4",
+  "version": "1.4.5",
   "main": "server.js",
   "type": "commonjs",
   "scripts": {
-    "prestart": "node -e \"console.log('PRESTART BUILD 2026-05-18-2210')\"",
+    "prestart": "node -e \"console.log('PRESTART BUILD 2026-05-20-1332')\"",
     "start": "node server.js"
   },
   "dependencies": {
