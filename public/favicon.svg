@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="MapaCC">
+  <rect width="64" height="64" rx="16" fill="#0f766e"/>
+  <path d="M15 42V17h7l10 14 10-14h7v25h-7V28L33 40h-2L22 28v14h-7z" fill="#fff"/>
+  <path d="M47 11c4 0 7 3 7 7s-3 7-7 7-7-3-7-7 3-7 7-7z" fill="#ccfbf1"/>
+  <path d="M47 15a3 3 0 1 1 0 6 3 3 0 0 1 0-6z" fill="#0f766e"/>
+</svg>

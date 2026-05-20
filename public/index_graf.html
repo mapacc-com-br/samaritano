@@ -4,11 +4,12 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>MAPA CC - Painel cirurgico</title>
+<link rel="icon" href="/favicon.svg?v=20260520-1442" type="image/svg+xml">
 <style>
 :root{--bg:#eef2f7;--card:#fff;--line:#d8e0ee;--text:#172033;--muted:#607086;--blue:#2563eb;--green:#16a34a;--red:#dc2626;--amber:#f59e0b;--purple:#7c3aed;--gray:#64748b;--lane:#dbeafe;--oeste:#e0f2fe;--virtual:#fef3c7;--hemo:#fae8ff}
 *{box-sizing:border-box}html,body{margin:0;padding:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif}button,input,textarea,select{font:inherit}button{border:0;border-radius:14px;padding:12px 14px;font-weight:800;color:#fff;background:var(--blue);box-shadow:0 2px 8px #0001;touch-action:manipulation}button:active{transform:scale(.98)}button.green{background:var(--green)}button.red{background:var(--red)}button.gray{background:var(--gray)}button.purple{background:var(--purple)}button.light{background:#fff;color:#172033;border:1px solid var(--line)}button.small{padding:8px 10px;border-radius:10px;font-size:12px}input,textarea,select{width:100%;border:1px solid var(--line);border-radius:14px;padding:12px;background:#fff;color:var(--text)}textarea{min-height:150px;resize:vertical;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13px;line-height:1.35}header{position:sticky;top:0;z-index:20;background:rgba(255,255,255,.96);backdrop-filter:blur(12px);border-bottom:1px solid var(--line);padding:12px}.headerTop{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center}.title{font-weight:900;font-size:18px}.sub{font-size:12px;color:var(--muted);margin-top:3px}.account{display:flex;gap:8px;align-items:center;justify-content:flex-end}.accountChip{display:flex;gap:8px;align-items:center;background:#fff;border:1px solid var(--line);border-radius:999px;padding:6px 9px;box-shadow:0 4px 14px #0f172a0d}.avatar{width:28px;height:28px;border-radius:50%;display:grid;place-items:center;background:#e0f2fe;color:#0f172a;font-size:12px;font-weight:1000}.accountName{font-size:13px;font-weight:900;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.accountRole{font-size:11px;color:var(--muted);font-weight:800}.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.toprow{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;margin-top:10px}.tabs{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:10px}.tabs button{padding:10px 6px;font-size:12px;background:#e2e8f0;color:#334155;box-shadow:none}.tabs button.active{background:var(--blue);color:#fff}.wrap{padding:12px;max-width:980px;margin:0 auto}.card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:14px;margin-bottom:12px;box-shadow:0 6px 20px #0f172a0d}.card h2{font-size:16px;margin:0 0 10px}.hint{font-size:12px;color:var(--muted);line-height:1.35}.status{white-space:pre-wrap;border:1px solid #bfdbfe;background:#eff6ff;color:#1e3a8a;border-radius:14px;padding:10px;font-size:12px;font-weight:700;margin-top:10px}.status.ok{background:#ecfff5;border-color:#bce8ce;color:#14532d}.status.warn,.status.err{background:#fff6d7;border-color:#ead58a;color:#854d0e}.hidden{display:none!important}.grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}.list{display:grid;gap:8px}.case{border:1px solid var(--line);border-radius:16px;padding:10px;background:#fff}.caseTop{display:flex;justify-content:space-between;gap:8px}.caseName{font-weight:900;font-size:14px}.caseMeta{font-size:12px;color:var(--muted);margin-top:4px}.pill{display:inline-flex;align-items:center;border-radius:999px;padding:5px 8px;font-size:11px;font-weight:900;border:1px solid var(--line);background:#f8fafc;color:#334155}.pill.sma{background:#dcfce7;color:#166534;border-color:#86efac}.pill.ext{background:#f3e8ff;color:#6b21a8;border-color:#d8b4fe}.pill.pend{background:#dbeafe;color:#1d4ed8;border-color:#93c5fd}.pill.fin{background:#e2e8f0;color:#475569}.tools{display:flex;gap:6px;flex-wrap:wrap;margin-top:9px}.tools button{font-size:12px;padding:8px 10px;border-radius:10px}.mapShell{overflow:auto;border:1px solid var(--line);border-radius:16px;background:#fff;-webkit-overflow-scrolling:touch}.map{position:relative;min-width:1280px;padding-bottom:18px}.timeHeader{position:sticky;top:0;z-index:3;display:grid;background:#f8fafc;border-bottom:1px solid var(--line)}.timeCell{height:34px;border-right:1px solid var(--line);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:900;color:#334155}.roomRow{position:relative;border-bottom:1px solid var(--line);height:58px}.roomLabel{position:sticky;left:0;z-index:2;width:102px;height:58px;background:#f8fafc;border-right:1px solid var(--line);display:flex;align-items:center;justify-content:center;text-align:center;font-size:11px;font-weight:900;padding:3px}.roomLabel.virtual{background:var(--virtual);color:#92400e}.roomLabel.lane{background:var(--lane);color:#1d4ed8}.roomLabel.oeste{background:var(--oeste);color:#075985}.roomLabel.hemo{background:var(--hemo);color:#86198f}.block{position:absolute;top:8px;height:42px;border-radius:12px;padding:6px 8px;color:#fff;background:linear-gradient(135deg,#38bdf8,#2563eb);font-size:11px;font-weight:900;overflow:hidden;box-shadow:0 4px 12px #0f172a33;display:flex;align-items:center;line-height:1.1}.block.ext{background:linear-gradient(135deg,#a78bfa,#7c3aed)}.block.virtual{background:linear-gradient(135deg,#f59e0b,#d97706)}.block.selected{outline:3px solid #facc15}.roomGridLine{position:absolute;top:0;bottom:0;border-left:1px solid #e2e8f0}.modalBg{display:none;position:fixed;inset:0;background:#0f172a99;z-index:99;padding:14px;align-items:center;justify-content:center}.modal{width:min(560px,100%);max-height:88vh;overflow:auto;background:#fff;border-radius:20px;padding:16px}.modal h2{margin:0 0 10px}.safeBottom{height:calc(12px + env(safe-area-inset-bottom))}.summaryGrid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.stat{background:#f8fafc;border:1px solid var(--line);border-radius:14px;padding:9px;text-align:center}.stat b{display:block;font-size:20px}.stat span{font-size:11px;color:var(--muted);font-weight:800}@media(min-width:760px){.mobileOnly{display:none}.desktopGrid{display:grid;grid-template-columns:360px 1fr;gap:12px}.tabs{max-width:520px}.roomLabel{width:120px}.map{min-width:1500px}}@media(max-width:420px){.tabs button{font-size:11px}.grid2,.grid3{grid-template-columns:1fr}.toprow,.headerTop{grid-template-columns:1fr}.account{justify-content:flex-start}.accountChip{width:100%}.roomLabel{width:92px}.map{min-width:1160px}.summaryGrid{grid-template-columns:1fr 1fr 1fr}}
 
-/* ===== PATCH GRÁFICO v4: drag, resize, badges, status ===== */
+/* ===== PATCH GRÃFICO v4: drag, resize, badges, status ===== */
 .roomRow{overflow:visible}
 .block{cursor:grab;touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent;overflow:visible;padding:0}
 .block:active{cursor:grabbing}
@@ -41,7 +42,7 @@
 
 
 
-/* ===== PATCH v5: toque longo, régua fixa, barra fixa e menu rápido ===== */
+/* ===== PATCH v5: toque longo, rÃ©gua fixa, barra fixa e menu rÃ¡pido ===== */
 .mapToolbarSticky{position:sticky;top:132px;z-index:18;background:rgba(238,242,247,.96);backdrop-filter:blur(10px);padding:6px 0;margin-bottom:6px}
 .fixedTimeBar{overflow:hidden;border:1px solid var(--line);border-radius:14px;background:#f8fafc;box-shadow:0 4px 14px #0f172a14}
 .fixedTimeInner{display:grid;height:34px;will-change:transform}
@@ -58,7 +59,7 @@
 
 
 
-/* ===== PATCH v6: régua de horas fixa, plantão até 07h e linha azul ===== */
+/* ===== PATCH v6: rÃ©gua de horas fixa, plantÃ£o atÃ© 07h e linha azul ===== */
 :root{--mapRulerTop:132px}
 .mapToolbarSticky{top:var(--mapRulerTop)!important;z-index:19}
 .fixedTimeBar{position:relative;overflow:hidden}
@@ -70,7 +71,7 @@
 .case.finished{opacity:.78;background:#f8fafc!important;border-color:#cbd5e1!important}
 
 
-/* ===== PATCH v7: autocomplete, cargos e atalhos rápidos ===== */
+/* ===== PATCH v7: autocomplete, cargos e atalhos rÃ¡pidos ===== */
 .quickNav{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
 .quickNav button{padding:8px 10px;border-radius:999px;font-size:12px}
 .timeStepper{display:grid;grid-template-columns:44px 1fr 44px;gap:6px;align-items:center}
@@ -156,14 +157,17 @@ body.mapExpanded{overflow:hidden}
 }
 
 </style>
-<link rel="stylesheet" href="/mapacc-theme.css?v=20260520-1332">
+<link rel="stylesheet" href="/mapacc-theme.css?v=20260520-1442">
 </head>
 <body>
 <header>
   <div class="headerTop">
-    <div>
-      <div class="title">MAPA CC</div>
-      <div class="sub">Painel cirurgico multi-hospital: escala, salas, conflitos e acessos em tempo real.</div>
+    <div class="brandLockup">
+      <div class="brandIcon" aria-hidden="true">M</div>
+      <div>
+        <div class="title">MapaCC</div>
+        <div class="sub">Painel cirurgico multi-hospital: escala, salas, conflitos e acessos em tempo real.</div>
+      </div>
     </div>
     <div class="account">
       <div class="accountChip">
@@ -204,19 +208,21 @@ body.mapExpanded{overflow:hidden}
   <section id="tab-importar" class="screen">
     <div class="card">
       <h2>Importador de cirurgias</h2>
-      <div class="hint">Cole no formato: Início | Sala | Cirurgia | Duração | Serviço | Iniciais | Idade | Obs opcional</div>
+      <div class="hint">Cole no formato: InÃ­cio | Sala | Cirurgia | DuraÃ§Ã£o | ServiÃ§o | Iniciais | Idade | Obs opcional</div>
       <textarea id="surgeryText" placeholder="07:00 | Oeste 03 | Colecistectomia | 120 | SMA | FC | 30"></textarea>
       <div class="row" style="margin-top:8px">
         <button id="btnParse" class="green">Processar lista</button>
         <button id="btnPhotoImport" class="purple">Tirar foto</button>
+        <button id="btnPastePhoto" class="light" type="button">Colar imagem</button>
         <button id="btnExample" class="light">Exemplo</button>
         <button id="btnClearText" class="gray">Limpar texto</button>
       </div>
       <input id="photoImportInput" type="file" accept="image/*" capture="environment" class="hidden">
+      <img id="photoImportPreview" class="photoPreview hidden" alt="Previa da imagem">
       <div id="photoImportStatus" class="hint" style="margin-top:10px"></div>
     </div>
     <div class="card">
-      <h2>Prévia da importação</h2>
+      <h2>PrÃ©via da importaÃ§Ã£o</h2>
       <div id="importPreview" class="hint">Nenhuma lista processada ainda.</div>
       <div class="row" style="margin-top:10px">
         <button id="btnSaveImported" class="green">Salvar alteracoes no mapa</button>
@@ -263,6 +269,7 @@ body.mapExpanded{overflow:hidden}
           <span class="legendChip legendVirtual">Sem sala</span>
         </div>
       </div>
+      <div id="mapSectorControls" class="mapSectorControls"></div>
     </div>
     <div class="mapToolbarSticky"><div id="mapTimeFixed" class="fixedTimeBar"><div id="mapTimeInner" class="fixedTimeInner"></div></div></div>
     <div id="mapShell" class="mapShell"><div id="map" class="map"></div></div>
@@ -285,8 +292,8 @@ body.mapExpanded{overflow:hidden}
   <section id="tab-escala" class="screen hidden">
     <div class="card">
       <h2>Importador de escala</h2>
-      <div class="hint">Cole no formato: Nome | Escala | Cargo. Exemplo: Rômulo Silva | 07:00-19:00 | Sala</div>
-      <textarea id="anesText" class="compact" placeholder="Nome | Escala | Cargo&#10;Rômulo Silva | 07:00-19:00 | Sala"></textarea>
+      <div class="hint">Cole no formato: Nome | Escala | Cargo. Exemplo: RÃ´mulo Silva | 07:00-19:00 | Sala</div>
+      <textarea id="anesText" class="compact" placeholder="Nome | Escala | Cargo&#10;RÃ´mulo Silva | 07:00-19:00 | Sala"></textarea>
       <div class="row" style="margin-top:8px">
         <button id="btnParseAnes" class="green">Processar escala</button>
         <button id="btnExampleAnes" class="light">Exemplo</button>
@@ -317,7 +324,7 @@ body.mapExpanded{overflow:hidden}
           <option>Estendido 21h</option>
           <option>Estendido 23h</option>
         </select>
-        <input id="anesObs" placeholder="Observação">
+        <input id="anesObs" placeholder="ObservaÃ§Ã£o">
       </div>
       <button id="btnAddAnes" class="green" style="margin-top:8px;width:100%">Adicionar / atualizar anestesista</button>
     </div>
@@ -367,16 +374,18 @@ var savingImport=false;
 var timelineMin=null;
 var timelineCustom=false;
 var mapExpanded=false;
+var collapsedRoomGroups={};
+var pastePhotoBusy=false;
 var PROCEDURE_SUGGESTIONS=[
-  "Colecistectomia videolaparoscópica","Herniorrafia inguinal","Herniorrafia umbilical","Apendicectomia videolaparoscópica","Gastrectomia","Colectomia","Retossigmoidectomia","Hemorroidectomia","Fistulectomia anal","Colonoscopia","Endoscopia digestiva alta",
-  "Artroscopia de joelho","Artroplastia de quadril","Artroplastia de joelho","Reconstrução de LCA","Tenorrafia","Redução de fratura","Osteossíntese",
-  "Mamoplastia redutora","Mastopexia","Abdominoplastia","Lipoaspiração","Rinoplastia","Blefaroplastia",
-  "Histerectomia","Ooforectomia","Laqueadura tubária","Miomectomia","Ressecção de endometriose",
-  "Prostatectomia","RTU de próstata","Ureterolitotripsia","Nefrectomia","Varicocelectomia",
+  "Colecistectomia videolaparoscÃ³pica","Herniorrafia inguinal","Herniorrafia umbilical","Apendicectomia videolaparoscÃ³pica","Gastrectomia","Colectomia","Retossigmoidectomia","Hemorroidectomia","Fistulectomia anal","Colonoscopia","Endoscopia digestiva alta",
+  "Artroscopia de joelho","Artroplastia de quadril","Artroplastia de joelho","ReconstruÃ§Ã£o de LCA","Tenorrafia","ReduÃ§Ã£o de fratura","OsteossÃ­ntese",
+  "Mamoplastia redutora","Mastopexia","Abdominoplastia","LipoaspiraÃ§Ã£o","Rinoplastia","Blefaroplastia",
+  "Histerectomia","Ooforectomia","Laqueadura tubÃ¡ria","Miomectomia","RessecÃ§Ã£o de endometriose",
+  "Prostatectomia","RTU de prÃ³stata","Ureterolitotripsia","Nefrectomia","Varicocelectomia",
   "Tireoidectomia","Parotidectomia","Septoplastia","Amigdalectomia","Timpanoplastia",
-  "Craniotomia","Artrodese de coluna","Microdiscectomia","Laminectomia","Angioplastia","Arteriografia","Embolização"
+  "Craniotomia","Artrodese de coluna","Microdiscectomia","Laminectomia","Angioplastia","Arteriografia","EmbolizaÃ§Ã£o"
 ];
-var ANESTHETIST_SEEDS=["Rômulo","Romulo"];
+var ANESTHETIST_SEEDS=["RÃ´mulo","Romulo"];
 
 function $(id){return document.getElementById(id)}
 function todayISO(){var d=new Date();var off=d.getTimezoneOffset()*60000;return new Date(d-off).toISOString().slice(0,10)}
@@ -389,7 +398,7 @@ function parseTime(t){
   var h=Number(m[1]), mi=Number(m[2]||0);
   if(!Number.isFinite(h)||!Number.isFinite(mi))return null;
   var total=h*60+mi;
-  // v6: horários entre 00:00 e 04:59 pertencem ao fim do plantão, no dia seguinte.
+  // v6: horÃ¡rios entre 00:00 e 04:59 pertencem ao fim do plantÃ£o, no dia seguinte.
   if(endHour>24 && h<startHour)total+=24*60;
   return total;
 }
@@ -452,6 +461,73 @@ function canonicalRoomName(name){
 }
 function isUnscheduledRoomName(name){return roomNameToIndex(name)===0}
 function html(s){return String(s??"").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;").replaceAll("'","&#039;")}
+function roomGroupLabel(room,idx){
+  var type=normRoomText(room && room.type);
+  var name=normRoomText(room && room.name);
+  var explicit=String((room && (room.group || room.bloco || room.setor)) || '').trim();
+  if(idx===0 || type==='virtual' || name.includes('nao escalad') || name.includes('sem sala'))return 'Sem sala';
+  if(explicit)return explicit;
+  if(type.includes('oeste') || name.includes('oeste'))return 'Oeste';
+  if(type.includes('lane') || name.includes('lane'))return 'Lane';
+  if(type.includes('hemo') || name.includes('hemo'))return 'Hemodinamica';
+  if(type.includes('cdi') || name.includes('cdi'))return 'CDI';
+  return 'Outras salas';
+}
+function roomGroupKey(label){return normRoomText(label).replace(/[^a-z0-9]+/g,'_') || 'grupo'}
+function collapsedRoomStorageKey(){
+  return 'ccsama_collapsed_room_groups_'+(currentHospitalId||'default');
+}
+function loadCollapsedRoomGroups(){
+  try{collapsedRoomGroups=JSON.parse(localStorage.getItem(collapsedRoomStorageKey())||'{}')||{}}
+  catch(e){collapsedRoomGroups={}}
+}
+function saveCollapsedRoomGroups(){
+  try{localStorage.setItem(collapsedRoomStorageKey(),JSON.stringify(collapsedRoomGroups))}catch(e){}
+}
+function roomGroups(){
+  var map={};
+  rooms.forEach(function(room,idx){
+    var label=roomGroupLabel(room,idx);
+    var key=roomGroupKey(label);
+    if(!map[key])map[key]={key:key,label:label,indices:[],type:room.type||'sala'};
+    map[key].indices.push(idx);
+    if(!map[key].type || map[key].type==='sala')map[key].type=room.type||map[key].type;
+  });
+  return Object.keys(map).map(function(k){return map[k]});
+}
+function isGroupCollapsible(group){
+  return group && group.label !== 'Sem sala' && group.indices.length > 0;
+}
+function isGroupCollapsed(group){
+  return !!(group && collapsedRoomGroups[group.key]);
+}
+function toggleRoomGroup(key){
+  var group=roomGroups().find(function(g){return g.key===key});
+  if(!group || !isGroupCollapsible(group))return;
+  collapsedRoomGroups[key]=!collapsedRoomGroups[key];
+  saveCollapsedRoomGroups();
+  renderMap();
+  renderSectorControls();
+}
+function renderSectorControls(){
+  var box=$('mapSectorControls');
+  if(!box)return;
+  var groups=roomGroups().filter(isGroupCollapsible);
+  if(!groups.length){box.innerHTML='';return}
+  box.innerHTML='<div class="sectorLabel">Setores</div>'+groups.map(function(g){
+    var active=isGroupCollapsed(g);
+    var activeItems=items.filter(function(it){return !isFinished(it) && g.indices.includes(it.row)});
+    var conflicts=activeItems.filter(function(it){return conflictsForItem(it,items).length}).length;
+    var pending=activeItems.filter(isUnassignedSma).length;
+    var text=(active?'+ ':'- ')+g.label+' | '+activeItems.length;
+    if(pending)text+=' | '+pending+' pend.';
+    if(conflicts)text+=' | '+conflicts+' conf.';
+    return '<button type="button" class="light sectorToggle '+(active?'collapsed':'')+'" data-sector="'+html(g.key)+'" title="'+html(active?'Expandir '+g.label:'Recolher '+g.label)+'">'+html(text)+'</button>';
+  }).join('');
+  box.querySelectorAll('[data-sector]').forEach(function(btn){
+    btn.onclick=function(){toggleRoomGroup(btn.dataset.sector)};
+  });
+}
 function roleLabel(user){return user && (user.admin_plus || String(user.username || '').trim().toLowerCase() === 'godofredo') ? 'admin+' : String((user && user.role) || '')}
 function initials(name){var clean=String(name||'').trim();return clean?clean.split(/\s+/).slice(0,2).map(function(p){return p[0]}).join('').toUpperCase():'--'}
 function renderSession(user){
@@ -495,7 +571,7 @@ function applyAccessMode(){
   var accessCard=$('accessCard');
   if(accessCard)accessCard.style.display=canManageAccess()?'block':'none';
   if(readonly){
-    status((currentHospital?currentHospital.nome+' · ':'')+'Somente leitura em '+brDate(currentDate)+'.','warn');
+    status((currentHospital?currentHospital.nome+' | ':'')+'Somente leitura em '+brDate(currentDate)+'.','warn');
   }
 }
 function nowPlantaoMin(){
@@ -535,6 +611,8 @@ function setMapExpanded(expanded){
     btn.textContent=mapExpanded?'Recolher':'Expandir';
     btn.classList.toggle('active',mapExpanded);
   }
+  renderMap();
+  renderSectorControls();
   setTimeout(function(){
     updateStickyRulerTop();
     setupMapScrollSync(labelW+(endHour-startHour)*hourW);
@@ -547,7 +625,7 @@ async function api(url,opt){
   }
   var r=await fetch(url,Object.assign({headers:{"Content-Type":"application/json"},cache:"no-store"},opt||{}));
   var text=await r.text(); var data={};
-  try{data=text?JSON.parse(text):{}}catch(e){throw new Error("Resposta não JSON: "+text.slice(0,150))}
+  try{data=text?JSON.parse(text):{}}catch(e){throw new Error("Resposta nÃ£o JSON: "+text.slice(0,150))}
   if(!r.ok)throw new Error(data.error||("Erro HTTP "+r.status));
   return data;
 }
@@ -588,6 +666,60 @@ async function preparePhotoDataUrl(file){
     return original;
   }
 }
+function showPhotoPreview(dataUrl){
+  var img=$('photoImportPreview');
+  if(!img)return;
+  img.src=dataUrl;
+  img.classList.remove('hidden');
+}
+function imageFileFromPasteEvent(ev){
+  var items=(ev.clipboardData && ev.clipboardData.items) ? Array.from(ev.clipboardData.items) : [];
+  for(var i=0;i<items.length;i++){
+    if(items[i].kind==='file'){
+      var file=items[i].getAsFile();
+      if(file && String(file.type||'').toLowerCase().startsWith('image/'))return file;
+    }
+  }
+  var files=(ev.clipboardData && ev.clipboardData.files) ? Array.from(ev.clipboardData.files) : [];
+  return files.find(function(file){return String(file.type||'').toLowerCase().startsWith('image/')}) || null;
+}
+async function handlePhotoPasteEvent(ev){
+  var importar=$('tab-importar');
+  if(!importar || importar.classList.contains('hidden'))return;
+  var file=imageFileFromPasteEvent(ev);
+  if(!file)return;
+  ev.preventDefault();
+  if(pastePhotoBusy)return;
+  pastePhotoBusy=true;
+  try{await handlePhotoFile(file)}
+  finally{pastePhotoBusy=false}
+}
+async function pastePhotoFromClipboard(){
+  if(!requireEdit())return;
+  if(!navigator.clipboard || !navigator.clipboard.read){
+    setPhotoStatus('O navegador nao liberou leitura direta da area de transferencia. Cole a imagem enquanto estiver na aba Importar.','warn');
+    return;
+  }
+  try{
+    pastePhotoBusy=true;
+    var clipboardItems=await navigator.clipboard.read();
+    for(var i=0;i<clipboardItems.length;i++){
+      var item=clipboardItems[i];
+      var type=(item.types||[]).find(function(t){return String(t).toLowerCase().startsWith('image/')});
+      if(type){
+        var blob=await item.getType(type);
+        var file=new File([blob],'imagem-colada.'+(type.split('/')[1]||'png'),{type:type});
+        await handlePhotoFile(file);
+        return;
+      }
+    }
+    setPhotoStatus('Nao encontrei imagem na area de transferencia.','warn');
+  }catch(e){
+    setPhotoStatus('Nao consegui ler a imagem colada: '+e.message,'err');
+  }finally{
+    pastePhotoBusy=false;
+  }
+}
 function importItemsToText(list){
   return (list||[]).map(function(c){
     return [c.horario_inicio||'',c.sala||'',c.nome_cirurgia||'',c.duracao||'',c.servico||'',c.iniciais_paciente||'',c.idade_paciente||0,c.observacao||''].join(' | ').replace(/\s+\|\s+$/,'');
@@ -599,7 +731,7 @@ async function loadPhotoPrompt(){
     var cfg=await api('/api/hospitais/'+encodeURIComponent(currentHospitalId)+'/importacao-foto?data='+encodeURIComponent(currentDate));
     $('photoImportPrompt').value=cfg.prompt_importacao_foto||'';
     var info=$('photoImportStatus');
-    if(info)info.textContent='IA de leitura: '+(cfg.model||'modelo configurado')+' · regras carregadas para '+(cfg.hospital_nome||'hospital')+'.';
+    if(info)info.textContent='IA de leitura: '+(cfg.model||'modelo configurado')+' | regras carregadas para '+(cfg.hospital_nome||'hospital')+'.';
   }catch(e){
     var info=$('photoImportStatus');
     if(info)info.textContent='Nao foi possivel carregar as regras de foto: '+e.message;
@@ -620,6 +752,7 @@ async function handlePhotoFile(file){
   try{
     setPhotoStatus('Preparando a foto para leitura inteligente...','warn');
     var imageDataUrl=await preparePhotoDataUrl(file);
+    showPhotoPreview(imageDataUrl);
     setPhotoStatus('Analisando foto com IA. Isso pode levar alguns segundos...','warn');
     var resp=await api('/api/importar-foto-cirurgias?hospital_id='+encodeURIComponent(currentHospitalId),{
       method:'POST',
@@ -650,11 +783,11 @@ async function handlePhotoFile(file){
 }
 
 function initRooms(){
-  rooms=[{name:"Não escaladas",type:"virtual"}];
-  for(var i=1;i<=10;i++)rooms.push({name:"Oeste "+i,type:"oeste"});
-  for(var j=1;j<=10;j++)rooms.push({name:"Lane "+j,type:"lane"});
-  rooms.push({name:"CDI",type:"cdi"});
-  rooms.push({name:"HEMO",type:"hemo"});
+  rooms=[{name:"NÃ£o escaladas",type:"virtual"}];
+  for(var i=1;i<=10;i++)rooms.push({name:"Oeste "+i,type:"oeste",group:"Oeste"});
+  for(var j=1;j<=10;j++)rooms.push({name:"Lane "+j,type:"lane",group:"Lane"});
+  rooms.push({name:"CDI",type:"cdi",group:"CDI"});
+  rooms.push({name:"HEMO",type:"hemo",group:"Hemodinamica"});
 }
 
 
@@ -663,13 +796,13 @@ function initRoomsFromSalas(salas){
     return Number(a.ordem||0)-Number(b.ordem||0) || String(a.nome||'').localeCompare(String(b.nome||''),'pt-BR');
   });
   if(!list.some(function(s){return String(s.tipo||'')==='virtual' || String(s.nome||'').toLowerCase().includes('escalad')})){
-    rooms=[{name:"Nao escaladas",type:"virtual"}];
+    rooms=[{name:"Nao escaladas",type:"virtual",group:"Sem sala"}];
   }else{
     rooms=[];
   }
   list.forEach(function(s){
     var tipo=String(s.tipo||'sala').toLowerCase();
-    rooms.push({name:s.nome,type:tipo});
+    rooms.push({name:s.nome,type:tipo,group:String(s.bloco||s.setor||'').trim()});
   });
   if(!rooms.length)initRooms();
 }
@@ -685,6 +818,7 @@ async function loadHospitals(){
   var saved=Number(localStorage.getItem('ccsama_hospital_id')||0);
   currentHospital=hospitais.find(function(h){return Number(h.id)===requested}) || hospitais.find(function(h){return Number(h.id)===saved}) || hospitais[0];
   currentHospitalId=currentHospital.id;
+  loadCollapsedRoomGroups();
   currentAccess={pode_editar:Number(currentHospital.pode_editar)===1,papel_dia:currentHospital.papel_dia||roleLabel(currentUser)};
   var sel=$('hospitalSelect');
   if(sel){
@@ -739,7 +873,7 @@ function itemToPayload(it){
     horario_inicio:fmtTime(it.start),
     nome_cirurgia:it.name,
     duracao:durToText(it.duration||it.end-it.start),
-    sala:it.room || (rooms[it.row]?rooms[it.row].name:"Não escaladas"),
+    sala:it.room || (rooms[it.row]?rooms[it.row].name:"NÃ£o escaladas"),
     servico:it.servico||"SMA",
     anestesista_escalado:(String(it.servico||'')==='Particular'?'':(it.anest||"")),
     iniciais_paciente:String(it.initials||"").toUpperCase(),
@@ -772,7 +906,7 @@ async function loadDay(){
   renderAll();
   applyAccessMode();
   if(canManageAccess())await loadAccessManager();
-  status((currentHospital ? currentHospital.nome + " · " : "") + "Data carregada: "+brDate(currentDate)+" · "+items.length+" cirurgia(s). · "+(canEdit()?'edicao liberada':'somente leitura'), canEdit()?"ok":"warn");
+  status((currentHospital ? currentHospital.nome + " | " : "") + "Data carregada: "+brDate(currentDate)+" | "+items.length+" cirurgia(s). | "+(canEdit()?'edicao liberada':'somente leitura'), canEdit()?"ok":"warn");
 }
 
 function renderStats(){
@@ -800,7 +934,7 @@ function renderOpsInsights(active,pending,conflicts,activeRooms){
   var pulseMeta=conflicts.length?conflicts.length+' cirurgia(s) em vermelho':(pending.length?pending.length+' cirurgia(s) aguardando anestesista':(noRoom?noRoom+' cirurgia(s) aguardando sala':activeRooms+' sala(s) em atividade'));
   var nextHtml=next.length?next.map(function(it){
     var status=conflictsForItem(it,items).length?'conflito':(isExternalCase(it)?'externo':(it.anest?'ok':'pendente'));
-    return '<span class="nextCase '+status+'"><b>'+html(fmtTime(it.start))+'</b> '+html(it.room)+' · '+html(it.name)+'</span>';
+    return '<span class="nextCase '+status+'"><b>'+html(fmtTime(it.start))+'</b> '+html(it.room)+' | '+html(it.name)+'</span>';
   }).join(''):'<span class="nextCase muted">Sem proximas cirurgias no horizonte atual</span>';
   box.innerHTML=
     '<div class="opsPulse '+pulseCls+'"><b>'+html(pulseTitle)+'</b><span>'+html(pulseMeta)+'</span></div>'+
@@ -810,6 +944,7 @@ function renderOpsInsights(active,pending,conflicts,activeRooms){
 
 function renderAll(){
   renderStats();
+  renderSectorControls();
   renderMap();
   renderList();
   renderAnes();
@@ -1096,7 +1231,7 @@ function updateItemRoomAndTime(it,newRow,newStart){
   newStart=Math.round(newStart/15)*15;
   newStart=Math.max(startHour*60,Math.min(endHour*60-duration,newStart));
   it.row=newRow;
-  it.room=rooms[newRow]?rooms[newRow].name:'Não escaladas';
+  it.room=rooms[newRow]?rooms[newRow].name:'NÃ£o escaladas';
   it.start=newStart;
   it.end=newStart+duration;
   it.duration=duration;
@@ -1106,25 +1241,58 @@ function renderMap(){
   var map=$('map'); if(!map)return;
   var totalHours=endHour-startHour;
   var totalW=labelW+totalHours*hourW;
+  var compact=mapExpanded;
+  var baseRowH=compact?48:rowH;
+  var laneGap=compact?42:58;
+  var blockTop=compact?7:9;
   var htmlMap='';
   var virtualItems=items.filter(function(it){return it.row===0 && !isFinished(it)});
   var virtualLane=calcVirtualLanes(virtualItems);
-  var rowHeights=rooms.map(function(r,idx){return idx===0?Math.max(rowH,20+virtualLane.count*58):rowH});
+  var rowHeights=rooms.map(function(r,idx){return idx===0?Math.max(baseRowH,16+virtualLane.count*laneGap):baseRowH});
+  var visibleRows=[];
+  roomGroups().forEach(function(group){
+    if(isGroupCollapsed(group)){
+      visibleRows.push({kind:'group',group:group});
+    }else{
+      group.indices.forEach(function(idx){visibleRows.push({kind:'room',idx:idx,group:group})});
+    }
+  });
 
   htmlMap+='<div class="timeHeader" style="grid-template-columns:'+labelW+'px repeat('+totalHours+','+hourW+'px);width:'+totalW+'px">';
   htmlMap+='<div></div>';
   for(var h=startHour;h<endHour;h++)htmlMap+='<div class="timeCell">'+String(((h%24)+24)%24).padStart(2,'0')+'h</div>';
   htmlMap+='</div>';
 
-  rooms.forEach(function(room,idx){
+  visibleRows.forEach(function(viewRow){
+    if(viewRow.kind==='group'){
+      var group=viewRow.group;
+      var indices=group.indices||[];
+      var groupItems=items.filter(function(it){return !isFinished(it) && indices.includes(it.row)});
+      var groupConflicts=groupItems.filter(function(it){return conflictsForItem(it,items).length}).length;
+      var groupPending=groupItems.filter(isUnassignedSma).length;
+      var groupAssigned=groupItems.filter(isAssignedSma).length;
+      var gCls=(groupConflicts?' hasConflict':(groupPending?' hasPending':(groupItems.length?' hasActivity':'')));
+      var firstRoom=rooms[indices[0]]||{};
+      var summary=groupItems.length+' cirurgia(s) | '+groupAssigned+' escalada(s)';
+      if(groupPending)summary+=' | '+groupPending+' pendente(s)';
+      if(groupConflicts)summary+=' | '+groupConflicts+' conflito(s)';
+      htmlMap+='<div class="roomRow collapsedGroupRow '+gCls+'" data-group="'+html(group.key)+'" style="width:'+totalW+'px;height:'+(compact?42:48)+'px">';
+      htmlMap+='<div class="roomLabel collapsed '+(firstRoom.type||group.type||'')+'" style="width:'+labelW+'px;height:'+(compact?42:48)+'px"><span class="roomName">'+html(group.label)+'</span><span class="roomStats">'+html(indices.length+' sala(s) recolhidas')+'</span></div>';
+      htmlMap+='<button type="button" class="groupExpandBtn light" data-map-group="'+html(group.key)+'" style="left:'+(labelW+10)+'px">Expandir</button>';
+      htmlMap+='<div class="collapsedSummaryText" style="left:'+(labelW+112)+'px">'+html(summary)+'</div>';
+      htmlMap+='</div>';
+      return;
+    }
+    var idx=viewRow.idx;
+    var room=rooms[idx];
     var rh=rowHeights[idx];
     var rowItems=items.filter(function(it){return it.row===idx && !isFinished(it)});
     var rowConflicts=rowItems.filter(function(it){return conflictsForItem(it,items).length}).length;
     var rowPending=rowItems.filter(isUnassignedSma).length;
     var rowCls=(rowConflicts?' hasConflict':(rowPending?' hasPending':(rowItems.length?' hasActivity':'')));
     var roomStats=idx===0?(rowItems.length+' sem sala'):(rowItems.length?(rowItems.length+' cirurgia(s)'):'livre');
-    if(rowConflicts)roomStats+=' · '+rowConflicts+' conflito(s)';
-    else if(rowPending)roomStats+=' · '+rowPending+' pendente(s)';
+    if(rowConflicts)roomStats+=' | '+rowConflicts+' conflito(s)';
+    else if(rowPending)roomStats+=' | '+rowPending+' pendente(s)';
     htmlMap+='<div class="roomRow '+rowCls+'" data-row="'+idx+'" style="width:'+totalW+'px;height:'+rh+'px">';
     htmlMap+='<div class="roomLabel '+room.type+'" style="width:'+labelW+'px;height:'+rh+'px"><span class="roomName">'+html(room.name)+'</span><span class="roomStats">'+html(roomStats)+'</span></div>';
     for(var h=startHour;h<=endHour;h++){
@@ -1134,7 +1302,7 @@ function renderMap(){
     items.filter(function(it){return it.row===idx}).forEach(function(it){
       var x=labelW+((it.start-startHour*60)/60)*hourW;
       var w=Math.max(46,((it.end-it.start)/60)*hourW);
-      var laneTop=idx===0 ? 9 + (virtualLane.byId[it.id]||0)*58 : 9;
+      var laneTop=idx===0 ? blockTop + (virtualLane.byId[it.id]||0)*laneGap : blockTop;
       var cls=getBlockClass(it,idx);
       if(w<124)cls+=' compact';
       if(w>220)cls+=' roomy';
@@ -1142,7 +1310,7 @@ function renderMap(){
       var blockStatus=conflictsForItem(it,items).length?'Conflito':(isFinished(it)?'Finalizada':(isExternalCase(it)?'Externo':(it.anest?'Escalada':'Pendente')));
       var badge=(it.anest && !isExternalCase(it) && !isFinished(it))?'<div class="anestBadge">'+html(it.anest)+'</div>':'';
       var preBadge=preDone?'<div class="preBadge" title="'+html('Pre feito'+(it.preFeitoPor?' por '+it.preFeitoPor:''))+'">Pre ok</div>':'';
-      htmlMap+='<div class="block '+cls+'" title="'+html(fmtTime(it.start)+'-'+fmtTime(it.end)+' · '+it.room+' · '+blockStatus)+'" style="left:'+x+'px;top:'+laneTop+'px;width:'+w+'px" data-id="'+it.id+'">'+
+      htmlMap+='<div class="block '+cls+'" title="'+html(fmtTime(it.start)+'-'+fmtTime(it.end)+' | '+it.room+' | '+blockStatus)+'" style="left:'+x+'px;top:'+laneTop+'px;width:'+w+'px" data-id="'+it.id+'">'+
         badge+
         preBadge+
         '<div class="blockText"><div class="blockTopLine"><span>'+html(fmtTime(it.start)+'-'+fmtTime(it.end))+'</span><span>'+html(durToText(it.duration))+'</span></div><div class="blockName">'+html(it.name)+'</div><div class="blockSub">'+html(it.anest||blockStatus)+'</div></div>'+ 
@@ -1174,6 +1342,13 @@ function renderMap(){
   });
   map.querySelectorAll('.resizeHandle').forEach(function(handle){
     bindResize(handle);
+  });
+  map.querySelectorAll('[data-map-group]').forEach(function(btn){
+    btn.onclick=function(ev){
+      ev.preventDefault();
+      ev.stopPropagation();
+      toggleRoomGroup(btn.dataset.mapGroup);
+    };
   });
 }
 
@@ -1218,7 +1393,7 @@ function setupMapScrollSync(totalW){
 }
 
 function rowFromClientY(clientY){
-  var rows=[].slice.call(document.querySelectorAll('.roomRow'));
+  var rows=[].slice.call(document.querySelectorAll('.roomRow[data-row]'));
   if(!rows.length)return null;
   var best=null, bestDist=Infinity;
   rows.forEach(function(r){
@@ -1287,7 +1462,7 @@ function bindBlockDrag(el){
     if(moved){
       updateItemRoomAndTime(it,newRow,origStart+deltaMin);
       el.dataset.moved='1';
-      try{await saveItemToDb(it);status('Cirurgia movida para '+it.room+' às '+fmtTime(it.start)+'.','ok')}
+      try{await saveItemToDb(it);status('Cirurgia movida para '+it.room+' Ã s '+fmtTime(it.start)+'.','ok')}
       catch(err){status('Erro ao salvar movimento: '+err.message,'err')}
     }else{
       el.dataset.skipClick='1';
@@ -1337,8 +1512,8 @@ function bindResize(handle){
     var deltaMin=Math.round((dx/hourW)*4)*15;
     it.end=Math.max(it.start+15,Math.min(endHour*60,origEnd+deltaMin));
     it.duration=it.end-it.start;
-    try{await saveItemToDb(it);status('Duração atualizada para '+durToText(it.duration)+'.','ok')}
-    catch(err){status('Erro ao salvar duração: '+err.message,'err')}
+    try{await saveItemToDb(it);status('DuraÃ§Ã£o atualizada para '+durToText(it.duration)+'.','ok')}
+    catch(err){status('Erro ao salvar duraÃ§Ã£o: '+err.message,'err')}
     renderAll();
   });
   handle.addEventListener('pointercancel',function(){clearTimeout(holdTimer);resizing=false;armed=false;handle.classList.remove('longPressReady');endMapInteraction()});
@@ -1386,11 +1561,11 @@ function renderList(){
     var preHtml=preDone?'<span class="preMeta" title="'+html(it.preFeitoPor?'Marcado por '+it.preFeitoPor:'Pre feito marcado')+'">Pre ok</span>':'';
     var conflictHtml=conflicts.length?'<div class="conflictNote">'+html(conflicts.join(' | '))+'</div>':'';
     return '<div class="case '+caseCls+'">'+
-      '<div class="caseTop"><div><div class="caseName">'+html(fmtTime(it.start)+' · '+it.name)+'</div>'+
-      '<div class="caseMeta">'+html(it.room)+' · '+html(durToText(it.duration))+' · '+html(it.initials)+' · '+html(it.age)+' anos</div></div>'+
+      '<div class="caseTop"><div><div class="caseName">'+html(fmtTime(it.start)+' | '+it.name)+'</div>'+
+      '<div class="caseMeta">'+html(it.room)+' | '+html(durToText(it.duration))+' | '+html(it.initials)+' | '+html(it.age)+' anos</div></div>'+
       '<span class="pill '+pillCls+'">'+html(pillText)+'</span></div>'+
       preHtml+
-      '<div class="caseMeta">Anest: <b>'+html(it.anest||'não definido')+'</b> '+(it.obs?('· '+html(it.obs)):'')+'</div>'+
+      '<div class="caseMeta">Anest: <b>'+html(it.anest||'nÃ£o definido')+'</b> '+(it.obs?(' | '+html(it.obs)):'')+'</div>'+
       conflictHtml+
       '<div class="tools"><button class="light" data-edit="'+it.id+'">Editar</button><button class="purple" data-assign="'+it.id+'">Escalar</button><button class="gray" data-unassign="'+it.id+'">Desescalar</button><button class="light" data-pre="'+it.id+'">'+(preDone?'Desfazer pre':'Pre feito')+'</button><button class="gray" data-finish="'+it.id+'">Finalizar</button><button class="red" data-del="'+it.id+'">Deletar</button></div>'+
     '</div>'
@@ -1409,7 +1584,7 @@ function renderAnes(){
   if(!anesthetists.length){list.innerHTML='<div class="card hint">Nenhum anestesista cadastrado para este dia.</div>';return}
   list.innerHTML=anesthetists.map(function(a){
     return '<div class="case"><div class="caseTop"><div><div class="caseName">'+html(a.name)+'</div>'+
-      '<div class="caseMeta">'+html(a.shift||'sem horário')+' · '+html(a.role||'sem cargo')+' '+(a.obs?('· '+html(a.obs)):'')+'</div></div>'+
+      '<div class="caseMeta">'+html(a.shift||'sem horÃ¡rio')+' | '+html(a.role||'sem cargo')+' '+(a.obs?(' | '+html(a.obs)):'')+'</div></div>'+
       '<span class="pill pend">escala do dia</span></div>'+
       '<div class="tools"><button class="light" data-edita="'+a.id+'">Editar</button><button class="red" data-dela="'+a.id+'">Remover</button></div></div>'
   }).join('');
@@ -1437,7 +1612,7 @@ async function loadAccessManager(){
     if(!usersForAccess.length){
       await loadRegisteredUsers();
       var select=$('accessUser');
-      if(select)select.innerHTML=usersForAccess.map(function(u){return '<option value="'+html(u.id)+'">'+html(u.username+' · '+roleLabel(u))+'</option>'}).join('');
+      if(select)select.innerHTML=usersForAccess.map(function(u){return '<option value="'+html(u.id)+'">'+html(u.username+' | '+roleLabel(u))+'</option>'}).join('');
     }
     var resp=await api('/api/acessos-dia?data='+encodeURIComponent(currentDate)+'&hospital_id='+encodeURIComponent(currentHospitalId));
     dailyAccess=resp.acessos||[];
@@ -1455,7 +1630,7 @@ function renderAccessList(){
   list.innerHTML=dailyAccess.map(function(a){
     return '<div class="case"><div class="caseTop"><div><div class="caseName">'+html(a.nome_escala||a.username)+'</div>'+
       '<div class="caseMeta">login: '+html(a.username)+'</div>'+
-      '<div class="caseMeta">'+html(a.papel_dia)+' · '+(Number(a.pode_editar)===1?'pode editar':'somente leitura')+'</div></div>'+
+      '<div class="caseMeta">'+html(a.papel_dia)+' | '+(Number(a.pode_editar)===1?'pode editar':'somente leitura')+'</div></div>'+
       '<button class="red small" data-del-access="'+a.id+'">Remover</button></div></div>';
   }).join('');
   list.querySelectorAll('[data-del-access]').forEach(function(b){b.onclick=function(){deleteAccess(Number(b.dataset.delAccess))}});
@@ -1495,7 +1670,7 @@ function normalizeRole(cargo){
   return s||'Sala';
 }
 function normalizeShift(v){
-  var s=String(v||'').trim().replace(/[–—]/g,'-');
+  var s=String(v||'').trim().replace(/[â€“â€”]/g,'-');
   var times=s.match(/\d{1,2}[:hH]?\d{0,2}/g)||[];
   function norm(t,def){var m=String(t||def).match(/(\d{1,2})[:hH]?(\d{2})?/);if(!m)return def;return String(Number(m[1])).padStart(2,'0')+':'+String(Number(m[2]||0)).padStart(2,'0')}
   if(times.length>=2)return norm(times[0],'07:00')+'-'+norm(times[1],'19:00');
@@ -1524,7 +1699,7 @@ function parseAnesImport(){
 function renderAnesImportPreview(){
   var box=$('anesImportPreview'); if(!box)return;
   if(!parsedAnesImport.length){box.innerHTML='Nenhuma escala processada ainda.';return}
-  box.innerHTML='<div class="list">'+parsedAnesImport.map(function(a){return '<div class="case"><div class="caseName">'+html(a.nome_anestesista)+'</div><div class="caseMeta">'+html(a.horario_escala)+' · '+html(a.funcao)+'</div></div>'}).join('')+'</div>';
+  box.innerHTML='<div class="list">'+parsedAnesImport.map(function(a){return '<div class="case"><div class="caseName">'+html(a.nome_anestesista)+'</div><div class="caseMeta">'+html(a.horario_escala)+' | '+html(a.funcao)+'</div></div>'}).join('')+'</div>';
 }
 async function saveImportedAnes(){
   if(!requireEdit())return;
@@ -1594,8 +1769,8 @@ function renderImportPreview(){
   var box=$('importPreview');
   if(!parsedImport.length){box.innerHTML='Nenhuma lista processada ainda.';return}
   box.innerHTML='<div class="list">'+parsedImport.map(function(c,i){
-    return '<div class="case"><div class="caseName">'+html(c.horario_inicio+' · '+c.nome_cirurgia)+'</div>'+
-      '<div class="caseMeta">'+html(c.sala)+' · '+html(c.duracao)+' · '+html(c.servico)+' · '+html(c.iniciais_paciente)+' · '+html(c.idade_paciente)+' anos</div></div>'
+    return '<div class="case"><div class="caseName">'+html(c.horario_inicio+' | '+c.nome_cirurgia)+'</div>'+
+      '<div class="caseMeta">'+html(c.sala)+' | '+html(c.duracao)+' | '+html(c.servico)+' | '+html(c.iniciais_paciente)+' | '+html(c.idade_paciente)+' anos</div></div>'
   }).join('')+'</div>';
 }
 
@@ -1729,7 +1904,7 @@ async function saveImported(){
       msgs.push((i+1)+': '+err.message);
     }
   }
-  status("Importação salva: "+ok+" cirurgia(s). Erros: "+errors+(msgs.length?'\n'+msgs.slice(0,5).join('\n'):''), errors?'warn':'ok');
+  status("ImportaÃ§Ã£o salva: "+ok+" cirurgia(s). Erros: "+errors+(msgs.length?'\n'+msgs.slice(0,5).join('\n'):''), errors?'warn':'ok');
   status("Importacao salva: "+ok+" cirurgia(s). Novas: "+inserted+". Atualizadas: "+updated+". Duplicadas ignoradas: "+skipped+". Erros: "+errors+(msgs.length?'\n'+msgs.slice(0,5).join('\n'):''), errors?'warn':'ok');
   if(ok){parsedImport=[];$('surgeryText').value="";}
   await loadDay();
@@ -1747,12 +1922,12 @@ $('modalBg').addEventListener('click',function(e){if(e.target===$('modalBg'))clo
 function openSurgeryModal(id){
   if(!requireEdit())return;
   var it=id?items.find(x=>x.id===id):null;
-  var opts=['Não escaladas'].concat(rooms.slice(1).map(r=>r.name));
+  var opts=['NÃ£o escaladas'].concat(rooms.slice(1).map(r=>r.name));
   var anesOptions='<option value="">Sem anestesista</option>'+allAnesthetistSuggestions().map(a=>'<option>'+html(a)+'</option>').join('');
   var procList=datalistHtml('procedureOptions',allProcedureSuggestions());
   openModal('<h2>'+(it?'Editar':'Nova')+' cirurgia</h2>'+procList+
-    '<div class="fieldLabel">Horário</div><div class="timeStepper"><button class="light" id="mMinus15" type="button">−15</button><input id="mHora" placeholder="07:00" value="'+html(it?fmtTime(it.start):'')+'"><button class="light" id="mPlus15" type="button">+15</button></div>'+ 
-    '<div class="fieldLabel">Duração</div><div class="timeStepper"><button class="light" id="mDurMinus15" type="button">−15</button><input id="mDur" placeholder="02:00" value="'+html(it?durToText(it.duration):'')+'"><button class="light" id="mDurPlus15" type="button">+15</button></div>'+ 
+    '<div class="fieldLabel">HorÃ¡rio</div><div class="timeStepper"><button class="light" id="mMinus15" type="button">âˆ’15</button><input id="mHora" placeholder="07:00" value="'+html(it?fmtTime(it.start):'')+'"><button class="light" id="mPlus15" type="button">+15</button></div>'+ 
+    '<div class="fieldLabel">DuraÃ§Ã£o</div><div class="timeStepper"><button class="light" id="mDurMinus15" type="button">âˆ’15</button><input id="mDur" placeholder="02:00" value="'+html(it?durToText(it.duration):'')+'"><button class="light" id="mDurPlus15" type="button">+15</button></div>'+ 
     '<div class="fieldLabel">Procedimento</div><input id="mNome" list="procedureOptions" placeholder="Nome da cirurgia" value="'+html(it?it.name:'')+'">'+
     '<div class="grid2" style="margin-top:8px"><div><div class="fieldLabel">Sala</div><select id="mSala">'+opts.map(o=>'<option '+(it&&it.room===o?'selected':'')+'>'+html(o)+'</option>').join('')+'</select></div><div><div class="fieldLabel">Tipo</div><select id="mServ"><option '+(!it||it.servico==='SMA'?'selected':'')+'>SMA</option><option '+(it&&it.servico==='Particular'?'selected':'')+'>Particular</option></select></div></div>'+ 
     '<div class="fieldLabel">Anestesista</div><select id="mAnest">'+anesOptions+'</select><div id="mAnestHint" class="smartHint"></div>'+ 
@@ -1807,19 +1982,19 @@ function openBlockActions(id){
   var preDone=isPreFeito(it);
   var conflicts=conflictsForItem(it,items);
   var conflictHtml=conflicts.length?'<div class="conflictNote">'+html(conflicts.join(' | '))+'</div>':'';
-  openModal('<h2>'+html(fmtTime(it.start)+' · '+it.name)+'</h2>'+ 
-    '<div class="hint">'+html(it.room)+' · '+html(durToText(it.duration))+' · Anest: '+html(it.anest||'não definido')+'</div>'+ 
+  openModal('<h2>'+html(fmtTime(it.start)+' | '+it.name)+'</h2>'+ 
+    '<div class="hint">'+html(it.room)+' | '+html(durToText(it.duration))+' | Anest: '+html(it.anest||'nÃ£o definido')+'</div>'+ 
     conflictHtml+
     '<div class="actionGrid">'+
       '<button class="purple" id="actAssign">Escalar / alterar</button>'+ 
       '<button class="gray" id="actUnassign">Desescalar</button>'+ 
       '<button class="green" id="actEdit">Editar cirurgia</button>'+ 
       '<button class="light" id="actPre">'+(preDone?'Desfazer pre feito':'Marcar pre feito')+'</button>'+ 
-      '<button class="gray" id="actFinish">'+(finished?'Desfazer finalização':'Finalizar')+'</button>'+ 
+      '<button class="gray" id="actFinish">'+(finished?'Desfazer finalizaÃ§Ã£o':'Finalizar')+'</button>'+ 
       '<button class="red" id="actDelete">Deletar</button>'+ 
       '<button class="light" id="actClose">Fechar</button>'+ 
     '</div>'+ 
-    '<div class="hint" style="margin-top:10px">Para mover ou redimensionar no mapa: toque e segure o bloco/alça por um instante antes de arrastar.</div>');
+    '<div class="hint" style="margin-top:10px">Para mover ou redimensionar no mapa: toque e segure o bloco/alÃ§a por um instante antes de arrastar.</div>');
   $('actAssign').onclick=function(){closeModal();openAssignModal(id)};
   $('actUnassign').onclick=function(){closeModal();unassignSurgery(id)};
   $('actEdit').onclick=function(){closeModal();openSurgeryModal(id)};
@@ -1919,8 +2094,8 @@ async function unfinishSurgery(id){
   it.finalizado=false;
   it.finished=false;
   it.obs=String(it.obs||'').replace(/\s*\|?\s*\[FINALIZADA\]\s*/gi,'').trim();
-  try{await saveItemToDb(it);status('Finalização desfeita.','ok');await loadDay()}
-  catch(err){status('Erro ao desfazer finalização: '+err.message,'err')}
+  try{await saveItemToDb(it);status('FinalizaÃ§Ã£o desfeita.','ok');await loadDay()}
+  catch(err){status('Erro ao desfazer finalizaÃ§Ã£o: '+err.message,'err')}
 }
 
 async function deleteSurgery(id){
@@ -1933,7 +2108,7 @@ async function deleteSurgery(id){
 async function addAnes(){
   if(!requireEdit())return;
   var name=$('anesName').value.trim();
-  if(!name){status("Nome do anestesista obrigatório.","warn");return}
+  if(!name){status("Nome do anestesista obrigatÃ³rio.","warn");return}
   storeValue('ccsama_anesthetists',name);
   var shift=(($('anesShiftStart').value||'07:00')+'-'+($('anesShiftEnd').value||'19:00'));
   $('anesShift').value=shift;
@@ -1988,12 +2163,14 @@ function bind(){
     currentHospitalId=Number(this.value);
     localStorage.setItem('ccsama_hospital_id',String(currentHospitalId));
     currentHospital={id:currentHospitalId,nome:this.options[this.selectedIndex].textContent};
+    loadCollapsedRoomGroups();
     await loadRoomsForHospital();
     await loadPhotoPrompt();
     await loadDay();
   };
   $('btnParse').onclick=parseImport;
   if($('btnPhotoImport'))$('btnPhotoImport').onclick=function(){$('photoImportInput').click()};
+  if($('btnPastePhoto'))$('btnPastePhoto').onclick=pastePhotoFromClipboard;
   if($('photoImportInput'))$('photoImportInput').onchange=function(){handlePhotoFile(this.files&&this.files[0])};
   if($('btnSavePhotoPrompt'))$('btnSavePhotoPrompt').onclick=savePhotoPrompt;
   if($('btnReloadPhotoPrompt'))$('btnReloadPhotoPrompt').onclick=loadPhotoPrompt;
@@ -2025,7 +2202,7 @@ function bind(){
   $('btnExport').onclick=exportJson;
   $('btnAddAnes').onclick=addAnes;
   $('btnParseAnes').onclick=parseAnesImport;
-  $('btnExampleAnes').onclick=function(){$('anesText').value='Nome | Escala | Cargo\nRômulo Silva | 07:00-19:00 | Sala\nAna Souza | 19:00-07:00 | Noturno';parseAnesImport()};
+  $('btnExampleAnes').onclick=function(){$('anesText').value='Nome | Escala | Cargo\nRÃ´mulo Silva | 07:00-19:00 | Sala\nAna Souza | 19:00-07:00 | Noturno';parseAnesImport()};
   $('btnClearAnesText').onclick=function(){$('anesText').value='';parsedAnesImport=[];renderAnesImportPreview()};
   $('btnSaveImportedAnes').onclick=saveImportedAnes;
   if($('btnSaveAccess'))$('btnSaveAccess').onclick=saveAccess;
@@ -2039,11 +2216,13 @@ function bind(){
   document.addEventListener('keydown',function(ev){
     if(ev.key==='Escape' && mapExpanded)setMapExpanded(false);
   });
+  document.addEventListener('paste',handlePhotoPasteEvent);
 }
 
 async function boot(){
   var params=new URLSearchParams(location.search);
   currentDate=params.get('data') || todayISO();
+  loadCollapsedRoomGroups();
   timelineMin=nowPlantaoMin();
   timelineCustom=false;
   $('dateInput').value=currentDate;
@@ -2063,6 +2242,6 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 
 })();
 </script>
-<script src="/mapacc-version.js?v=20260520-1332"></script>
+<script src="/mapacc-version.js?v=20260520-1442"></script>
 </body>
 </html>

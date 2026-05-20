@@ -1,0 +1,14 @@
+node_modules/
+npm-debug.log*
+.env
+.DS_Store
+*.log
+*.jpeg
+*.jpg
+*.png
+.codex-*.db
+.codex-*.db-shm
+.codex-*.db-wal
+database.db
+database.db-shm
+database.db-wal

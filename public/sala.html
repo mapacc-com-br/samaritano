@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Sala operacional - MAPA CC</title>
+<link rel="icon" href="/favicon.svg?v=20260520-1442" type="image/svg+xml">
 <style>
 :root{--bg:#101820;--panel:#f7f9fc;--card:#fff;--line:#d8e0ea;--text:#111827;--muted:#667085;--blue:#2454ff;--green:#168a5b;--amber:#b7791f;--red:#c2410c}
 *{box-sizing:border-box}
@@ -73,7 +74,7 @@ select{width:100%;border:1px solid var(--line);border-radius:12px;padding:12px;b
 @media(max-width:820px){.reception{grid-template-columns:1fr}.quickStats{grid-template-columns:repeat(3,1fr)}}
 @media(max-width:680px){.head,.toolbar{grid-template-columns:1fr}.actions{justify-content:flex-start}.menuPanel{left:0;right:auto;width:min(280px,calc(100vw - 36px))}h1{font-size:28px}main{border-radius:18px 18px 0 0}.welcomeCard h2{font-size:22px}.quickStats{grid-template-columns:1fr}.sectionTitle{display:block}}
 </style>
-<link rel="stylesheet" href="/mapacc-theme.css?v=20260518-2210">
+<link rel="stylesheet" href="/mapacc-theme.css?v=20260520-1442">
 </head>
 <body>
 <header>
@@ -227,7 +228,7 @@ function cardHospital(h){
     <div class="card">
       <h2>${escapeHtml(h.nome)}</h2>
       <div class="meta">${escapeHtml(empresa)}</div>
-      <div class="meta">${escapeHtml(h.tipo || 'hospital')} · ${escapeHtml(brDate(data))}</div>
+      <div class="meta">${escapeHtml(h.tipo || 'hospital')} Ã‚Â· ${escapeHtml(brDate(data))}</div>
       <div>
         <span class="pill ${edit ? 'edit' : 'view'}">${edit ? 'pode editar' : 'somente leitura'}</span>
         <span class="pill ${papel === 'visualizacao' ? 'warn' : ''}">${escapeHtml(papel)}</span>
@@ -301,7 +302,7 @@ async function load(){
     me = resp.user;
     const admin = isAdmin(me);
     setUserMenu(me);
-    $('welcome').textContent = 'Logado como '+me.username+' · '+roleDescription(me);
+    $('welcome').textContent = 'Logado como '+me.username+' Ã‚Â· '+roleDescription(me);
     $('adminLink').style.display = admin ? 'inline-flex' : 'none';
     $('clinicasLink').style.display = admin ? 'inline-flex' : 'none';
     $('adminPanel').classList.toggle('show', admin);
@@ -371,6 +372,6 @@ document.addEventListener('click', e=>{
 });
 load();
 </script>
-<script src="/mapacc-version.js?v=20260518-2210"></script>
+<script src="/mapacc-version.js?v=20260520-1442"></script>
 </body>
 </html>

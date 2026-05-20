@@ -33,7 +33,7 @@ const ROOT_DIR = __dirname;
 const PUBLIC_DIR = path.join(ROOT_DIR, "public");
 const IS_RAILWAY = !!(process.env.RAILWAY_ENVIRONMENT || process.env.RAILWAY_PROJECT_ID || process.env.RAILWAY_SERVICE_ID);
 const CONFIG_CHECK_VERSION = "2026-05-17-railway-volume-guard-v3";
-const SERVER_BUILD_ID = "2026-05-20-1332-pre-expand-ai-duration";
+const SERVER_BUILD_ID = "2026-05-20-1442-clean-separators";
 const DEFAULT_HOSPITAL_NOME = "Hospital Samaritano";
 const DEFAULT_HOSPITAL_SLUG = "samaritano";
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY || process.env.MAPACC_OPENAI_API_KEY || "";
@@ -44,6 +44,8 @@ const SMTP_PORT = Number(process.env.SMTP_PORT || 587);
 const SMTP_USER = String(process.env.SMTP_USER || "").trim();
 const SMTP_PASS = String(process.env.SMTP_PASS || "").trim();
 const SMTP_FROM = String(process.env.SMTP_FROM || SMTP_USER || "").trim();
+const INITIAL_ADMIN_USER = String(process.env.INITIAL_ADMIN_USER || (IS_RAILWAY ? "" : "godofredo")).trim();
+const INITIAL_ADMIN_PASSWORD = String(process.env.INITIAL_ADMIN_PASSWORD || (IS_RAILWAY ? "" : "admin")).trim();
 const MAX_IMPORT_IMAGE_CHARS = 12 * 1024 * 1024;
 const DEFAULT_IMPORT_PROMPT = [
   "Extraia a lista de cirurgias do Samaritano no formato:",
@@ -88,7 +90,7 @@ const BACKUP_TABLES = [
   "anestesistas_dia"
 ];
 
-const RAILWAY_DATA_DIR = "/data";
+const RAILWAY_DATA_DIR = String(process.env.RAILWAY_VOLUME_MOUNT_PATH || "/data").trim() || "/data";
 
 function normalizarCaminho(p) {
   return path.resolve(String(p || ""));
@@ -181,7 +183,7 @@ console.log("Sistema Mapa de Cirurgias por Dia");
 console.log("Server build:", SERVER_BUILD_ID);
 console.log("DB:", DB_FILE);
 console.log("Railway:", IS_RAILWAY ? "sim" : "nao");
-if (IS_RAILWAY) console.log("Railway volume /data:", "ok");
+if (IS_RAILWAY) console.log(`Railway volume ${RAILWAY_DATA_DIR}:`, "ok");
 if (BOOT_DB_BACKUP_FILES && BOOT_DB_BACKUP_FILES.length) console.log("Backup boot DB:", BOOT_DB_BACKUP_FILES.join(", "));
 console.log("OpenAI API key:", OPENAI_API_KEY ? "configurada" : "nao configurada");
 console.log("OpenAI vision model:", OPENAI_VISION_MODEL);
@@ -2105,7 +2107,7 @@ async function enviarEmailRecuperacao({ to, username, resetLink }) {
   });
 }
 
-// Cria tabela de usuários e usuário inicial godofredo/admin
+// Cria tabela de usuarios e, se o banco estiver vazio, o admin inicial.
 db.serialize(() => {
   db.run(`CREATE TABLE IF NOT EXISTS users (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -2123,13 +2125,25 @@ db.serialize(() => {
   db.run(`ALTER TABLE users ADD COLUMN nome_escala TEXT`, () => {});
   db.run(`ALTER TABLE users ADD COLUMN ativo INTEGER NOT NULL DEFAULT 1`, () => {});
 
-  db.get(`SELECT id FROM users WHERE username = ?`, ['godofredo'], (err, row) => {
-    if (!row) {
+  db.get(`SELECT COUNT(*) AS total FROM users`, [], (err, row) => {
+    if (err) {
+      console.error('Erro ao verificar usuario inicial:', err.message);
+      if (IS_RAILWAY) process.exit(1);
+      return;
+    }
+
+    if (row && row.total === 0) {
+      if (!INITIAL_ADMIN_USER || !INITIAL_ADMIN_PASSWORD) {
+        console.error('FATAL: banco sem usuarios. Configure INITIAL_ADMIN_USER e INITIAL_ADMIN_PASSWORD.');
+        if (IS_RAILWAY) process.exit(1);
+        return;
+      }
+
       db.run(
-        `INSERT INTO users(username,password_hash,role) VALUES(?,?,?)`,
-        ['godofredo', hashPassword('admin'), 'admin']
+        `INSERT INTO users(username,nome_escala,password_hash,role) VALUES(?,?,?,?)`,
+        [INITIAL_ADMIN_USER, INITIAL_ADMIN_USER, hashPassword(INITIAL_ADMIN_PASSWORD), 'admin']
       );
-      console.log('Usuário inicial criado: godofredo / admin');
+      console.log(`Usuario inicial criado: ${INITIAL_ADMIN_USER}`);
     }
   });
 

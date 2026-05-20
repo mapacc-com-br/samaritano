@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta http-equiv="Cache-Control" content="no-store">
 <title>Acesso nao liberado - MAPA CC</title>
+<link rel="icon" href="/favicon.svg?v=20260520-1442" type="image/svg+xml">
 <style>
 :root{--bg:#101820;--card:#fff;--text:#132033;--muted:#667085;--line:#d8e1eb;--blue:#2454ff;--red:#b42318}
 *{box-sizing:border-box}
@@ -18,7 +19,7 @@ h1{margin:10px 0 8px;font-size:28px;line-height:1.05}.sub{color:var(--muted);fon
 a{border-radius:13px;padding:12px 14px;font-weight:900;text-decoration:none;display:inline-flex;align-items:center;justify-content:center}
 .primary{background:var(--blue);color:white}.light{background:white;color:var(--text);border:1px solid var(--line)}
 </style>
-<link rel="stylesheet" href="/mapacc-theme.css?v=20260518-2210">
+<link rel="stylesheet" href="/mapacc-theme.css?v=20260520-1442">
 </head>
 <body>
 <main class="card">
@@ -27,7 +28,7 @@ a{border-radius:13px;padding:12px 14px;font-weight:900;text-decoration:none;disp
   <div class="sub" id="message">Este hospital existe na sua empresa, mas seu acesso depende da escala do dia.</div>
   <div class="box">
     <strong>Como liberar o acesso?</strong>
-    <span>Peça para o coordenador do dia ou para o escalador adicionar seu login na escala/acesso deste hospital. Depois disso, volte para a sala e abra o mapa novamente.</span>
+    <span>PeÃƒÂ§a para o coordenador do dia ou para o escalador adicionar seu login na escala/acesso deste hospital. Depois disso, volte para a sala e abra o mapa novamente.</span>
   </div>
   <div class="actions">
     <a class="primary" href="/sala.html">Voltar para sala</a>
@@ -40,6 +41,6 @@ const hospital = params.get('hospital') || 'este hospital';
 const data = params.get('data') || '';
 document.getElementById('message').textContent = hospital+' aparece na sua empresa, mas seu login nao esta escalado para '+(data || 'a data selecionada')+'.';
 </script>
-<script src="/mapacc-version.js?v=20260518-2210"></script>
+<script src="/mapacc-version.js?v=20260520-1442"></script>
 </body>
 </html>

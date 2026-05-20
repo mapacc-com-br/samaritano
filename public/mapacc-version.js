@@ -1,6 +1,6 @@
 (function(){
-  const buildLabel = '20/05/2026 13:32 BRT';
-  const buildId = '2026-05-20-1332-pre-expand-ai-duration';
+  const buildLabel = '20/05/2026 14:42 BRT';
+  const buildId = '2026-05-20-1442-clean-separators';
 
   function showBadge(){
     if(document.getElementById('mapaccUpdateBadge')) return;
