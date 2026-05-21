@@ -68,6 +68,8 @@
 .quickNav button{padding:8px 10px;border-radius:999px;font-size:12px}
 .timeStepper{display:grid;grid-template-columns:44px 1fr 44px;gap:6px;align-items:center}
 .timeStepper button{padding:10px 0;border-radius:12px}
+.timePickerGrid{align-items:end}
+.timeSelect{font-weight:900;font-variant-numeric:tabular-nums}
 .fieldLabel{font-size:11px;font-weight:900;color:var(--muted);margin:8px 0 4px;text-transform:uppercase;letter-spacing:.02em}
 .smartHint{font-size:11px;color:var(--muted);margin-top:5px}
 select:disabled,input:disabled{background:#f1f5f9;color:#94a3b8}

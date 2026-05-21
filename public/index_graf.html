@@ -4,9 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>MAPA CC - Painel cirurgico</title>
-<link rel="icon" href="/favicon.svg?v=20260521-1557-mapa-limpo" type="image/svg+xml">
-<link rel="stylesheet" href="/assets/css/mapa.css?v=20260521-1557-mapa-limpo">
-<link rel="stylesheet" href="/assets/css/theme.css?v=20260521-1557-mapa-limpo">
+<link rel="icon" href="/favicon.svg?v=20260521-1635-melhorias" type="image/svg+xml">
+<link rel="stylesheet" href="/assets/css/mapa.css?v=20260521-1635-melhorias">
+<link rel="stylesheet" href="/assets/css/theme.css?v=20260521-1635-melhorias">
 </head>
 <body>
 <header>
@@ -30,12 +30,12 @@
     <input id="dateInput" type="date">
     <select id="hospitalSelect" title="Hospital atual"></select>
     <button id="btnSala" class="light">Sala</button>
-    <button id="btnRefresh" class="green">Sincronizar</button>
+    <button id="btnRefresh" class="green">Atualizar</button>
   </div>
   <div class="tabs">
     <button class="tab active" data-tab="importar">Importar</button>
     <button class="tab" data-tab="mapa">Mapa</button>
-    <button class="tab" data-tab="lista">Lista</button>
+    <button class="tab" data-tab="lista">Cirurgias</button>
     <button class="tab" data-tab="escala">Escala</button>
   </div>
 </header>
@@ -78,7 +78,7 @@
         <button id="btnAddSurgeryImport" class="light">+ Linha para revisao</button>
       </div>
     </div>
-    <div class="card" id="photoPromptCard">
+    <div class="card" id="photoPromptCard" style="display:none">
       <h2>Leitura inteligente por hospital</h2>
       <div class="hint">Regras usadas pela IA para interpretar a foto deste hospital. Ajuste quando o mapa da enfermagem mudar.</div>
       <textarea id="photoImportPrompt" class="compact" placeholder="Regras de extracao por foto"></textarea>
@@ -130,7 +130,7 @@
 
   <section id="tab-lista" class="screen hidden">
     <div class="card">
-      <h2>Lista do dia</h2>
+      <h2>Cirurgias do dia</h2>
       <div class="row">
         <button id="btnAddSurgery2" class="green">+ Cirurgia</button>
         <button id="btnExport" class="light">Exportar JSON</button>
@@ -205,7 +205,7 @@
 
 <div id="modalBg" class="modalBg"><div class="modal" id="modal"></div></div>
 
-<script src="/assets/js/mapa.js?v=20260521-1557-mapa-limpo"></script>
-<script src="/assets/js/version.js?v=20260521-1557-mapa-limpo"></script>
+<script src="/assets/js/mapa.js?v=20260521-1635-melhorias"></script>
+<script src="/assets/js/version.js?v=20260521-1635-melhorias"></script>
 </body>
 </html>

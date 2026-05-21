@@ -10,6 +10,7 @@ h1{margin:8px 0 6px;font-size:34px;line-height:1.05}
 button,a.btn{border:0;border-radius:12px;background:var(--blue);color:white;font-weight:900;padding:11px 14px;text-decoration:none;cursor:pointer;font:inherit;display:inline-flex;align-items:center;justify-content:center}
 button.light,a.light{background:#ffffff14;border:1px solid #ffffff33;color:white}
 button.dark,a.dark{background:#172033;color:white}
+button:disabled{opacity:.58;cursor:not-allowed}
 .userMenu{position:relative}
 .userButton{gap:9px;background:#ffffff14;border:1px solid #ffffff33;color:white;border-radius:999px;padding:7px 10px 7px 7px;min-height:42px}
 .avatar{width:28px;height:28px;border-radius:50%;display:inline-grid;place-items:center;background:#e0f2fe;color:#0f172a;font-size:12px;font-weight:1000}
@@ -43,6 +44,9 @@ main{background:var(--panel);border-radius:24px 24px 0 0;min-height:calc(100vh -
 label{display:block;font-size:12px;font-weight:900;color:var(--muted);margin-bottom:5px;text-transform:uppercase}
 input{width:100%;border:1px solid var(--line);border-radius:12px;padding:12px;background:white;font:inherit}
 select{width:100%;border:1px solid var(--line);border-radius:12px;padding:12px;background:white;font:inherit}
+.dateControl{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center}
+.dateShortcuts{display:flex;gap:6px}
+button.mini{padding:10px 11px;border-radius:999px;background:#eef4ff;color:#2454ff;border:1px solid #c7d7fe;font-size:12px;box-shadow:none}
 .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px}
 .card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:15px;box-shadow:0 8px 22px #1018280a}
 .card h2{margin:0 0 8px;font-size:18px}
@@ -64,4 +68,4 @@ select{width:100%;border:1px solid var(--line);border-radius:12px;padding:12px;b
 .adminCard{display:block;background:#fff;border:1px solid var(--line);border-radius:16px;padding:15px;text-decoration:none;color:var(--text);box-shadow:0 8px 22px #1018280a}
 .adminCard strong{display:block;font-size:17px;margin-bottom:6px}.adminCard span{color:var(--muted);font-size:13px;line-height:1.4}
 @media(max-width:820px){.reception{grid-template-columns:1fr}.quickStats{grid-template-columns:repeat(3,1fr)}}
-@media(max-width:680px){.head,.toolbar{grid-template-columns:1fr}.actions{justify-content:flex-start}.menuPanel{left:0;right:auto;width:min(280px,calc(100vw - 36px))}h1{font-size:28px}main{border-radius:18px 18px 0 0}.welcomeCard h2{font-size:22px}.quickStats{grid-template-columns:1fr}.sectionTitle{display:block}}
+@media(max-width:680px){.head,.toolbar{grid-template-columns:1fr}.actions{justify-content:flex-start}.menuPanel{left:0;right:auto;width:min(280px,calc(100vw - 36px))}h1{font-size:28px}main{border-radius:18px 18px 0 0}.welcomeCard h2{font-size:22px}.quickStats{grid-template-columns:1fr}.sectionTitle{display:block}.dateControl{grid-template-columns:1fr}.dateShortcuts{display:grid;grid-template-columns:1fr 1fr}}

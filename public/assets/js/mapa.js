@@ -56,8 +56,25 @@ function fmtTime(min){
   h=((h%24)+24)%24;
   return String(h).padStart(2,"0")+":"+String(m).padStart(2,"0");
 }
-function parseDur(d){if(!d)return 60;var s=String(d).trim().toLowerCase().replace(/\s+/g,"");if(s.includes(":")){var p=s.split(":");return Number(p[0])*60+Number(p[1]||0)}var hm=s.match(/^(\d+)(?:h|hora|horas)(\d+)?(?:m|min)?$/);if(hm)return Number(hm[1])*60+Number(hm[2]||0);var mm=s.match(/^(\d+)(?:m|min|minuto|minutos)$/);if(mm)return Number(mm[1]);var n=Number(s.replace(",","."));if(!Number.isFinite(n))return 60;if(n>0&&n<12)return Math.round(n*60);return Math.round(n)}
+function parseDur(d){if(d===undefined||d===null||String(d).trim()==="")return 60;var s=String(d).trim().toLowerCase().replace(/\s+/g,"");if(s.includes(":")){var p=s.split(":");return Number(p[0])*60+Number(p[1]||0)}var hm=s.match(/^(\d+)(?:h|hora|horas)(\d+)?(?:m|min)?$/);if(hm)return Number(hm[1])*60+Number(hm[2]||0);var mm=s.match(/^(\d+)(?:m|min|minuto|minutos)$/);if(mm)return Number(mm[1]);var n=Number(s.replace(",","."));if(!Number.isFinite(n))return 60;if(n>0&&n<12)return Math.round(n*60);return Math.round(n)}
 function durToText(v){var n=parseDur(v);var h=Math.floor(n/60),m=n%60;return String(h).padStart(2,"0")+":"+String(m).padStart(2,"0")}
+function minutesToText(min){
+  min=Math.max(0,Math.round(Number(min)||0));
+  var h=Math.floor(min/60),m=min%60;
+  return String(h).padStart(2,"0")+":"+String(m).padStart(2,"0");
+}
+function quarterHourOptions(maxMinutes,selected){
+  var selectedText=String(selected||"").trim();
+  var out="";
+  var found=false;
+  for(var min=0;min<=maxMinutes;min+=15){
+    var value=minutesToText(min);
+    if(value===selectedText)found=true;
+    out+='<option value="'+value+'" '+(value===selectedText?'selected':'')+'>'+value+'</option>';
+  }
+  if(selectedText && !found)out='<option value="'+html(selectedText)+'" selected>'+html(selectedText)+'</option>'+out;
+  return out;
+}
 function normRoomText(value){
   return String(value||"")
     .normalize("NFD").replace(/[\u0300-\u036f]/g,"")
@@ -184,6 +201,8 @@ function renderSession(user){
   $('sessionName').textContent=(user&&user.username)||'Conta';
   $('sessionRole').textContent=roleLabel(user);
 }
+function isAdminUser(user){return !!user && (user.role==='admin' || user.admin_plus)}
+function canConfigurePhotoPrompt(){return isAdminUser(currentUser)}
 function uniq(arr){return Array.from(new Set(arr.map(function(x){return String(x||'').trim()}).filter(Boolean))).sort(function(a,b){return a.localeCompare(b,'pt-BR')})}
 function getStoredList(key){try{return JSON.parse(localStorage.getItem(key)||'[]')}catch(e){return []}}
 function storeValue(key,val){val=String(val||'').trim();if(!val)return;var list=uniq(getStoredList(key).concat([val]));try{localStorage.setItem(key,JSON.stringify(list.slice(0,200)))}catch(e){}}
@@ -202,11 +221,11 @@ function findRegisteredUserByName(name){
 function status(msg,cls){$('status').textContent=msg;$('status').className="status "+(cls||"")}
 function selectedItem(){return items.find(x=>x.id===selectedId)}
 function canEdit(){
-  if(currentUser && (currentUser.role === 'admin' || currentUser.admin_plus))return true;
+  if(isAdminUser(currentUser))return true;
   if(!currentAccess)return false;
   return currentAccess.pode_editar === true || currentAccess.pode_editar === 1 || currentAccess.pode_editar === '1';
 }
-function canManageAccess(){return currentUser && (currentUser.role==='admin' || currentUser.admin_plus || currentUser.role==='escalador')}
+function canManageAccess(){return currentUser && (isAdminUser(currentUser) || currentUser.role==='escalador')}
 function requireEdit(){
   if(canEdit())return true;
   status('Este hospital esta em modo somente leitura para voce nesta data.','warn');
@@ -215,7 +234,12 @@ function requireEdit(){
 function setDisabled(id,disabled){var el=$(id);if(el)el.disabled=disabled}
 function applyAccessMode(){
   var readonly=!canEdit();
-  ['btnSaveImported','btnAddSurgeryImport','btnAddSurgery','btnAddSurgery2','btnAddAnes','btnSaveImportedAnes','btnParse','btnParseAnes','btnAutoSuggest','btnAutoSuggest2','btnUndoSuggest','btnUndoSuggest2','btnPhotoImport','btnSavePhotoPrompt'].forEach(function(id){setDisabled(id,readonly)});
+  ['btnSaveImported','btnAddSurgeryImport','btnAddSurgery','btnAddSurgery2','btnAddAnes','btnSaveImportedAnes','btnParse','btnParseAnes','btnAutoSuggest','btnAutoSuggest2','btnUndoSuggest','btnUndoSuggest2','btnPhotoImport','btnPastePhoto'].forEach(function(id){setDisabled(id,readonly)});
+  var canPrompt=canConfigurePhotoPrompt();
+  setDisabled('btnSavePhotoPrompt',readonly||!canPrompt);
+  setDisabled('btnReloadPhotoPrompt',!canPrompt);
+  var photoPromptCard=$('photoPromptCard');
+  if(photoPromptCard)photoPromptCard.style.display=canPrompt?'block':'none';
   var accessCard=$('accessCard');
   if(accessCard)accessCard.style.display=canManageAccess()?'block':'none';
   if(readonly){
@@ -387,6 +411,10 @@ function importItemsToText(list){
 }
 async function loadPhotoPrompt(){
   if(!currentHospitalId||!$('photoImportPrompt'))return;
+  if(!canConfigurePhotoPrompt()){
+    $('photoImportPrompt').value='';
+    return;
+  }
   try{
     var cfg=await api('/api/hospitais/'+encodeURIComponent(currentHospitalId)+'/importacao-foto?data='+encodeURIComponent(currentDate));
     $('photoImportPrompt').value=cfg.prompt_importacao_foto||'';
@@ -398,6 +426,10 @@ async function loadPhotoPrompt(){
   }
 }
 async function savePhotoPrompt(){
+  if(!canConfigurePhotoPrompt()){
+    setPhotoStatus('Somente admin pode alterar as regras de leitura inteligente.','warn');
+    return;
+  }
   if(!requireEdit())return;
   try{
     await api('/api/hospitais/'+encodeURIComponent(currentHospitalId)+'/importacao-foto',{method:'PUT',body:JSON.stringify({prompt_importacao_foto:$('photoImportPrompt').value})});
@@ -562,7 +594,7 @@ function itemToPayload(it){
 async function loadDay(){
   var data=await api("/api/dia/"+encodeURIComponent(currentDate));
   currentAccess=data.acesso || currentAccess || {pode_editar:false,papel_dia:'visualizacao'};
-  if(currentUser && (currentUser.role === 'admin' || currentUser.admin_plus))currentAccess={pode_editar:true,papel_dia:roleLabel(currentUser),origem:'frontend-admin'};
+  if(isAdminUser(currentUser))currentAccess={pode_editar:true,papel_dia:roleLabel(currentUser),origem:'frontend-admin'};
   items=(data.cirurgias||[]).map(dbToItem);
   anesthetists=(data.anestesistas||[]).map(function(a){return {
     id:a.id,
@@ -1939,9 +1971,10 @@ function openSurgeryModal(id){
   var opts=['Nao escaladas'].concat(rooms.slice(1).map(r=>r.name));
   var anesOptions='<option value="">Sem anestesista</option>'+allAnesthetistSuggestions().map(a=>'<option>'+html(a)+'</option>').join('');
   var procList=datalistHtml('procedureOptions',allProcedureSuggestions());
+  var startValue=it?fmtTime(it.start):'07:00';
+  var durationValue=it?durToText(it.duration):'01:00';
   openModal('<h2>'+(it?'Editar':'Nova')+' cirurgia</h2>'+procList+
-    '<div class="fieldLabel">Horario</div><div class="timeStepper"><button class="light" id="mMinus15" type="button">-15</button><input id="mHora" placeholder="07:00" value="'+html(it?fmtTime(it.start):'')+'"><button class="light" id="mPlus15" type="button">+15</button></div>'+ 
-    '<div class="fieldLabel">Duracao</div><div class="timeStepper"><button class="light" id="mDurMinus15" type="button">-15</button><input id="mDur" placeholder="02:00" value="'+html(it?durToText(it.duration):'')+'"><button class="light" id="mDurPlus15" type="button">+15</button></div>'+ 
+    '<div class="grid2 timePickerGrid"><div><div class="fieldLabel">Inicio</div><select id="mHora" class="timeSelect">'+quarterHourOptions((24*60)-15,startValue)+'</select></div><div><div class="fieldLabel">Duracao</div><select id="mDur" class="timeSelect">'+quarterHourOptions(15*60,durationValue)+'</select></div></div>'+
     '<div class="fieldLabel">Atendimento</div><input id="mAtendimento" placeholder="Numero de atendimento" value="'+html(it?it.attendance:'')+'">'+
     '<div class="fieldLabel">Procedimento</div><input id="mNome" list="procedureOptions" placeholder="Nome da cirurgia" value="'+html(it?it.name:'')+'">'+
     '<div class="fieldLabel">Cirurgiao</div><input id="mCirurgiao" placeholder="Nome do cirurgiao" value="'+html(it?it.surgeon:'')+'">'+
@@ -1951,21 +1984,12 @@ function openSurgeryModal(id){
     '<input id="mObs" placeholder="Obs" style="margin-top:8px" value="'+html(it?it.obs:'')+'">'+
     '<div class="row" style="margin-top:12px"><button class="green" id="mSave">Salvar</button><button class="gray" id="mCancel">Cancelar</button></div>');
   if(it && it.servico!=='Particular')$('mAnest').value=it.anest||"";
-  function addMinToInput(id,delta,kind){
-    var el=$(id); var min=kind==='dur'?parseDur(el.value):(parseTime(el.value)||startHour*60);
-    min=Math.max(kind==='dur'?15:startHour*60,Math.min(kind==='dur'?12*60:endHour*60,min+delta));
-    el.value=kind==='dur'?durToText(min):fmtTime(min);
-  }
   function syncService(){
     var particular=$('mServ').value==='Particular';
     $('mAnest').disabled=particular;
     if(particular){$('mAnest').value='';$('mAnestHint').textContent='Particular selecionado: anestesista fica em branco/nulo.'}
     else {$('mAnestHint').textContent='SMA selecionado: escolha um anestesista do dia ou cadastrado.'}
   }
-  $('mMinus15').onclick=function(){addMinToInput('mHora',-15,'time')};
-  $('mPlus15').onclick=function(){addMinToInput('mHora',15,'time')};
-  $('mDurMinus15').onclick=function(){addMinToInput('mDur',-15,'dur')};
-  $('mDurPlus15').onclick=function(){addMinToInput('mDur',15,'dur')};
   $('mServ').onchange=syncService;
   syncService();
   $('mCancel').onclick=closeModal;

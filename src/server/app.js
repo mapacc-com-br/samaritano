@@ -1128,8 +1128,7 @@ async function exigirHospital(req, res, hospitalId, escrita = false, data = null
 async function podeConfigurarImportacao(req, hospitalId) {
   const user = usuarioAtual(req);
   if (!user) return false;
-  if (isAdminLike(user)) return true;
-  return ["escalador", "coordenador"].includes(user.role) && await usuarioTemVinculo(user.id, hospitalId);
+  return isAdminLike(user);
 }
 
 function dataUrlMime(dataUrl) {
@@ -2987,7 +2986,7 @@ app.get('/api/hospitais/:id/salas', authRequired, async (req,res)=>{
   }
 });
 
-app.get('/api/hospitais/:id/importacao-foto', authRequired, async (req,res)=>{
+app.get('/api/hospitais/:id/importacao-foto', authRequired, adminRequired, async (req,res)=>{
   try{
     const hospitalId = Number(req.params.id);
     const data = validarDataISO(req.query.data) ? req.query.data : dataLocalISO();
@@ -3006,7 +3005,7 @@ app.get('/api/hospitais/:id/importacao-foto', authRequired, async (req,res)=>{
   }
 });
 
-app.put('/api/hospitais/:id/importacao-foto', authRequired, async (req,res)=>{
+app.put('/api/hospitais/:id/importacao-foto', authRequired, adminRequired, async (req,res)=>{
   try{
     const hospitalId = Number(req.params.id);
     if(!await podeConfigurarImportacao(req, hospitalId)){

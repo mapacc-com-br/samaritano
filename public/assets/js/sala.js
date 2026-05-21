@@ -123,6 +123,12 @@ function updateReception({user, hospitais, empresas}){
 }
 
 async function load(){
+  const btn = $('btnAtualizar');
+  const previousLabel = btn ? btn.textContent : '';
+  if(btn){
+    btn.disabled = true;
+    btn.textContent = 'Atualizando...';
+  }
   try{
     const data = $('dataSala').value || todayISO();
     let resp = await api('/api/me?data='+encodeURIComponent(data)+'&recepcao=1');
@@ -154,6 +160,11 @@ async function load(){
   }catch(e){
     status(e.message,'err');
     if(String(e.message).toLowerCase().includes('autenticado')) location.href='/login.html?next=/sala.html';
+  }finally{
+    if(btn){
+      btn.disabled = false;
+      btn.textContent = previousLabel || 'Atualizar acessos';
+    }
   }
 }
 
@@ -178,6 +189,14 @@ $('dataSala').value = params.get('data') || todayISO();
 $('btnAtualizar').onclick = load;
 $('dataSala').onchange = load;
 $('empresaSala').onchange = load;
+$('btnHoje').onclick = ()=>{
+  $('dataSala').value = todayISO();
+  load();
+};
+$('btnAmanha').onclick = ()=>{
+  $('dataSala').value = todayISO(1);
+  load();
+};
 $('userMenuButton').onclick = ()=>{
   const panel = $('userMenuPanel');
   const open = !panel.classList.contains('open');
