@@ -4,7 +4,7 @@
   "main": "server.js",
   "type": "commonjs",
   "scripts": {
-    "prestart": "node -e \"console.log('PRESTART BUILD 2026-05-21-comandos-mapa')\"",
+    "prestart": "node -e \"console.log('PRESTART BUILD 2026-05-21-mapa-limpo')\"",
     "start": "node server.js"
   },
   "dependencies": {

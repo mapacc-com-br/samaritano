@@ -452,17 +452,23 @@ function initRooms(){
   rooms.push({name:"HEMO",type:"hemo",group:"Hemodinamica"});
 }
 
+function isVirtualRoomDef(s){
+  var tipo=normRoomText(s && (s.tipo || s.type));
+  var nome=normRoomText(s && (s.nome || s.name));
+  return tipo==='virtual' || nome.includes('nao escalad') || nome.includes('sem sala') || nome.includes('cirurgias nao escalad');
+}
 
 function initRoomsFromSalas(salas){
   var list=(salas||[]).filter(function(s){return s && s.ativa!==0}).sort(function(a,b){
     return Number(a.ordem||0)-Number(b.ordem||0) || String(a.nome||'').localeCompare(String(b.nome||''),'pt-BR');
   });
-  if(!list.some(function(s){return String(s.tipo||'')==='virtual' || String(s.nome||'').toLowerCase().includes('escalad')})){
-    rooms=[{name:"Nao escaladas",type:"virtual",group:"Sem sala"}];
-  }else{
-    rooms=[];
-  }
-  list.forEach(function(s){
+  var virtual=list.filter(isVirtualRoomDef).slice(0,1).map(function(s){
+    return Object.assign({},s,{nome:'Nao escaladas',tipo:'virtual',bloco:'Sem sala',setor:'Sem sala'});
+  });
+  var reais=list.filter(function(s){return !isVirtualRoomDef(s)});
+  var finalList=virtual.concat(reais);
+  rooms=virtual.length?[]:[{name:"Nao escaladas",type:"virtual",group:"Sem sala"}];
+  finalList.forEach(function(s){
     var tipo=String(s.tipo||'sala').toLowerCase();
     rooms.push({name:s.nome,type:tipo,group:String(s.bloco||s.setor||'').trim()});
   });
@@ -1132,11 +1138,6 @@ function renderMap(){
     }
   });
 
-  htmlMap+='<div class="timeHeader" style="grid-template-columns:'+labelW+'px repeat('+totalHours+','+hourW+'px);width:'+totalW+'px">';
-  htmlMap+='<div></div>';
-  for(var h=startHour;h<endHour;h++)htmlMap+='<div class="timeCell">'+String(((h%24)+24)%24).padStart(2,'0')+'h</div>';
-  htmlMap+='</div>';
-
   visibleRows.forEach(function(viewRow){
     if(viewRow.kind==='group'){
       var group=viewRow.group;
@@ -1794,6 +1795,62 @@ function removeDuplicateImportRows(){
   return skipped;
 }
 
+function strongImportKey(atendimento,iniciais,idade){
+  var att=importAttendanceKey(atendimento);
+  var ini=importInitialsKey(iniciais);
+  if(!att || !ini)return '';
+  return att+'|'+ini+'|'+Number(idade||0);
+}
+function strongImportKeyFromRow(row){
+  return strongImportKey(row && row.numero_atendimento,row && row.iniciais_paciente,row && row.idade_paciente);
+}
+function strongImportKeyFromItem(it){
+  return strongImportKey(it && it.attendance,it && it.initials,it && it.age);
+}
+function importedStrongKeySet(rows){
+  var keys={};
+  (rows||[]).forEach(function(row){
+    var key=strongImportKeyFromRow(row);
+    if(key)keys[key]=true;
+  });
+  return keys;
+}
+function appendFinalizedObs(obs,automatic){
+  var text=String(obs||'').trim();
+  if(!text.toUpperCase().includes('[FINALIZADA]')){
+    text+=(text?' | ':'')+'[FINALIZADA]';
+  }
+  if(automatic && !/ausente na importacao/i.test(text)){
+    text+=' ausente na importacao';
+  }
+  return text.trim();
+}
+async function finalizeMissingImportedSurgeries(beforeItems,importRows){
+  var importedKeys=importedStrongKeySet(importRows);
+  var keyCount=Object.keys(importedKeys).length;
+  if(!keyCount){
+    return {finished:0,candidates:0,errors:[],reason:'sem atendimentos fortes na importacao'};
+  }
+  var candidates=(beforeItems||[]).filter(function(it){
+    var key=strongImportKeyFromItem(it);
+    return key && !importedKeys[key] && !isFinished(it);
+  });
+  var finished=0, errors=[];
+  for(var i=0;i<candidates.length;i++){
+    var it=Object.assign({},candidates[i]);
+    it.finalizado=true;
+    it.finished=true;
+    it.obs=appendFinalizedObs(it.obs,true);
+    try{
+      await saveItemToDb(it);
+      finished++;
+    }catch(err){
+      errors.push((it.name||('ID '+it.id))+': '+err.message);
+    }
+  }
+  return {finished:finished,candidates:candidates.length,errors:errors,reason:''};
+}
+
 function addImportReviewRow(){
   if(!requireEdit())return;
   syncImportPreview();
@@ -1825,11 +1882,14 @@ async function saveImported(){
   if(!parsedImport.length){status("Nada para importar.","warn");return}
   syncImportPreview();
   var skipped=removeDuplicateImportRows();
+  var importRowsForSave=parsedImport.map(function(item){return Object.assign({},item)});
+  var beforeImportItems=items.map(function(item){return Object.assign({},item)});
   renderImportPreview();
   var btn=$('btnSaveImported');
   savingImport=true;
   if(btn){btn.disabled=true;btn.textContent='Salvando...'}
   var ok=0, inserted=0, updated=0, errors=0, msgs=[];
+  var finishResult={finished:0,candidates:0,errors:[],reason:''};
   try{
   status("Salvando "+parsedImport.length+" cirurgia(s) no SQLite...","warn");
   for(var i=0;i<parsedImport.length;i++){
@@ -1843,11 +1903,19 @@ async function saveImported(){
       msgs.push((i+1)+': '+err.message);
     }
   }
+  if(ok && errors===0){
+    finishResult=await finalizeMissingImportedSurgeries(beforeImportItems,importRowsForSave);
+    if(finishResult.errors.length){
+      msgs=msgs.concat(finishResult.errors.map(function(msg){return 'Finalizacao: '+msg}));
+    }
+  }
   if(ok){parsedImport=[];$('surgeryText').value="";}
   await loadDay();
   var groups=findDuplicateGroups();
   setDuplicateReviewGroups(groups);
-  var summary="Importacao salva: "+ok+" cirurgia(s). Novas: "+inserted+". Atualizadas: "+updated+". Duplicadas ignoradas: "+skipped+". Erros: "+errors;
+  var summary="Importacao salva: "+ok+" cirurgia(s). Novas: "+inserted+". Atualizadas: "+updated+". Duplicadas ignoradas: "+skipped+". Finalizadas automaticamente: "+finishResult.finished+". Erros: "+(errors+finishResult.errors.length);
+  if(errors)summary+=". Auto-finalizacao ignorada porque houve erro na importacao";
+  else if(finishResult.reason)summary+=". Auto-finalizacao ignorada: "+finishResult.reason;
   if(groups.length){
     openDuplicateModal(groups);
     summary+=". Possiveis duplicatas no mapa: "+groups.length+" grupo(s)";
@@ -2046,7 +2114,7 @@ async function unfinishSurgery(id){
   var it=items.find(function(x){return x.id===id}); if(!it)return;
   it.finalizado=false;
   it.finished=false;
-  it.obs=String(it.obs||'').replace(/\s*\|?\s*\[FINALIZADA\]\s*/gi,'').trim();
+  it.obs=String(it.obs||'').replace(/\s*\|?\s*\[FINALIZADA\](?:\s*ausente na importacao)?\s*/gi,'').trim();
   try{await saveItemToDb(it);status('Finalizacao desfeita.','ok');await loadDay()}
   catch(err){status('Erro ao desfazer finalizacao: '+err.message,'err')}
 }

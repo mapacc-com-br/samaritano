@@ -160,3 +160,7 @@ button:disabled{opacity:.55;cursor:not-allowed}
 .duplicateItem{font-size:12px;font-weight:800;color:#475569;line-height:1.35;padding:5px 0;border-top:1px solid rgba(245,158,11,.22)}
 .duplicateItem:first-of-type{border-top:0}
 .legendDuplicate{background:#fffbeb;color:#92400e;border-color:#fcd34d}
+
+/* ===== PATCH v10: mapa com uma unica regua de horas ===== */
+.nowLine{top:0!important}
+.nowLabel{top:4px!important}

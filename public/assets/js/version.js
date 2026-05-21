@@ -1,6 +1,6 @@
 (function(){
-  const buildLabel = '21/05/2026 15:17 - comandos mapa';
-  const buildId = '2026-05-21-1517-comandos';
+  const buildLabel = '21/05/2026 15:57 - mapa limpo';
+  const buildId = '2026-05-21-1557-mapa-limpo';
 
   function showBadge(){
     if(document.getElementById('mapaccUpdateBadge')) return;
