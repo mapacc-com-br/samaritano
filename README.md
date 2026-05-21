@@ -27,10 +27,19 @@ O Railway inicia com `npm start`. Depois de subir as alteracoes para o GitHub, o
 
 O reset por e-mail usa Outlook.com com os defaults abaixo:
 
-- `SMTP_HOST=smtp-mail.outlook.com`
+- `SMTP_HOSTS=smtp-mail.outlook.com,smtp.office365.com`
 - `SMTP_PORT=587`
 - `SMTP_USER=mapa_cc@outlook.com.br`
 - `SMTP_FROM=mapa_cc@outlook.com.br`
 - `SMTP_REQUIRE_TLS=true`
+- `SMTP_TIMEOUT_MS=60000`
 
 No Railway, configure `SMTP_PASS` com a senha ou app password dessa conta. Tambem mantenha `APP_BASE_URL` apontando para o dominio publico do app para que o link de recuperacao saia correto.
+
+Se o envio retornar `Connection timeout`, teste a conectividade no proprio Railway com:
+
+```text
+POST /api/admin-config/smtp/test
+```
+
+Essa rota exige login admin. Se tambem der timeout, a conexao SMTP de saida do ambiente/provedor esta bloqueada ou inacessivel; nesse caso use um provedor transacional com SMTP/API compativel e ajuste `SMTP_HOSTS`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS` e `SMTP_FROM`.

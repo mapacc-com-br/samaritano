@@ -32,7 +32,7 @@ Esses arquivos ja estao protegidos pelo `.gitignore`.
    - `INITIAL_ADMIN_USER`: usuario admin inicial, por exemplo `godofredo`.
    - `INITIAL_ADMIN_PASSWORD`: senha forte para o admin inicial.
    - `SMTP_PASS`: senha ou app password do e-mail `mapa_cc@outlook.com.br`, para reset de senha.
-   - O app ja usa por padrao `SMTP_HOST=smtp-mail.outlook.com`, `SMTP_PORT=587`, `SMTP_USER=mapa_cc@outlook.com.br`, `SMTP_FROM=mapa_cc@outlook.com.br` e `SMTP_REQUIRE_TLS=true`.
+   - O app ja usa por padrao `SMTP_HOSTS=smtp-mail.outlook.com,smtp.office365.com`, `SMTP_PORT=587`, `SMTP_USER=mapa_cc@outlook.com.br`, `SMTP_FROM=mapa_cc@outlook.com.br`, `SMTP_REQUIRE_TLS=true` e `SMTP_TIMEOUT_MS=60000`.
 4. Crie um volume persistente no servico e monte em `/data`.
 5. Deixe `DB_FILE` vazio, ou use `/data/database.db`.
 6. O Railway deve iniciar com `npm start`. O arquivo `railway.toml` tambem fixa esse comando.
@@ -54,6 +54,14 @@ https://SEU-DOMINIO.up.railway.app/api/config-check
 ```
 
 O campo `smtp_configurado` deve ficar `true` depois que `SMTP_PASS` estiver configurado.
+
+Para testar a conexao SMTP pelo proprio Railway, faca um POST autenticado como admin:
+
+```text
+POST https://SEU-DOMINIO.up.railway.app/api/admin-config/smtp/test
+```
+
+Se retornar timeout mesmo com a senha correta, a porta SMTP de saida esta bloqueada ou o Outlook esta recusando conexoes do ambiente. Nesse caso, use um provedor transacional de e-mail com SMTP/API compativel e ajuste as variaveis `SMTP_HOSTS`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS` e `SMTP_FROM`.
 
 ## Importante
 

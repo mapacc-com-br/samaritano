@@ -41,15 +41,21 @@ const DEFAULT_HOSPITAL_SLUG = "samaritano";
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY || process.env.MAPACC_OPENAI_API_KEY || "";
 const OPENAI_VISION_MODEL = process.env.OPENAI_VISION_MODEL || "gpt-5.4-mini";
 const APP_BASE_URL = String(process.env.APP_BASE_URL || process.env.RAILWAY_PUBLIC_DOMAIN || "").trim();
-const DEFAULT_SMTP_HOST = "smtp-mail.outlook.com";
+const DEFAULT_SMTP_HOSTS = ["smtp-mail.outlook.com", "smtp.office365.com"];
 const DEFAULT_SMTP_PORT = 587;
 const DEFAULT_SMTP_USER = "mapa_cc@outlook.com.br";
-const SMTP_HOST = String(process.env.SMTP_HOST || DEFAULT_SMTP_HOST).trim();
+function listaEnv(valor, fallback) {
+  const itens = String(valor || "").split(",").map(v => v.trim()).filter(Boolean);
+  return itens.length ? itens : fallback;
+}
+const SMTP_HOSTS = listaEnv(process.env.SMTP_HOSTS || process.env.SMTP_HOST, DEFAULT_SMTP_HOSTS);
+const SMTP_HOST = SMTP_HOSTS[0];
 const SMTP_PORT = Number(process.env.SMTP_PORT || DEFAULT_SMTP_PORT);
 const SMTP_USER = String(process.env.SMTP_USER || DEFAULT_SMTP_USER).trim();
 const SMTP_PASS = String(process.env.SMTP_PASS || "").trim();
 const SMTP_FROM = String(process.env.SMTP_FROM || SMTP_USER || "").trim();
 const SMTP_REQUIRE_TLS = String(process.env.SMTP_REQUIRE_TLS || "true").toLowerCase() !== "false";
+const SMTP_TIMEOUT_MS = Number(process.env.SMTP_TIMEOUT_MS || 60000);
 const INITIAL_ADMIN_USER = String(process.env.INITIAL_ADMIN_USER || (IS_RAILWAY ? "" : "godofredo")).trim();
 const INITIAL_ADMIN_PASSWORD = String(process.env.INITIAL_ADMIN_PASSWORD || (IS_RAILWAY ? "" : "admin")).trim();
 const MAX_IMPORT_IMAGE_CHARS = 12 * 1024 * 1024;
@@ -1368,10 +1374,12 @@ app.get("/api/config-check", authRequired, adminRequired, async (req, res) => {
     openai_vision_model: OPENAI_VISION_MODEL,
     smtp_configurado: smtpConfigurado(),
     smtp_host: SMTP_HOST,
+    smtp_hosts: SMTP_HOSTS,
     smtp_port: SMTP_PORT,
     smtp_user: SMTP_USER,
     smtp_from: SMTP_FROM,
     smtp_require_tls: SMTP_REQUIRE_TLS,
+    smtp_timeout_ms: SMTP_TIMEOUT_MS,
     port: PORT
   });
 });
@@ -1401,6 +1409,32 @@ app.post("/api/admin-config/openai", authRequired, adminRequired, async (req, re
     res.json({ok:true,configurada:true,tamanho:apiKey.length});
   }catch(e){
     res.status(500).json({ok:false,error:e.message});
+  }
+});
+
+app.post("/api/admin-config/smtp/test", authRequired, adminRequired, async (req, res) => {
+  try{
+    const resultado = await testarConexaoSmtp();
+    res.json({
+      ok:true,
+      smtp_configurado:true,
+      host:resultado.host,
+      port:SMTP_PORT,
+      user:SMTP_USER,
+      from:SMTP_FROM
+    });
+  }catch(e){
+    res.status(e.code === 'SMTP_NOT_CONFIGURED' ? 503 : 502).json({
+      ok:false,
+      smtp_configurado:smtpConfigurado(),
+      error:e.message,
+      code:e.code || 'SMTP_TEST_FAILED',
+      hosts:SMTP_HOSTS,
+      port:SMTP_PORT,
+      user:SMTP_USER,
+      from:SMTP_FROM,
+      errors:e.smtp_errors || []
+    });
   }
 });
 
@@ -2082,7 +2116,60 @@ function publicBaseUrl(req){
 }
 
 function smtpConfigurado(){
-  return !!(SMTP_HOST && SMTP_PORT && SMTP_USER && SMTP_PASS && SMTP_FROM);
+  return !!(SMTP_HOSTS.length && SMTP_PORT && SMTP_USER && SMTP_PASS && SMTP_FROM);
+}
+
+function smtpTransport(nodemailer, host) {
+  return nodemailer.createTransport({
+    host,
+    port:SMTP_PORT,
+    secure:SMTP_PORT === 465,
+    requireTLS:SMTP_REQUIRE_TLS && SMTP_PORT !== 465,
+    connectionTimeout:SMTP_TIMEOUT_MS,
+    greetingTimeout:SMTP_TIMEOUT_MS,
+    socketTimeout:Math.max(SMTP_TIMEOUT_MS, 30000),
+    tls:{servername:host},
+    auth:{ user:SMTP_USER, pass:SMTP_PASS }
+  });
+}
+
+function resumoErroSmtp(host, err) {
+  return {
+    host,
+    code:err && err.code ? String(err.code) : "",
+    command:err && err.command ? String(err.command) : "",
+    message:err && err.message ? String(err.message).slice(0, 240) : "Falha SMTP"
+  };
+}
+
+function erroSmtpFinal(erros) {
+  const texto = erros.map(e => [e.code, e.command, e.message].filter(Boolean).join(" ")).join(" | ");
+  const timeout = /timeout|timed out|etimedout|etimeout|econnrefused|network is unreachable/i.test(texto);
+  const err = new Error(timeout
+    ? "Servidor de e-mail nao respondeu. Isso costuma indicar bloqueio de conexao SMTP pela hospedagem/provedor ou porta SMTP inacessivel."
+    : "Falha ao conectar/autenticar no servidor de e-mail.");
+  err.code = timeout ? "SMTP_CONNECT_TIMEOUT" : "SMTP_SEND_FAILED";
+  err.smtp_errors = erros;
+  return err;
+}
+
+async function testarConexaoSmtp() {
+  if(!smtpConfigurado()) {
+    const err = new Error('SMTP nao configurado');
+    err.code = 'SMTP_NOT_CONFIGURED';
+    throw err;
+  }
+  const nodemailer = require('nodemailer');
+  const erros = [];
+  for (const host of SMTP_HOSTS) {
+    try {
+      await smtpTransport(nodemailer, host).verify();
+      return {ok:true,host};
+    } catch (err) {
+      erros.push(resumoErroSmtp(host, err));
+    }
+  }
+  throw erroSmtpFinal(erros);
 }
 
 async function enviarEmailRecuperacao({ to, username, resetLink }) {
@@ -2092,30 +2179,29 @@ async function enviarEmailRecuperacao({ to, username, resetLink }) {
     throw err;
   }
   const nodemailer = require('nodemailer');
-  const transporter = nodemailer.createTransport({
-    host:SMTP_HOST,
-    port:SMTP_PORT,
-    secure:SMTP_PORT === 465,
-    requireTLS:SMTP_REQUIRE_TLS && SMTP_PORT !== 465,
-    connectionTimeout:15000,
-    greetingTimeout:15000,
-    socketTimeout:30000,
-    auth:{ user:SMTP_USER, pass:SMTP_PASS }
-  });
-  await transporter.sendMail({
-    from:SMTP_FROM,
-    to,
-    subject:'Recuperacao de senha - MAPA CC',
-    text:[
-      'Ola '+username+',',
-      '',
-      'Recebemos uma solicitacao para redefinir sua senha no MAPA CC.',
-      'Acesse o link abaixo em ate 30 minutos:',
-      resetLink,
-      '',
-      'Se voce nao solicitou isso, ignore este e-mail.'
-    ].join('\n')
-  });
+  const erros = [];
+  for (const host of SMTP_HOSTS) {
+    try {
+      const info = await smtpTransport(nodemailer, host).sendMail({
+        from:SMTP_FROM,
+        to,
+        subject:'Recuperacao de senha - MAPA CC',
+        text:[
+          'Ola '+username+',',
+          '',
+          'Recebemos uma solicitacao para redefinir sua senha no MAPA CC.',
+          'Acesse o link abaixo em ate 30 minutos:',
+          resetLink,
+          '',
+          'Se voce nao solicitou isso, ignore este e-mail.'
+        ].join('\n')
+      });
+      return {host, messageId:info && info.messageId};
+    } catch (err) {
+      erros.push(resumoErroSmtp(host, err));
+    }
+  }
+  throw erroSmtpFinal(erros);
 }
 
 // Cria tabela de usuarios e, se o banco estiver vazio, o admin inicial.
@@ -2266,7 +2352,10 @@ app.post('/api/password-reset/request', async (req,res)=>{
     if(e.code === 'SMTP_NOT_CONFIGURED'){
       return res.status(503).json({ok:false,error:'Envio de e-mail ainda nao configurado no servidor. Configure SMTP_PASS no Railway. O Outlook ja esta pre-configurado como mapa_cc@outlook.com.br.',smtp_configurado:false});
     }
-    res.status(500).json({ok:false,error:e.message});
+    if(e.code === 'SMTP_CONNECT_TIMEOUT'){
+      return res.status(503).json({ok:false,error:e.message,smtp_configurado:true,code:e.code});
+    }
+    res.status(500).json({ok:false,error:e.message,code:e.code || 'SMTP_SEND_FAILED'});
   }
 });
 
