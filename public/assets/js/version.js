@@ -1,6 +1,6 @@
 (function(){
-  const buildLabel = '21/05/2026 refactor';
-  const buildId = '2026-05-21-refactor';
+  const buildLabel = '21/05/2026 15:10 - atendimento';
+  const buildId = '2026-05-21-1510-atendimento';
 
   function showBadge(){
     if(document.getElementById('mapaccUpdateBadge')) return;
