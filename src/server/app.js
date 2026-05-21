@@ -41,11 +41,15 @@ const DEFAULT_HOSPITAL_SLUG = "samaritano";
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY || process.env.MAPACC_OPENAI_API_KEY || "";
 const OPENAI_VISION_MODEL = process.env.OPENAI_VISION_MODEL || "gpt-5.4-mini";
 const APP_BASE_URL = String(process.env.APP_BASE_URL || process.env.RAILWAY_PUBLIC_DOMAIN || "").trim();
-const SMTP_HOST = String(process.env.SMTP_HOST || "").trim();
-const SMTP_PORT = Number(process.env.SMTP_PORT || 587);
-const SMTP_USER = String(process.env.SMTP_USER || "").trim();
+const DEFAULT_SMTP_HOST = "smtp-mail.outlook.com";
+const DEFAULT_SMTP_PORT = 587;
+const DEFAULT_SMTP_USER = "mapa_cc@outlook.com.br";
+const SMTP_HOST = String(process.env.SMTP_HOST || DEFAULT_SMTP_HOST).trim();
+const SMTP_PORT = Number(process.env.SMTP_PORT || DEFAULT_SMTP_PORT);
+const SMTP_USER = String(process.env.SMTP_USER || DEFAULT_SMTP_USER).trim();
 const SMTP_PASS = String(process.env.SMTP_PASS || "").trim();
 const SMTP_FROM = String(process.env.SMTP_FROM || SMTP_USER || "").trim();
+const SMTP_REQUIRE_TLS = String(process.env.SMTP_REQUIRE_TLS || "true").toLowerCase() !== "false";
 const INITIAL_ADMIN_USER = String(process.env.INITIAL_ADMIN_USER || (IS_RAILWAY ? "" : "godofredo")).trim();
 const INITIAL_ADMIN_PASSWORD = String(process.env.INITIAL_ADMIN_PASSWORD || (IS_RAILWAY ? "" : "admin")).trim();
 const MAX_IMPORT_IMAGE_CHARS = 12 * 1024 * 1024;
@@ -1362,6 +1366,12 @@ app.get("/api/config-check", authRequired, adminRequired, async (req, res) => {
     openai_api_key_no_banco: !!dbOpenAIKey,
     mapacc_teste: process.env.MAPACC_TESTE || "",
     openai_vision_model: OPENAI_VISION_MODEL,
+    smtp_configurado: smtpConfigurado(),
+    smtp_host: SMTP_HOST,
+    smtp_port: SMTP_PORT,
+    smtp_user: SMTP_USER,
+    smtp_from: SMTP_FROM,
+    smtp_require_tls: SMTP_REQUIRE_TLS,
     port: PORT
   });
 });
@@ -2086,6 +2096,10 @@ async function enviarEmailRecuperacao({ to, username, resetLink }) {
     host:SMTP_HOST,
     port:SMTP_PORT,
     secure:SMTP_PORT === 465,
+    requireTLS:SMTP_REQUIRE_TLS && SMTP_PORT !== 465,
+    connectionTimeout:15000,
+    greetingTimeout:15000,
+    socketTimeout:30000,
     auth:{ user:SMTP_USER, pass:SMTP_PASS }
   });
   await transporter.sendMail({
@@ -2250,7 +2264,7 @@ app.post('/api/password-reset/request', async (req,res)=>{
     res.json(respostaPadrao);
   }catch(e){
     if(e.code === 'SMTP_NOT_CONFIGURED'){
-      return res.status(503).json({ok:false,error:'Envio de e-mail ainda nao configurado no servidor. Configure SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS e SMTP_FROM.',smtp_configurado:false});
+      return res.status(503).json({ok:false,error:'Envio de e-mail ainda nao configurado no servidor. Configure SMTP_PASS no Railway. O Outlook ja esta pre-configurado como mapa_cc@outlook.com.br.',smtp_configurado:false});
     }
     res.status(500).json({ok:false,error:e.message});
   }

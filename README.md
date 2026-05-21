@@ -22,3 +22,15 @@ Por padrao o app sobe em `http://localhost:3000`.
 ## Deploy
 
 O Railway inicia com `npm start`. Depois de subir as alteracoes para o GitHub, o Railway deve redeployar automaticamente quando o repositorio estiver conectado ao servico.
+
+## Reset de senha
+
+O reset por e-mail usa Outlook.com com os defaults abaixo:
+
+- `SMTP_HOST=smtp-mail.outlook.com`
+- `SMTP_PORT=587`
+- `SMTP_USER=mapa_cc@outlook.com.br`
+- `SMTP_FROM=mapa_cc@outlook.com.br`
+- `SMTP_REQUIRE_TLS=true`
+
+No Railway, configure `SMTP_PASS` com a senha ou app password dessa conta. Tambem mantenha `APP_BASE_URL` apontando para o dominio publico do app para que o link de recuperacao saia correto.

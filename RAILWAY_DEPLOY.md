@@ -31,7 +31,8 @@ Esses arquivos ja estao protegidos pelo `.gitignore`.
    - `APP_BASE_URL`: dominio publico do app no Railway, depois que ele existir.
    - `INITIAL_ADMIN_USER`: usuario admin inicial, por exemplo `godofredo`.
    - `INITIAL_ADMIN_PASSWORD`: senha forte para o admin inicial.
-   - `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM`: somente se for usar reset de senha por e-mail.
+   - `SMTP_PASS`: senha ou app password do e-mail `mapa_cc@outlook.com.br`, para reset de senha.
+   - O app ja usa por padrao `SMTP_HOST=smtp-mail.outlook.com`, `SMTP_PORT=587`, `SMTP_USER=mapa_cc@outlook.com.br`, `SMTP_FROM=mapa_cc@outlook.com.br` e `SMTP_REQUIRE_TLS=true`.
 4. Crie um volume persistente no servico e monte em `/data`.
 5. Deixe `DB_FILE` vazio, ou use `/data/database.db`.
 6. O Railway deve iniciar com `npm start`. O arquivo `railway.toml` tambem fixa esse comando.
@@ -45,6 +46,14 @@ https://SEU-DOMINIO.up.railway.app/api/health
 ```
 
 Se estiver tudo certo, a resposta deve trazer `ok: true`.
+
+Para conferir a configuracao de e-mail, entre como admin e abra:
+
+```text
+https://SEU-DOMINIO.up.railway.app/api/config-check
+```
+
+O campo `smtp_configurado` deve ficar `true` depois que `SMTP_PASS` estiver configurado.
 
 ## Importante
 
