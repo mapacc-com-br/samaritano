@@ -66,3 +66,13 @@ GET /api/admin-config/smtp/test
 ```
 
 Essas rotas tambem aceitam `POST` e exigem login admin. Se o SMTP retornar timeout mesmo com senha correta, a conexao SMTP de saida do ambiente/provedor esta bloqueada ou inacessivel; use `EMAIL_PROVIDER=resend`.
+
+## Importacao de cirurgias
+
+O formato preferencial de importacao e:
+
+```text
+Inicio | Sala | Atendimento | Cirurgia | Cirurgiao | Duracao | Servico | Iniciais | Idade | Obs opcional
+```
+
+A deduplicacao principal usa `Atendimento + Iniciais + Idade` dentro do hospital. Linhas antigas sem atendimento ainda usam o criterio legado por data, procedimento, iniciais e idade como fallback.

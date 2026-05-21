@@ -35,7 +35,7 @@ const PORT = Number(process.env.PORT) || 3000;
 const PUBLIC_DIR = path.join(ROOT_DIR, "public");
 const IS_RAILWAY = !!(process.env.RAILWAY_ENVIRONMENT || process.env.RAILWAY_PROJECT_ID || process.env.RAILWAY_SERVICE_ID);
 const CONFIG_CHECK_VERSION = "2026-05-17-railway-volume-guard-v3";
-const SERVER_BUILD_ID = "2026-05-21-refactor";
+const SERVER_BUILD_ID = "2026-05-21-atendimento";
 const DEFAULT_HOSPITAL_NOME = "Hospital Samaritano";
 const DEFAULT_HOSPITAL_SLUG = "samaritano";
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY || process.env.MAPACC_OPENAI_API_KEY || "";
@@ -72,9 +72,10 @@ const MAX_IMPORT_IMAGE_CHARS = 12 * 1024 * 1024;
 const DEFAULT_IMPORT_PROMPT = [
   "Extraia a lista de cirurgias do Samaritano no formato:",
   "",
-  "Inicio | Sala | Cirurgia | Duracao | Servico | Iniciais | Idade",
+  "Inicio | Sala | Atendimento | Cirurgia | Cirurgiao | Duracao | Servico | Iniciais | Idade",
   "",
   "Regras:",
+  "- Atendimento: extrair o numero de atendimento/codigo do bloco. Se nao estiver visivel, deixar vazio.",
   "- Inicio: usar coluna \"Ho...\".",
   "- Sala real: usar a coluna \"Sala P\".",
   "- Se \"Sala P\" = \"Sala 01 (Oeste)\", escrever \"Oeste 01\".",
@@ -82,6 +83,7 @@ const DEFAULT_IMPORT_PROMPT = [
   "- Se \"Sala P\" estiver vazia, escrever \"Cirurgias nao escaladas\".",
   "- Excecao: se \"Sala P\" estiver vazia, mas a coluna \"Sala\" indicar Radiologia Intervencionista/Radiol., escrever \"Hemo\".",
   "- Servico: se houver \"Sma\" em qualquer parte do servico, escrever \"SMA\". Se for \"Anestesista Particular\", escrever \"Anestesista Particular\".",
+  "- Cirurgiao: extrair o nome do cirurgiao/medico responsavel quando estiver visivel.",
   "- Iniciais e idade: extrair da coluna \"Paciente\".",
   "- Separar iniciais e idade em colunas diferentes.",
   "- Manter uma linha por cirurgia."
@@ -284,6 +286,15 @@ function normalizarIdentidadeCirurgia(valor) {
     .toUpperCase()
     .replace(/[^A-Z0-9]+/g, " ")
     .replace(/\s+/g, " ")
+    .trim();
+}
+
+function normalizarNumeroAtendimento(valor) {
+  return String(valor || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toUpperCase()
+    .replace(/[^A-Z0-9]+/g, "")
     .trim();
 }
 
@@ -564,8 +575,11 @@ async function initDb() {
       data_cirurgia TEXT NOT NULL,
 
       horario_inicio TEXT NOT NULL,
+      numero_atendimento TEXT,
+      numero_atendimento_key TEXT,
       nome_cirurgia TEXT NOT NULL,
       nome_cirurgia_key TEXT,
+      nome_cirurgiao TEXT,
 
       duracao TEXT NOT NULL,
 
@@ -583,6 +597,9 @@ async function initDb() {
     )
   `);
 
+  await garantirColuna("cirurgias", "numero_atendimento", "TEXT");
+  await garantirColuna("cirurgias", "numero_atendimento_key", "TEXT");
+  await garantirColuna("cirurgias", "nome_cirurgiao", "TEXT");
   await garantirColuna("cirurgias", "nome_cirurgia_key", "TEXT");
   await garantirColuna("cirurgias", "hospital_id", `INTEGER NOT NULL DEFAULT ${hospitalPadraoId}`);
   await garantirColuna("cirurgias", "observacao", "TEXT");
@@ -607,16 +624,33 @@ async function initDb() {
     );
   }
 
+  const atendimentosAntigos = await all(`
+    SELECT id, numero_atendimento
+    FROM cirurgias
+    WHERE numero_atendimento IS NOT NULL
+      AND trim(numero_atendimento) <> ''
+      AND (numero_atendimento_key IS NULL OR trim(numero_atendimento_key) = '')
+  `);
+
+  for (const row of atendimentosAntigos) {
+    await run(
+      "UPDATE cirurgias SET numero_atendimento_key = ? WHERE id = ?",
+      [normalizarNumeroAtendimento(row.numero_atendimento), row.id]
+    );
+  }
+
   await run(`DROP INDEX IF EXISTS ux_cirurgias_identidade`);
+  await run(`DROP INDEX IF EXISTS ux_cirurgias_identidade_hospital`);
   await run(`
-    CREATE UNIQUE INDEX IF NOT EXISTS ux_cirurgias_identidade_hospital
+    CREATE UNIQUE INDEX IF NOT EXISTS ux_cirurgias_atendimento_hospital
     ON cirurgias (
       hospital_id,
-      data_cirurgia,
-      nome_cirurgia_key,
+      numero_atendimento_key,
       iniciais_paciente,
       idade_paciente
     )
+    WHERE numero_atendimento_key IS NOT NULL
+      AND trim(numero_atendimento_key) <> ''
   `);
 
   await run(`
@@ -707,8 +741,11 @@ function validarCirurgia(body) {
   const hospital_id = Number(body.hospital_id || body.hospitalId || 0);
   const data_cirurgia = String(body.data_cirurgia || "").trim();
   const horario_inicio = String(body.horario_inicio || "").trim();
+  const numero_atendimento = String(body.numero_atendimento || body.numeroAtendimento || body.atendimento || "").trim();
+  const numero_atendimento_key = normalizarNumeroAtendimento(numero_atendimento);
   const nome_cirurgia = String(body.nome_cirurgia || "").trim();
   const nome_cirurgia_key = normalizarTextoChave(nome_cirurgia);
+  const nome_cirurgiao = String(body.nome_cirurgiao || body.nomeCirurgiao || body.cirurgiao || "").trim();
   const duracao = String(body.duracao || "").trim();
   const sala = normalizarSalaCirurgia(body.sala);
   const servico = String(body.servico || "").trim();
@@ -749,8 +786,11 @@ function validarCirurgia(body) {
     hospital_id,
     data_cirurgia,
     horario_inicio,
+    numero_atendimento,
+    numero_atendimento_key,
     nome_cirurgia,
     nome_cirurgia_key,
+    nome_cirurgiao,
     duracao,
     sala,
     servico,
@@ -1128,7 +1168,9 @@ function normalizarItemFoto(item, currentDate) {
     data_cirurgia: currentDate,
     horario_inicio: String(item.horario_inicio || item.inicio || "").trim(),
     sala: String(item.sala || "Nao escaladas").trim(),
+    numero_atendimento: String(item.numero_atendimento || item.atendimento || item.numero_atendimento_bloco || item.atendimento_bloco || "").trim(),
     nome_cirurgia: String(item.nome_cirurgia || item.cirurgia || item.nome || "").trim(),
+    nome_cirurgiao: String(item.nome_cirurgiao || item.cirurgiao || item.nome_medico || item.medico || "").trim(),
     duracao: String(item.duracao || duracaoEstimadaIa || duracaoInformada || "01:00").trim(),
     servico: normalizarServicoExtraido(item.servico || item.servico_original),
     iniciais_paciente: String(item.iniciais_paciente || item.iniciais || "NI").replace(/\W/g, "").toUpperCase() || "NI",
@@ -1170,7 +1212,9 @@ async function chamarOpenAIImportacaoFoto({ imageDataUrl, hospital, salas, dataC
           properties: {
             horario_inicio: { type: "string" },
             sala: { type: "string" },
+            numero_atendimento: { type: "string" },
             nome_cirurgia: { type: "string" },
+            nome_cirurgiao: { type: "string" },
             duracao: { type: "string" },
             duracao_informada: { type: "string" },
             duracao_estimada_ia: { type: "string" },
@@ -1188,7 +1232,9 @@ async function chamarOpenAIImportacaoFoto({ imageDataUrl, hospital, salas, dataC
           required: [
             "horario_inicio",
             "sala",
+            "numero_atendimento",
             "nome_cirurgia",
+            "nome_cirurgiao",
             "duracao",
             "duracao_informada",
             "duracao_estimada_ia",
@@ -1225,6 +1271,8 @@ async function chamarOpenAIImportacaoFoto({ imageDataUrl, hospital, salas, dataC
     "Preencha duracao_estimada_ia, tempo_cirurgico_estimado_min, tempo_giro_sala_min e estimativa_ia_justificativa com uma justificativa curta e conservadora.",
     "Quando nao der para estimar com seguranca, use a duracao informada; se tambem nao houver, use 01:00 e explique em aviso.",
     "Para sala, prefira exatamente um dos nomes da lista de salas do hospital quando houver correspondencia clara.",
+    "Extraia numero_atendimento do numero/codigo de atendimento do bloco; se nao estiver visivel, deixe string vazia.",
+    "Extraia nome_cirurgiao do cirurgiao/medico responsavel quando estiver visivel; se nao estiver visivel, deixe string vazia.",
     "Servico no JSON final deve ser SMA ou Particular; preserve termos como Anestesista Particular em servico_original.",
     "Data alvo da importacao: " + dataCirurgia + ".",
     "",
@@ -1287,7 +1335,7 @@ app.get("/api/health", async (req, res) => {
       database: DB_FILE,
       total_cirurgias: c.total,
       total_anestesistas_dia: a.total,
-      regra_duplicata: "data_cirurgia + nome_cirurgia + iniciais_paciente + idade_paciente",
+      regra_duplicata: "numero_atendimento + iniciais_paciente + idade_paciente; fallback legado por data + cirurgia + iniciais + idade quando atendimento estiver ausente",
       escala_anestesistas: "data_escala + nome_anestesista; cada escala pertence apenas ao dia selecionado",
       timestamp: new Date().toISOString()
     });
@@ -1550,8 +1598,33 @@ app.get("/api/cirurgias", async (req, res) => {
 
 // UPSERT:
 
-// UPSERT: se data + nome + iniciais + idade ja existir, atualiza em vez de duplicar.
+// UPSERT: se atendimento + iniciais + idade ja existir, atualiza em vez de duplicar.
 async function encontrarCirurgiaExistente(v) {
+  if (v.numero_atendimento_key) {
+    const existenteAtendimento = await get(`
+      SELECT id
+      FROM cirurgias
+      WHERE hospital_id = ?
+        AND numero_atendimento_key = ?
+        AND iniciais_paciente = ?
+        AND idade_paciente = ?
+      ORDER BY
+        CASE WHEN data_cirurgia = ? THEN 0 ELSE 1 END,
+        id ASC
+      LIMIT 1
+    `, [
+      v.hospital_id,
+      v.numero_atendimento_key,
+      v.iniciais_paciente,
+      v.idade_paciente,
+      v.data_cirurgia
+    ]);
+    if (existenteAtendimento) return existenteAtendimento;
+  }
+
+  const somenteLegadoSemAtendimento = v.numero_atendimento_key
+    ? "AND (numero_atendimento_key IS NULL OR trim(numero_atendimento_key) = '')"
+    : "";
   const existenteExato = await get(`
     SELECT id
     FROM cirurgias
@@ -1560,6 +1633,7 @@ async function encontrarCirurgiaExistente(v) {
       AND nome_cirurgia_key = ?
       AND iniciais_paciente = ?
       AND idade_paciente = ?
+      ${somenteLegadoSemAtendimento}
     ORDER BY id ASC
     LIMIT 1
   `, [
@@ -1579,6 +1653,7 @@ async function encontrarCirurgiaExistente(v) {
     WHERE hospital_id = ?
       AND data_cirurgia = ?
       AND idade_paciente = ?
+      ${somenteLegadoSemAtendimento}
     ORDER BY
       CASE WHEN horario_inicio = ? THEN 0 ELSE 1 END,
       CASE WHEN lower(sala) LIKE '%escalad%' OR lower(sala) LIKE '%sem sala%' THEN 0 ELSE 1 END,
@@ -1605,9 +1680,13 @@ async function atualizarCirurgiaExistente(id, v) {
     UPDATE cirurgias
     SET
       hospital_id = ?,
+      data_cirurgia = ?,
       horario_inicio = ?,
+      numero_atendimento = ?,
+      numero_atendimento_key = ?,
       nome_cirurgia = ?,
       nome_cirurgia_key = ?,
+      nome_cirurgiao = ?,
       duracao = ?,
       sala = ?,
       servico = ?,
@@ -1623,9 +1702,13 @@ async function atualizarCirurgiaExistente(id, v) {
     WHERE id = ?
   `, [
     v.hospital_id,
+    v.data_cirurgia,
     v.horario_inicio,
+    v.numero_atendimento,
+    v.numero_atendimento_key,
     v.nome_cirurgia,
     v.nome_cirurgia_key,
+    v.nome_cirurgiao,
     v.duracao,
     v.sala,
     v.servico,
@@ -1675,8 +1758,11 @@ app.post("/api/cirurgias", async (req, res) => {
           hospital_id,
           data_cirurgia,
           horario_inicio,
+          numero_atendimento,
+          numero_atendimento_key,
           nome_cirurgia,
           nome_cirurgia_key,
+          nome_cirurgiao,
           duracao,
           sala,
           servico,
@@ -1690,13 +1776,16 @@ app.post("/api/cirurgias", async (req, res) => {
           pre_feito_user_id,
           pre_feito_em
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `, [
         v.hospital_id,
         v.data_cirurgia,
         v.horario_inicio,
+        v.numero_atendimento,
+        v.numero_atendimento_key,
         v.nome_cirurgia,
         v.nome_cirurgia_key,
+        v.nome_cirurgiao,
         v.duracao,
         v.sala,
         v.servico,
@@ -1757,8 +1846,11 @@ app.put("/api/cirurgias/:id", async (req, res) => {
         hospital_id = ?,
         data_cirurgia = ?,
         horario_inicio = ?,
+        numero_atendimento = ?,
+        numero_atendimento_key = ?,
         nome_cirurgia = ?,
         nome_cirurgia_key = ?,
+        nome_cirurgiao = ?,
         duracao = ?,
         sala = ?,
         servico = ?,
@@ -1776,8 +1868,11 @@ app.put("/api/cirurgias/:id", async (req, res) => {
       v.hospital_id,
       v.data_cirurgia,
       v.horario_inicio,
+      v.numero_atendimento,
+      v.numero_atendimento_key,
       v.nome_cirurgia,
       v.nome_cirurgia_key,
+      v.nome_cirurgiao,
       v.duracao,
       v.sala,
       v.servico,
@@ -1803,7 +1898,7 @@ app.put("/api/cirurgias/:id", async (req, res) => {
     res.json(row);
   } catch(err) {
     if (String(err.message || "").includes("UNIQUE")) {
-      return res.status(400).json({ error:"Ja existe outra cirurgia nesse hospital e dia com mesmo nome, iniciais e idade." });
+      return res.status(400).json({ error:"Ja existe outra cirurgia nesse hospital com mesmo atendimento, iniciais e idade." });
     }
     res.status(500).json({ error:err.message });
   }

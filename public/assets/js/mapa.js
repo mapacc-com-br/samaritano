@@ -368,7 +368,18 @@ async function pastePhotoFromClipboard(){
 }
 function importItemsToText(list){
   return (list||[]).map(function(c){
-    return [c.horario_inicio||'',c.sala||'',c.nome_cirurgia||'',c.duracao||'',c.servico||'',c.iniciais_paciente||'',c.idade_paciente||0,c.observacao||''].join(' | ').replace(/\s+\|\s+$/,'');
+    return [
+      c.horario_inicio||'',
+      c.sala||'',
+      c.numero_atendimento||'',
+      c.nome_cirurgia||'',
+      c.nome_cirurgiao||'',
+      c.duracao||'',
+      c.servico||'',
+      c.iniciais_paciente||'',
+      c.idade_paciente||0,
+      c.observacao||''
+    ].join(' | ').replace(/\s+\|\s+$/,'');
   }).join('\n');
 }
 async function loadPhotoPrompt(){
@@ -409,7 +420,9 @@ async function handlePhotoFile(file){
         data_cirurgia:currentDate,
         horario_inicio:c.horario_inicio||'',
         sala:canonicalRoomName(c.sala||'Nao escaladas'),
+        numero_atendimento:c.numero_atendimento||c.atendimento||'',
         nome_cirurgia:c.nome_cirurgia||'',
+        nome_cirurgiao:c.nome_cirurgiao||c.cirurgiao||'',
         duracao:durToText(c.duracao||'01:00'),
         servico:String(c.servico||'SMA').toLowerCase().includes('particular')?'Particular':'SMA',
         iniciais_paciente:String(c.iniciais_paciente||'NI').replace(/\W/g,'').toUpperCase()||'NI',
@@ -495,6 +508,8 @@ function dbToItem(r){
     id:r.id,
     dbId:r.id,
     name:r.nome_cirurgia,
+    attendance:r.numero_atendimento||"",
+    surgeon:r.nome_cirurgiao||"",
     start:start,
     end:start+dur,
     duration:dur,
@@ -517,7 +532,9 @@ function itemToPayload(it){
   return {
     data_cirurgia:currentDate,
     horario_inicio:fmtTime(it.start),
+    numero_atendimento:it.attendance||"",
     nome_cirurgia:it.name,
+    nome_cirurgiao:it.surgeon||"",
     duracao:durToText(it.duration||it.end-it.start),
     sala:it.room || (rooms[it.row]?rooms[it.row].name:"Nao escaladas"),
     servico:it.servico||"SMA",
@@ -954,13 +971,15 @@ function renderMap(){
       if(w>220)cls+=' roomy';
       var preDone=isPreFeito(it);
       var blockStatus=conflictsForItem(it,items).length?'Conflito':(isFinished(it)?'Finalizada':(isExternalCase(it)?'Externo':(it.anest?'Escalada':'Pendente')));
+      var blockSubText=(it.attendance?('Atend. '+it.attendance+' | '):'')+(it.anest||blockStatus);
+      var titleDetails=(it.attendance?('Atend. '+it.attendance+' | '):'')+(it.surgeon?('Cirurgiao: '+it.surgeon+' | '):'')+blockStatus;
       var badge=(it.anest && !isExternalCase(it) && !isFinished(it))?'<div class="anestBadge">'+html(it.anest)+'</div>':'';
       var preBadge=preDone?'<div class="preBadge" title="'+html('Pre feito'+(it.preFeitoPor?' por '+it.preFeitoPor:''))+'">Pre ok</div>':'';
-      htmlMap+='<div class="block '+cls+'" title="'+html(fmtTime(it.start)+'-'+fmtTime(it.end)+' | '+it.room+' | '+blockStatus)+'" style="left:'+x+'px;top:'+laneTop+'px;width:'+w+'px" data-id="'+it.id+'">'+
+      htmlMap+='<div class="block '+cls+'" title="'+html(fmtTime(it.start)+'-'+fmtTime(it.end)+' | '+it.room+' | '+titleDetails)+'" style="left:'+x+'px;top:'+laneTop+'px;width:'+w+'px" data-id="'+it.id+'">'+
         badge+
         preBadge+
-        '<div class="blockText"><div class="blockTopLine"><span>'+html(fmtTime(it.start)+'-'+fmtTime(it.end))+'</span><span>'+html(durToText(it.duration))+'</span></div><div class="blockName">'+html(it.name)+'</div><div class="blockSub">'+html(it.anest||blockStatus)+'</div></div>'+ 
-        '<div class="resizeHandle" data-resize="'+it.id+'"></div>'+ 
+        '<div class="blockText"><div class="blockTopLine"><span>'+html(fmtTime(it.start)+'-'+fmtTime(it.end))+'</span><span>'+html(durToText(it.duration))+'</span></div><div class="blockName">'+html(it.name)+'</div><div class="blockSub">'+html(blockSubText)+'</div></div>'+
+        '<div class="resizeHandle" data-resize="'+it.id+'"></div>'+
       '</div>';
     });
     htmlMap+='</div>';
@@ -1206,9 +1225,17 @@ function renderList(){
     var pillText=conflicts.length?'Conflito':(isFinished(it)?'Finalizada':(isExternalCase(it)?'Externo':(it.anest?'SMA escalada':'Pendente')));
     var preHtml=preDone?'<span class="preMeta" title="'+html(it.preFeitoPor?'Marcado por '+it.preFeitoPor:'Pre feito marcado')+'">Pre ok</span>':'';
     var conflictHtml=conflicts.length?'<div class="conflictNote">'+html(conflicts.join(' | '))+'</div>':'';
+    var identityMeta=[
+      it.room,
+      durToText(it.duration),
+      it.attendance?('Atend. '+it.attendance):'sem atendimento',
+      it.surgeon?('Cirurgiao: '+it.surgeon):'cirurgiao nao informado',
+      it.initials,
+      it.age+' anos'
+    ].filter(Boolean).join(' | ');
     return '<div class="case '+caseCls+'">'+
       '<div class="caseTop"><div><div class="caseName">'+html(fmtTime(it.start)+' | '+it.name)+'</div>'+
-      '<div class="caseMeta">'+html(it.room)+' | '+html(durToText(it.duration))+' | '+html(it.initials)+' | '+html(it.age)+' anos</div></div>'+
+      '<div class="caseMeta">'+html(identityMeta)+'</div></div>'+
       '<span class="pill '+pillCls+'">'+html(pillText)+'</span></div>'+
       preHtml+
       '<div class="caseMeta">Anest: <b>'+html(it.anest||'nao definido')+'</b> '+(it.obs?(' | '+html(it.obs)):'')+'</div>'+
@@ -1371,17 +1398,48 @@ async function saveImportedAnes(){
 function parseLine(line){
   var p=line.split('|').map(s=>s.trim());
   if(p.length<5)return null;
+  var novoFormato=p.length>=9 && looksLikeDuration(p[5]) && looksLikeService(p[6]);
+  if(novoFormato){
+    return {
+      data_cirurgia:currentDate,
+      horario_inicio:p[0]||"",
+      sala:canonicalRoomName(p[1]||"Nao escaladas"),
+      numero_atendimento:p[2]||"",
+      nome_cirurgia:p[3]||"",
+      nome_cirurgiao:p[4]||"",
+      duracao:durToText(p[5]||"01:00"),
+      servico:serviceFromText(p[6]),
+      iniciais_paciente:(p[7]||"NI").replace(/\W/g,"").toUpperCase()||"NI",
+      idade_paciente:Number(p[8]||0),
+      observacao:p.slice(9).join(" | ")
+    }
+  }
   return {
     data_cirurgia:currentDate,
     horario_inicio:p[0]||"",
     sala:canonicalRoomName(p[1]||"Nao escaladas"),
+    numero_atendimento:"",
     nome_cirurgia:p[2]||"",
+    nome_cirurgiao:"",
     duracao:durToText(p[3]||"01:00"),
-    servico:(String(p[4]||"").toLowerCase().includes("particular")||String(p[4]||"").toLowerCase().includes("externo"))?"Particular":"SMA",
+    servico:serviceFromText(p[4]),
     iniciais_paciente:(p[5]||"NI").replace(/\W/g,"").toUpperCase()||"NI",
     idade_paciente:Number(p[6]||0),
     observacao:p.slice(7).join(" | ")
   }
+}
+
+function looksLikeDuration(value){
+  var s=String(value||'').trim().toLowerCase();
+  return /^\d{1,2}:\d{2}$/.test(s) || /^\d+(?:h|hora|horas)?\d*(?:m|min|minuto|minutos)?$/.test(s) || /^\d+([,.]\d+)?$/.test(s);
+}
+function looksLikeService(value){
+  var s=String(value||'').toLowerCase();
+  return s.includes('sma') || s.includes('particular') || s.includes('externo');
+}
+function serviceFromText(value){
+  var s=String(value||'').toLowerCase();
+  return (s.includes("particular")||s.includes("externo"))?"Particular":"SMA";
 }
 
 function parseImport(){
@@ -1395,9 +1453,11 @@ function parseImport(){
           data_cirurgia:currentDate,
           horario_inicio:x.horario_inicio||x.inicio||x.hora||"",
           sala:canonicalRoomName(x.sala||"Nao escaladas"),
+          numero_atendimento:x.numero_atendimento||x.numeroAtendimento||x.atendimento||"",
           nome_cirurgia:x.nome_cirurgia||x.cirurgia||x.nome||"",
+          nome_cirurgiao:x.nome_cirurgiao||x.nomeCirurgiao||x.cirurgiao||x.medico||"",
           duracao:durToText(x.duracao||x.duration||"01:00"),
-          servico:(x.servico||"SMA").toString().toLowerCase().includes("particular")?"Particular":"SMA",
+          servico:serviceFromText(x.servico||"SMA"),
           iniciais_paciente:(x.iniciais_paciente||x.iniciais||"NI").toString().replace(/\W/g,"").toUpperCase(),
           idade_paciente:Number(x.idade_paciente||x.idade||0),
           observacao:x.observacao||x.obs||""
@@ -1416,7 +1476,7 @@ function renderImportPreview(){
   if(!parsedImport.length){box.innerHTML='Nenhuma lista processada ainda.';return}
   box.innerHTML='<div class="list">'+parsedImport.map(function(c,i){
     return '<div class="case"><div class="caseName">'+html(c.horario_inicio+' | '+c.nome_cirurgia)+'</div>'+
-      '<div class="caseMeta">'+html(c.sala)+' | '+html(c.duracao)+' | '+html(c.servico)+' | '+html(c.iniciais_paciente)+' | '+html(c.idade_paciente)+' anos</div></div>'
+      '<div class="caseMeta">'+html(c.sala)+' | '+html(c.numero_atendimento?('Atend. '+c.numero_atendimento):'sem atendimento')+' | '+html(c.nome_cirurgiao||'cirurgiao nao informado')+' | '+html(c.duracao)+' | '+html(c.servico)+' | '+html(c.iniciais_paciente)+' | '+html(c.idade_paciente)+' anos</div></div>'
   }).join('')+'</div>';
 }
 
@@ -1425,12 +1485,14 @@ function renderImportPreviewEditable(){
   if(!parsedImport.length){box.innerHTML='Nenhuma lista processada ainda.';return}
   var roomsOpts=rooms.map(function(r){return '<option value="'+html(r.name)+'">'+html(r.name)+'</option>'}).join('');
   box.innerHTML='<div class="importReviewNote">Revise cada campo abaixo. Essas linhas ainda nao entraram no mapa; elas so serao gravadas quando voce clicar em "Salvar alteracoes no mapa".</div>'+
-    '<div class="importEditGrid importEditHead"><span>Inicio</span><span>Sala</span><span>Cirurgia</span><span>Duracao</span><span>Servico</span><span>Iniciais</span><span>Idade</span><span></span></div>'+
+    '<div class="importEditGrid importEditHead"><span>Inicio</span><span>Sala</span><span>Atendimento</span><span>Cirurgia</span><span>Cirurgiao</span><span>Duracao</span><span>Servico</span><span>Iniciais</span><span>Idade</span><span></span></div>'+
     parsedImport.map(function(c,i){
       return '<div class="importRow" data-import-row="'+i+'"><div class="importEditGrid">'+
         '<input data-import-field="horario_inicio" value="'+html(c.horario_inicio||'')+'" placeholder="07:00">'+
         '<select data-import-field="sala">'+roomsOpts+'</select>'+
+        '<input data-import-field="numero_atendimento" value="'+html(c.numero_atendimento||'')+'" placeholder="Atendimento">'+
         '<input data-import-field="nome_cirurgia" value="'+html(c.nome_cirurgia||'')+'" placeholder="Cirurgia">'+
+        '<input data-import-field="nome_cirurgiao" value="'+html(c.nome_cirurgiao||'')+'" placeholder="Cirurgiao">'+
         '<input data-import-field="duracao" value="'+html(c.duracao||'01:00')+'" placeholder="01:00">'+
         '<select data-import-field="servico"><option value="SMA">SMA</option><option value="Particular">Particular</option></select>'+
         '<input data-import-field="iniciais_paciente" value="'+html(c.iniciais_paciente||'NI')+'" placeholder="AB">'+
@@ -1476,7 +1538,22 @@ function importInitialsKey(value){
     .replace(/[^A-Z0-9]+/g,'')
     .trim();
 }
+function importAttendanceKey(value){
+  return String(value||'')
+    .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+    .toUpperCase()
+    .replace(/[^A-Z0-9]+/g,'')
+    .trim();
+}
 function importDuplicateKey(item){
+  var atendimento=importAttendanceKey(item.numero_atendimento);
+  if(atendimento){
+    return [
+      atendimento,
+      importInitialsKey(item.iniciais_paciente),
+      Number(item.idade_paciente||0)
+    ].join('|');
+  }
   return [
     item.data_cirurgia||currentDate,
     importIdentityText(item.nome_cirurgia),
@@ -1488,7 +1565,7 @@ function removeDuplicateImportRows(){
   var seen={}, unique=[], skipped=0;
   parsedImport.forEach(function(item){
     var key=importDuplicateKey(item);
-    if(!importIdentityText(item.nome_cirurgia) || !importInitialsKey(item.iniciais_paciente)){
+    if(!importInitialsKey(item.iniciais_paciente) || (!importAttendanceKey(item.numero_atendimento) && !importIdentityText(item.nome_cirurgia))){
       unique.push(item);
       return;
     }
@@ -1511,7 +1588,9 @@ function addImportReviewRow(){
     data_cirurgia:currentDate,
     horario_inicio:last && last.horario_inicio ? last.horario_inicio : '07:00',
     sala:last && last.sala ? last.sala : (rooms[0] ? rooms[0].name : 'Nao escaladas'),
+    numero_atendimento:'',
     nome_cirurgia:'',
+    nome_cirurgiao:'',
     duracao:'01:00',
     servico:'SMA',
     iniciais_paciente:'NI',
@@ -1574,7 +1653,9 @@ function openSurgeryModal(id){
   openModal('<h2>'+(it?'Editar':'Nova')+' cirurgia</h2>'+procList+
     '<div class="fieldLabel">Horario</div><div class="timeStepper"><button class="light" id="mMinus15" type="button">-15</button><input id="mHora" placeholder="07:00" value="'+html(it?fmtTime(it.start):'')+'"><button class="light" id="mPlus15" type="button">+15</button></div>'+ 
     '<div class="fieldLabel">Duracao</div><div class="timeStepper"><button class="light" id="mDurMinus15" type="button">-15</button><input id="mDur" placeholder="02:00" value="'+html(it?durToText(it.duration):'')+'"><button class="light" id="mDurPlus15" type="button">+15</button></div>'+ 
+    '<div class="fieldLabel">Atendimento</div><input id="mAtendimento" placeholder="Numero de atendimento" value="'+html(it?it.attendance:'')+'">'+
     '<div class="fieldLabel">Procedimento</div><input id="mNome" list="procedureOptions" placeholder="Nome da cirurgia" value="'+html(it?it.name:'')+'">'+
+    '<div class="fieldLabel">Cirurgiao</div><input id="mCirurgiao" placeholder="Nome do cirurgiao" value="'+html(it?it.surgeon:'')+'">'+
     '<div class="grid2" style="margin-top:8px"><div><div class="fieldLabel">Sala</div><select id="mSala">'+opts.map(o=>'<option '+(it&&it.room===o?'selected':'')+'>'+html(o)+'</option>').join('')+'</select></div><div><div class="fieldLabel">Tipo</div><select id="mServ"><option '+(!it||it.servico==='SMA'?'selected':'')+'>SMA</option><option '+(it&&it.servico==='Particular'?'selected':'')+'>Particular</option></select></div></div>'+ 
     '<div class="fieldLabel">Anestesista</div><select id="mAnest">'+anesOptions+'</select><div id="mAnestHint" class="smartHint"></div>'+ 
     '<div class="grid2" style="margin-top:8px"><input id="mIni" placeholder="Iniciais" value="'+html(it?it.initials:'')+'"><input id="mIdade" type="number" placeholder="Idade" value="'+html(it?it.age:'')+'"></div>'+ 
@@ -1603,7 +1684,9 @@ function openSurgeryModal(id){
     var payload={
       data_cirurgia:currentDate,
       horario_inicio:$('mHora').value,
+      numero_atendimento:$('mAtendimento').value,
       nome_cirurgia:$('mNome').value,
+      nome_cirurgiao:$('mCirurgiao').value,
       duracao:$('mDur').value,
       sala:$('mSala').value,
       servico:$('mServ').value,
@@ -1628,8 +1711,9 @@ function openBlockActions(id){
   var preDone=isPreFeito(it);
   var conflicts=conflictsForItem(it,items);
   var conflictHtml=conflicts.length?'<div class="conflictNote">'+html(conflicts.join(' | '))+'</div>':'';
+  var detalhes=[it.room, durToText(it.duration), it.attendance?('Atend. '+it.attendance):'', it.surgeon?('Cirurgiao: '+it.surgeon):'', 'Anest: '+(it.anest||'nao definido')].filter(Boolean).join(' | ');
   openModal('<h2>'+html(fmtTime(it.start)+' | '+it.name)+'</h2>'+ 
-    '<div class="hint">'+html(it.room)+' | '+html(durToText(it.duration))+' | Anest: '+html(it.anest||'nao definido')+'</div>'+ 
+    '<div class="hint">'+html(detalhes)+'</div>'+
     conflictHtml+
     '<div class="actionGrid">'+
       '<button class="purple" id="actAssign">Escalar / alterar</button>'+ 
@@ -1820,7 +1904,7 @@ function bind(){
   if($('photoImportInput'))$('photoImportInput').onchange=function(){handlePhotoFile(this.files&&this.files[0])};
   if($('btnSavePhotoPrompt'))$('btnSavePhotoPrompt').onclick=savePhotoPrompt;
   if($('btnReloadPhotoPrompt'))$('btnReloadPhotoPrompt').onclick=loadPhotoPrompt;
-  $('btnExample').onclick=function(){$('surgeryText').value='07:00 | Oeste 03 | Colecistectomia | 120 | SMA | FC | 30\n09:30 | Lane 02 | Herniorrafia inguinal | 90 | Particular | AB | 44';parseImport()};
+  $('btnExample').onclick=function(){$('surgeryText').value='07:00 | Oeste 03 | 123456 | Colecistectomia | Dra Ana Silva | 120 | SMA | FC | 30\n09:30 | Lane 02 | 123457 | Herniorrafia inguinal | Dr Bruno Lima | 90 | Particular | AB | 44';parseImport()};
   $('btnClearText').onclick=function(){$('surgeryText').value='';parsedImport=[];renderImportPreview()};
   $('btnSaveImported').onclick=saveImported;
   $('importPreview').onclick=function(ev){
