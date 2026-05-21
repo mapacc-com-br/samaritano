@@ -56,6 +56,16 @@ const SMTP_PASS = String(process.env.SMTP_PASS || "").trim();
 const SMTP_FROM = String(process.env.SMTP_FROM || SMTP_USER || "").trim();
 const SMTP_REQUIRE_TLS = String(process.env.SMTP_REQUIRE_TLS || "true").toLowerCase() !== "false";
 const SMTP_TIMEOUT_MS = Number(process.env.SMTP_TIMEOUT_MS || 60000);
+const EMAIL_HTTP_TIMEOUT_MS = Number(process.env.EMAIL_HTTP_TIMEOUT_MS || 15000);
+const RESEND_API_KEY = String(process.env.RESEND_API_KEY || "").trim();
+const RESEND_FROM = String(process.env.RESEND_FROM || "MAPA CC <no-reply@mapacc.com.br>").trim();
+const RESEND_REPLY_TO = String(process.env.RESEND_REPLY_TO || SMTP_FROM || "").trim();
+const RESEND_API_URL = "https://api.resend.com";
+const EMAIL_PROVIDER = (() => {
+  const provider = String(process.env.EMAIL_PROVIDER || "").trim().toLowerCase();
+  if(provider === "smtp" || provider === "resend") return provider;
+  return RESEND_API_KEY ? "resend" : "smtp";
+})();
 const INITIAL_ADMIN_USER = String(process.env.INITIAL_ADMIN_USER || (IS_RAILWAY ? "" : "godofredo")).trim();
 const INITIAL_ADMIN_PASSWORD = String(process.env.INITIAL_ADMIN_PASSWORD || (IS_RAILWAY ? "" : "admin")).trim();
 const MAX_IMPORT_IMAGE_CHARS = 12 * 1024 * 1024;
@@ -1372,6 +1382,8 @@ app.get("/api/config-check", authRequired, adminRequired, async (req, res) => {
     openai_api_key_no_banco: !!dbOpenAIKey,
     mapacc_teste: process.env.MAPACC_TESTE || "",
     openai_vision_model: OPENAI_VISION_MODEL,
+    email_provider: EMAIL_PROVIDER,
+    email_configurado: emailConfigurado(),
     smtp_configurado: smtpConfigurado(),
     smtp_host: SMTP_HOST,
     smtp_hosts: SMTP_HOSTS,
@@ -1380,6 +1392,11 @@ app.get("/api/config-check", authRequired, adminRequired, async (req, res) => {
     smtp_from: SMTP_FROM,
     smtp_require_tls: SMTP_REQUIRE_TLS,
     smtp_timeout_ms: SMTP_TIMEOUT_MS,
+    resend_configurado: resendConfigurado(),
+    resend_api_key_configurada: !!RESEND_API_KEY,
+    resend_from: RESEND_FROM,
+    resend_reply_to: RESEND_REPLY_TO,
+    email_http_timeout_ms: EMAIL_HTTP_TIMEOUT_MS,
     port: PORT
   });
 });
@@ -1434,6 +1451,35 @@ app.all("/api/admin-config/smtp/test", authRequired, adminRequired, async (req, 
       user:SMTP_USER,
       from:SMTP_FROM,
       errors:e.smtp_errors || []
+    });
+  }
+});
+
+app.all("/api/admin-config/email/test", authRequired, adminRequired, async (req, res) => {
+  try{
+    const resultado = await testarConexaoEmail();
+    res.json({
+      ok:true,
+      email_provider:EMAIL_PROVIDER,
+      email_configurado:emailConfigurado(),
+      smtp_configurado:smtpConfigurado(),
+      resend_configurado:resendConfigurado(),
+      ...resultado
+    });
+  }catch(e){
+    const naoConfigurado = e.code === 'SMTP_NOT_CONFIGURED' || e.code === 'RESEND_NOT_CONFIGURED';
+    const timeout = e.code === 'SMTP_CONNECT_TIMEOUT' || e.code === 'RESEND_CONNECT_TIMEOUT' || e.code === 'RESEND_CONNECT_FAILED';
+    res.status(naoConfigurado || timeout ? 503 : 502).json({
+      ok:false,
+      email_provider:EMAIL_PROVIDER,
+      email_configurado:emailConfigurado(),
+      smtp_configurado:smtpConfigurado(),
+      resend_configurado:resendConfigurado(),
+      error:e.message,
+      code:e.code || 'EMAIL_TEST_FAILED',
+      smtp_errors:e.smtp_errors || [],
+      resend_status:e.resend_status || null,
+      resend_response:e.resend_response || null
     });
   }
 });
@@ -2119,6 +2165,14 @@ function smtpConfigurado(){
   return !!(SMTP_HOSTS.length && SMTP_PORT && SMTP_USER && SMTP_PASS && SMTP_FROM);
 }
 
+function resendConfigurado(){
+  return !!(RESEND_API_KEY && RESEND_FROM);
+}
+
+function emailConfigurado(){
+  return EMAIL_PROVIDER === "resend" ? resendConfigurado() : smtpConfigurado();
+}
+
 function smtpTransport(nodemailer, host) {
   return nodemailer.createTransport({
     host,
@@ -2172,7 +2226,136 @@ async function testarConexaoSmtp() {
   throw erroSmtpFinal(erros);
 }
 
-async function enviarEmailRecuperacao({ to, username, resetLink }) {
+function textoEmailRecuperacao(username, resetLink) {
+  return [
+    'Ola '+username+',',
+    '',
+    'Recebemos uma solicitacao para redefinir sua senha no MAPA CC.',
+    'Acesse o link abaixo em ate 30 minutos:',
+    resetLink,
+    '',
+    'Se voce nao solicitou isso, ignore este e-mail.'
+  ].join('\n');
+}
+
+function htmlEscape(value) {
+  return String(value || "").replace(/[&<>"']/g, ch => ({
+    "&":"&amp;",
+    "<":"&lt;",
+    ">":"&gt;",
+    '"':"&quot;",
+    "'":"&#39;"
+  })[ch]);
+}
+
+function htmlEmailRecuperacao(username, resetLink) {
+  const nome = htmlEscape(username);
+  const link = htmlEscape(resetLink);
+  return [
+    '<p>Ola '+nome+',</p>',
+    '<p>Recebemos uma solicitacao para redefinir sua senha no MAPA CC.</p>',
+    '<p><a href="'+link+'">Clique aqui para criar uma nova senha</a>. O link expira em 30 minutos.</p>',
+    '<p>Se voce nao solicitou isso, ignore este e-mail.</p>'
+  ].join('');
+}
+
+function dominioDoEmailComNome(value) {
+  const texto = String(value || "").trim();
+  const match = texto.match(/<([^<>@\s]+@[^<>@\s]+)>/) || texto.match(/([^<>\s]+@[^<>\s]+)/);
+  if(!match) return "";
+  const email = match[1].toLowerCase();
+  const idx = email.lastIndexOf("@");
+  return idx >= 0 ? email.slice(idx + 1) : "";
+}
+
+async function fetchJsonComTimeout(url, options, timeoutMs) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try{
+    const response = await fetch(url, {...options, signal:controller.signal});
+    const text = await response.text();
+    let data = {};
+    if(text){
+      try{ data = JSON.parse(text); }
+      catch(e){ data = {raw:text.slice(0, 500)}; }
+    }
+    return {response, data};
+  }finally{
+    clearTimeout(timer);
+  }
+}
+
+function mensagemErroResend(data) {
+  if(!data) return "Falha na API Resend.";
+  if(typeof data.message === "string") return data.message;
+  if(typeof data.error === "string") return data.error;
+  if(data.error && typeof data.error.message === "string") return data.error.message;
+  if(typeof data.name === "string") return data.name;
+  return "Falha na API Resend.";
+}
+
+async function fetchResendJson(endpoint, options = {}) {
+  if(!resendConfigurado()) {
+    const err = new Error('Resend nao configurado. Configure RESEND_API_KEY e RESEND_FROM no Railway.');
+    err.code = 'RESEND_NOT_CONFIGURED';
+    throw err;
+  }
+  try{
+    const body = options.body ? JSON.stringify(options.body) : undefined;
+    const {response, data} = await fetchJsonComTimeout(RESEND_API_URL + endpoint, {
+      method:options.method || 'GET',
+      headers:{
+        Authorization:'Bearer '+RESEND_API_KEY,
+        'Content-Type':'application/json',
+        'User-Agent':'mapacc/1.4.7'
+      },
+      body
+    }, EMAIL_HTTP_TIMEOUT_MS);
+    if(!response.ok){
+      const err = new Error('Resend respondeu com erro: '+mensagemErroResend(data));
+      err.code = options.errorCode || 'RESEND_API_FAILED';
+      err.resend_status = response.status;
+      err.resend_response = data;
+      throw err;
+    }
+    return data;
+  }catch(err){
+    if(err && err.code && err.code.startsWith('RESEND_')) throw err;
+    if(err && err.name === 'AbortError'){
+      const e = new Error('Servidor Resend nao respondeu a tempo via HTTPS.');
+      e.code = 'RESEND_CONNECT_TIMEOUT';
+      throw e;
+    }
+    const e = new Error('Nao foi possivel conectar ao Resend via HTTPS: '+(err && err.message ? err.message : 'falha de rede'));
+    e.code = 'RESEND_CONNECT_FAILED';
+    throw e;
+  }
+}
+
+async function testarConexaoResend() {
+  const data = await fetchResendJson('/domains?limit=100', {errorCode:'RESEND_TEST_FAILED'});
+  const domains = Array.isArray(data.data) ? data.data : [];
+  const fromDomain = dominioDoEmailComNome(RESEND_FROM);
+  const found = domains.find(d => String(d.name || '').toLowerCase() === fromDomain);
+  return {
+    provider:'resend',
+    from:RESEND_FROM,
+    reply_to:RESEND_REPLY_TO,
+    from_domain:fromDomain,
+    from_domain_found:!!found,
+    from_domain_status:found ? found.status : null,
+    from_domain_sending:found && found.capabilities ? found.capabilities.sending : null,
+    domains_count:domains.length
+  };
+}
+
+async function testarConexaoEmail() {
+  if(EMAIL_PROVIDER === "resend") return testarConexaoResend();
+  const resultado = await testarConexaoSmtp();
+  return {provider:'smtp', ...resultado};
+}
+
+async function enviarEmailRecuperacaoSmtp({ to, username, resetLink }) {
   if(!smtpConfigurado()) {
     const err = new Error('SMTP nao configurado');
     err.code = 'SMTP_NOT_CONFIGURED';
@@ -2186,15 +2369,7 @@ async function enviarEmailRecuperacao({ to, username, resetLink }) {
         from:SMTP_FROM,
         to,
         subject:'Recuperacao de senha - MAPA CC',
-        text:[
-          'Ola '+username+',',
-          '',
-          'Recebemos uma solicitacao para redefinir sua senha no MAPA CC.',
-          'Acesse o link abaixo em ate 30 minutos:',
-          resetLink,
-          '',
-          'Se voce nao solicitou isso, ignore este e-mail.'
-        ].join('\n')
+        text:textoEmailRecuperacao(username, resetLink)
       });
       return {host, messageId:info && info.messageId};
     } catch (err) {
@@ -2202,6 +2377,30 @@ async function enviarEmailRecuperacao({ to, username, resetLink }) {
     }
   }
   throw erroSmtpFinal(erros);
+}
+
+async function enviarEmailRecuperacaoResend({ to, username, resetLink }) {
+  const payload = {
+    from:RESEND_FROM,
+    to:[to],
+    subject:'Recuperacao de senha - MAPA CC',
+    text:textoEmailRecuperacao(username, resetLink),
+    html:htmlEmailRecuperacao(username, resetLink),
+    tags:[{name:'tipo',value:'password_reset'}]
+  };
+  if(RESEND_REPLY_TO) payload.reply_to = RESEND_REPLY_TO;
+  const data = await fetchResendJson('/emails', {
+    method:'POST',
+    body:payload,
+    errorCode:'RESEND_SEND_FAILED'
+  });
+  return {provider:'resend', messageId:data && data.id};
+}
+
+async function enviarEmailRecuperacao(args) {
+  return EMAIL_PROVIDER === "resend"
+    ? enviarEmailRecuperacaoResend(args)
+    : enviarEmailRecuperacaoSmtp(args);
 }
 
 // Cria tabela de usuarios e, se o banco estiver vazio, o admin inicial.
@@ -2325,6 +2524,9 @@ app.post('/api/password-reset/request', async (req,res)=>{
     const respostaPadrao = {
       ok:true,
       message:'Se existir usuario com e-mail cadastrado, enviaremos um link de recuperacao.',
+      email_provider:EMAIL_PROVIDER,
+      email_configurado:emailConfigurado(),
+      resend_configurado:resendConfigurado(),
       smtp_configurado:smtpConfigurado()
     };
     if(!identificador) return res.json(respostaPadrao);
@@ -2350,12 +2552,21 @@ app.post('/api/password-reset/request', async (req,res)=>{
     res.json(respostaPadrao);
   }catch(e){
     if(e.code === 'SMTP_NOT_CONFIGURED'){
-      return res.status(503).json({ok:false,error:'Envio de e-mail ainda nao configurado no servidor. Configure SMTP_PASS no Railway. O Outlook ja esta pre-configurado como mapa_cc@outlook.com.br.',smtp_configurado:false});
+      return res.status(503).json({ok:false,error:'Envio de e-mail ainda nao configurado no servidor. Configure SMTP_PASS no Railway ou use EMAIL_PROVIDER=resend com RESEND_API_KEY.',email_provider:EMAIL_PROVIDER,email_configurado:false,smtp_configurado:false});
     }
     if(e.code === 'SMTP_CONNECT_TIMEOUT'){
-      return res.status(503).json({ok:false,error:e.message,smtp_configurado:true,code:e.code});
+      return res.status(503).json({ok:false,error:e.message,email_provider:EMAIL_PROVIDER,email_configurado:true,smtp_configurado:true,code:e.code});
     }
-    res.status(500).json({ok:false,error:e.message,code:e.code || 'SMTP_SEND_FAILED'});
+    if(e.code === 'RESEND_NOT_CONFIGURED'){
+      return res.status(503).json({ok:false,error:e.message,email_provider:EMAIL_PROVIDER,email_configurado:false,resend_configurado:false,code:e.code});
+    }
+    if(e.code === 'RESEND_CONNECT_TIMEOUT' || e.code === 'RESEND_CONNECT_FAILED'){
+      return res.status(503).json({ok:false,error:e.message,email_provider:EMAIL_PROVIDER,email_configurado:emailConfigurado(),resend_configurado:resendConfigurado(),code:e.code});
+    }
+    if(e.code === 'RESEND_SEND_FAILED' || e.code === 'RESEND_API_FAILED'){
+      return res.status(502).json({ok:false,error:e.message,email_provider:EMAIL_PROVIDER,email_configurado:emailConfigurado(),resend_configurado:resendConfigurado(),code:e.code,resend_status:e.resend_status || null});
+    }
+    res.status(500).json({ok:false,error:e.message,email_provider:EMAIL_PROVIDER,code:e.code || 'EMAIL_SEND_FAILED'});
   }
 });
 

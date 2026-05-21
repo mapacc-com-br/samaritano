@@ -25,7 +25,22 @@ O Railway inicia com `npm start`. Depois de subir as alteracoes para o GitHub, o
 
 ## Reset de senha
 
-O reset por e-mail usa Outlook.com com os defaults abaixo:
+O reset por e-mail agora aceita dois provedores:
+
+- `resend`: recomendado no Railway, porque usa HTTPS e evita timeout de porta SMTP.
+- `smtp`: fallback para Outlook.com se a hospedagem permitir SMTP.
+
+Variaveis recomendadas para Railway:
+
+- `EMAIL_PROVIDER=resend`
+- `RESEND_API_KEY=re_...`
+- `RESEND_FROM=MAPA CC <no-reply@mapacc.com.br>`
+- `RESEND_REPLY_TO=mapa_cc@outlook.com.br`
+- `APP_BASE_URL=https://www.mapacc.com.br`
+
+No Resend, verifique o dominio `mapacc.com.br`. Depois de verificado, o envio pode sair de `no-reply@mapacc.com.br`; o Outlook `mapa_cc@outlook.com.br` fica como resposta.
+
+O fallback SMTP Outlook.com usa os defaults abaixo:
 
 - `SMTP_HOSTS=smtp-mail.outlook.com,smtp.office365.com`
 - `SMTP_PORT=587`
@@ -34,12 +49,18 @@ O reset por e-mail usa Outlook.com com os defaults abaixo:
 - `SMTP_REQUIRE_TLS=true`
 - `SMTP_TIMEOUT_MS=60000`
 
-No Railway, configure `SMTP_PASS` com a senha ou app password dessa conta. Tambem mantenha `APP_BASE_URL` apontando para o dominio publico do app para que o link de recuperacao saia correto.
+Para SMTP, configure `SMTP_PASS` com a senha ou app password dessa conta. Tambem mantenha `APP_BASE_URL` apontando para o dominio publico do app para que o link de recuperacao saia correto.
 
-Se o envio retornar `Connection timeout`, teste a conectividade no proprio Railway com:
+Para testar o provedor atual pelo proprio Railway, entre como admin e abra:
+
+```text
+GET /api/admin-config/email/test
+```
+
+Para testar especificamente SMTP:
 
 ```text
 GET /api/admin-config/smtp/test
 ```
 
-Essa rota tambem aceita `POST` e exige login admin. Se tambem der timeout, a conexao SMTP de saida do ambiente/provedor esta bloqueada ou inacessivel; nesse caso use um provedor transacional com SMTP/API compativel e ajuste `SMTP_HOSTS`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS` e `SMTP_FROM`.
+Essas rotas tambem aceitam `POST` e exigem login admin. Se o SMTP retornar timeout mesmo com senha correta, a conexao SMTP de saida do ambiente/provedor esta bloqueada ou inacessivel; use `EMAIL_PROVIDER=resend`.
