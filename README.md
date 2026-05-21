@@ -39,7 +39,7 @@ No Railway, configure `SMTP_PASS` com a senha ou app password dessa conta. Tambe
 Se o envio retornar `Connection timeout`, teste a conectividade no proprio Railway com:
 
 ```text
-POST /api/admin-config/smtp/test
+GET /api/admin-config/smtp/test
 ```
 
-Essa rota exige login admin. Se tambem der timeout, a conexao SMTP de saida do ambiente/provedor esta bloqueada ou inacessivel; nesse caso use um provedor transacional com SMTP/API compativel e ajuste `SMTP_HOSTS`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS` e `SMTP_FROM`.
+Essa rota tambem aceita `POST` e exige login admin. Se tambem der timeout, a conexao SMTP de saida do ambiente/provedor esta bloqueada ou inacessivel; nesse caso use um provedor transacional com SMTP/API compativel e ajuste `SMTP_HOSTS`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS` e `SMTP_FROM`.

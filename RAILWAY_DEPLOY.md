@@ -55,13 +55,13 @@ https://SEU-DOMINIO.up.railway.app/api/config-check
 
 O campo `smtp_configurado` deve ficar `true` depois que `SMTP_PASS` estiver configurado.
 
-Para testar a conexao SMTP pelo proprio Railway, faca um POST autenticado como admin:
+Para testar a conexao SMTP pelo proprio Railway, abra autenticado como admin:
 
 ```text
-POST https://SEU-DOMINIO.up.railway.app/api/admin-config/smtp/test
+https://SEU-DOMINIO.up.railway.app/api/admin-config/smtp/test
 ```
 
-Se retornar timeout mesmo com a senha correta, a porta SMTP de saida esta bloqueada ou o Outlook esta recusando conexoes do ambiente. Nesse caso, use um provedor transacional de e-mail com SMTP/API compativel e ajuste as variaveis `SMTP_HOSTS`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS` e `SMTP_FROM`.
+Essa rota aceita `GET` pelo navegador e `POST` por ferramentas de API. Se retornar timeout mesmo com a senha correta, a porta SMTP de saida esta bloqueada ou o Outlook esta recusando conexoes do ambiente. Nesse caso, use um provedor transacional de e-mail com SMTP/API compativel e ajuste as variaveis `SMTP_HOSTS`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS` e `SMTP_FROM`.
 
 ## Importante
 

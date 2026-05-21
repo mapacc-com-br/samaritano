@@ -1412,7 +1412,7 @@ app.post("/api/admin-config/openai", authRequired, adminRequired, async (req, re
   }
 });
 
-app.post("/api/admin-config/smtp/test", authRequired, adminRequired, async (req, res) => {
+app.all("/api/admin-config/smtp/test", authRequired, adminRequired, async (req, res) => {
   try{
     const resultado = await testarConexaoSmtp();
     res.json({
