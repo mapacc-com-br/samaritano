@@ -2,6 +2,14 @@
 
 Este projeto esta pronto para deploy como app Node/Express.
 
+## Estrutura atual
+
+- `server.js` e o ponto de entrada.
+- `src/server/` contem o backend.
+- `public/` contem as paginas HTML.
+- `public/assets/` contem CSS e JS separados por tela.
+- `backups_legacy/` guarda versoes antigas que nao entram no fluxo principal.
+
 ## GitHub
 
 Suba apenas os arquivos do projeto. Nao suba:

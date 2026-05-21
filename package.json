@@ -4,7 +4,7 @@
   "main": "server.js",
   "type": "commonjs",
   "scripts": {
-    "prestart": "node -e \"console.log('PRESTART BUILD 2026-05-20-1442')\"",
+    "prestart": "node -e \"console.log('PRESTART BUILD 2026-05-21-refactor')\"",
     "start": "node server.js"
   },
   "dependencies": {

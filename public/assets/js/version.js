@@ -1,6 +1,6 @@
 (function(){
-  const buildLabel = '20/05/2026 14:42 BRT';
-  const buildId = '2026-05-20-1442-clean-separators';
+  const buildLabel = '21/05/2026 refactor';
+  const buildId = '2026-05-21-refactor';
 
   function showBadge(){
     if(document.getElementById('mapaccUpdateBadge')) return;
