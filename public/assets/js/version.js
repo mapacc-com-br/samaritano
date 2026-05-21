@@ -1,6 +1,6 @@
 (function(){
-  const buildLabel = '21/05/2026 15:10 - atendimento';
-  const buildId = '2026-05-21-1510-atendimento';
+  const buildLabel = '21/05/2026 15:17 - comandos mapa';
+  const buildId = '2026-05-21-1517-comandos';
 
   function showBadge(){
     if(document.getElementById('mapaccUpdateBadge')) return;

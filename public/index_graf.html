@@ -4,9 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>MAPA CC - Painel cirurgico</title>
-<link rel="icon" href="/favicon.svg?v=20260521-1510-atendimento" type="image/svg+xml">
-<link rel="stylesheet" href="/assets/css/mapa.css?v=20260521-1510-atendimento">
-<link rel="stylesheet" href="/assets/css/theme.css?v=20260521-1510-atendimento">
+<link rel="icon" href="/favicon.svg?v=20260521-1517-comandos" type="image/svg+xml">
+<link rel="stylesheet" href="/assets/css/mapa.css?v=20260521-1517-comandos">
+<link rel="stylesheet" href="/assets/css/theme.css?v=20260521-1517-comandos">
 </head>
 <body>
 <header>
@@ -100,6 +100,8 @@
           <button id="btnAddSurgery" class="green">+ Cirurgia</button>
           <button id="btnAnalyzeSchedule" class="light">Analisar conflitos</button>
           <button id="btnAutoSuggest" class="purple">Inserir sugestoes</button>
+          <button id="btnUndoSuggest" class="gray" type="button">Desfazer sugestoes</button>
+          <button id="btnFindDuplicates" class="light" type="button">Identificar duplicatas</button>
           <button id="btnExpandMap" class="light" type="button">Expandir</button>
         </div>
       </div>
@@ -114,6 +116,7 @@
           <span class="legendChip legendAssigned">Escalada</span>
           <span class="legendChip legendPending">Pendente</span>
           <span class="legendChip legendConflict">Conflito</span>
+          <span class="legendChip legendDuplicate">Duplicata</span>
           <span class="legendChip legendExternal">Externo</span>
           <span class="legendChip legendVirtual">Sem sala</span>
         </div>
@@ -133,6 +136,8 @@
         <button id="btnExport" class="light">Exportar JSON</button>
         <button id="btnAnalyzeSchedule2" class="light">Analisar conflitos</button>
         <button id="btnAutoSuggest2" class="purple">Inserir sugestoes</button>
+        <button id="btnUndoSuggest2" class="gray" type="button">Desfazer sugestoes</button>
+        <button id="btnFindDuplicates2" class="light" type="button">Identificar duplicatas</button>
       </div>
     </div>
     <div id="caseList" class="list"></div>
@@ -200,7 +205,7 @@
 
 <div id="modalBg" class="modalBg"><div class="modal" id="modal"></div></div>
 
-<script src="/assets/js/mapa.js?v=20260521-1510-atendimento"></script>
-<script src="/assets/js/version.js?v=20260521-1510-atendimento"></script>
+<script src="/assets/js/mapa.js?v=20260521-1517-comandos"></script>
+<script src="/assets/js/version.js?v=20260521-1517-comandos"></script>
 </body>
 </html>

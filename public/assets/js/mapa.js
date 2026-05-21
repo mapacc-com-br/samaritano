@@ -22,6 +22,8 @@ var timelineCustom=false;
 var mapExpanded=false;
 var collapsedRoomGroups={};
 var pastePhotoBusy=false;
+var lastSuggestionUndo=null;
+var duplicateReviewIds={};
 var PROCEDURE_SUGGESTIONS=[
   "Colecistectomia videolaparoscopica","Herniorrafia inguinal","Herniorrafia umbilical","Apendicectomia videolaparoscopica","Gastrectomia","Colectomia","Retossigmoidectomia","Hemorroidectomia","Fistulectomia anal","Colonoscopia","Endoscopia digestiva alta",
   "Artroscopia de joelho","Artroplastia de quadril","Artroplastia de joelho","Reconstrucao de LCA","Tenorrafia","Reducao de fratura","Osteossintese",
@@ -213,12 +215,13 @@ function requireEdit(){
 function setDisabled(id,disabled){var el=$(id);if(el)el.disabled=disabled}
 function applyAccessMode(){
   var readonly=!canEdit();
-  ['btnSaveImported','btnAddSurgeryImport','btnAddSurgery','btnAddSurgery2','btnAddAnes','btnSaveImportedAnes','btnParse','btnParseAnes','btnAutoSuggest','btnAutoSuggest2','btnPhotoImport','btnSavePhotoPrompt'].forEach(function(id){setDisabled(id,readonly)});
+  ['btnSaveImported','btnAddSurgeryImport','btnAddSurgery','btnAddSurgery2','btnAddAnes','btnSaveImportedAnes','btnParse','btnParseAnes','btnAutoSuggest','btnAutoSuggest2','btnUndoSuggest','btnUndoSuggest2','btnPhotoImport','btnSavePhotoPrompt'].forEach(function(id){setDisabled(id,readonly)});
   var accessCard=$('accessCard');
   if(accessCard)accessCard.style.display=canManageAccess()?'block':'none';
   if(readonly){
     status((currentHospital?currentHospital.nome+' | ':'')+'Somente leitura em '+brDate(currentDate)+'.','warn');
   }
+  refreshSuggestionUndoButtons();
 }
 function nowPlantaoMin(){
   var d=new Date();
@@ -565,6 +568,8 @@ async function loadDay(){
     obs:a.observacao||""
   }});
   selectedId=null;
+  duplicateReviewIds={};
+  loadSuggestionUndo();
   await loadRegisteredUsers();
   renderAll();
   applyAccessMode();
@@ -614,6 +619,137 @@ function renderAll(){
   renderImportPreview();
   renderAnesImportPreview();
   refreshAnesDatalist();
+  refreshSuggestionUndoButtons();
+}
+
+function suggestionUndoStorageKey(){
+  return 'ccsama_suggestion_undo_'+String(currentHospitalId||'default')+'_'+String(currentDate||'sem-data');
+}
+function makeSuggestionUndoEntry(it,candidate){
+  return {
+    id:it.id,
+    name:it.name,
+    anest:it.anest||'',
+    servico:it.servico||'SMA',
+    suggested:candidate ? candidate.name : ''
+  };
+}
+function makeSuggestionUndoSnapshot(entries){
+  return {
+    date:currentDate,
+    hospital_id:currentHospitalId,
+    created_at:new Date().toISOString(),
+    items:entries||[]
+  };
+}
+function loadSuggestionUndo(){
+  lastSuggestionUndo=null;
+  try{
+    var raw=localStorage.getItem(suggestionUndoStorageKey());
+    var data=raw?JSON.parse(raw):null;
+    if(data && data.date===currentDate && String(data.hospital_id||'')===String(currentHospitalId||'') && Array.isArray(data.items)){
+      lastSuggestionUndo=data;
+    }
+  }catch(e){
+    lastSuggestionUndo=null;
+  }
+  refreshSuggestionUndoButtons();
+}
+function setSuggestionUndo(snapshot){
+  lastSuggestionUndo=snapshot && snapshot.items && snapshot.items.length ? snapshot : null;
+  try{
+    if(lastSuggestionUndo)localStorage.setItem(suggestionUndoStorageKey(),JSON.stringify(lastSuggestionUndo));
+    else localStorage.removeItem(suggestionUndoStorageKey());
+  }catch(e){}
+  refreshSuggestionUndoButtons();
+}
+function clearSuggestionUndo(){
+  lastSuggestionUndo=null;
+  try{localStorage.removeItem(suggestionUndoStorageKey())}catch(e){}
+  refreshSuggestionUndoButtons();
+}
+function refreshSuggestionUndoButtons(){
+  var active=!!(lastSuggestionUndo && lastSuggestionUndo.items && lastSuggestionUndo.items.length);
+  ['btnUndoSuggest','btnUndoSuggest2'].forEach(function(id){
+    var btn=$(id);
+    if(!btn)return;
+    btn.disabled=!canEdit() || !active;
+    btn.title=active ? 'Desfaz a ultima rodada de sugestoes inseridas neste dia.' : 'Nenhuma sugestao recente para desfazer neste dia.';
+  });
+}
+function duplicateKeyForItem(it){
+  if(!it)return null;
+  var initials=importInitialsKey(it.initials);
+  var age=Number(it.age||0);
+  var attendance=importAttendanceKey(it.attendance);
+  if(attendance && initials){
+    return {
+      key:'AT|'+attendance+'|'+initials+'|'+age,
+      label:'Atendimento '+it.attendance+' | '+initials+' | '+age+' anos'
+    };
+  }
+  var procedure=importIdentityText(it.name);
+  if(procedure && initials){
+    return {
+      key:'LEG|'+currentDate+'|'+procedure+'|'+initials+'|'+age,
+      label:brDate(currentDate)+' | '+it.name+' | '+initials+' | '+age+' anos'
+    };
+  }
+  return null;
+}
+function findDuplicateGroups(){
+  var grouped={};
+  items.forEach(function(it){
+    var info=duplicateKeyForItem(it);
+    if(!info)return;
+    if(!grouped[info.key])grouped[info.key]={key:info.key,label:info.label,items:[]};
+    grouped[info.key].items.push(it);
+  });
+  return Object.keys(grouped).map(function(k){
+    grouped[k].items.sort(function(a,b){return a.start-b.start || String(a.room).localeCompare(String(b.room),'pt-BR') || a.id-b.id});
+    return grouped[k];
+  }).filter(function(g){return g.items.length>1}).sort(function(a,b){
+    return a.items[0].start-b.items[0].start || a.label.localeCompare(b.label,'pt-BR');
+  });
+}
+function setDuplicateReviewGroups(groups){
+  duplicateReviewIds={};
+  (groups||[]).forEach(function(group){
+    group.items.forEach(function(it){duplicateReviewIds[it.id]=true});
+  });
+  renderAll();
+}
+function duplicateItemLine(it){
+  return fmtTime(it.start)+' | '+(it.room||'sem sala')+' | '+it.name+
+    (it.attendance?' | Atend. '+it.attendance:'')+
+    (it.surgeon?' | Cirurgiao: '+it.surgeon:'')+
+    ' | '+(it.initials||'NI')+' | '+(it.age||0)+' anos';
+}
+function openDuplicateModal(groups){
+  var htmlGroups=(groups||[]).slice(0,12).map(function(group,idx){
+    var lines=group.items.map(function(it){
+      return '<div class="duplicateItem">'+html(duplicateItemLine(it))+'</div>';
+    }).join('');
+    return '<div class="duplicateGroup"><b>Grupo '+(idx+1)+': '+html(group.label)+'</b>'+lines+'</div>';
+  }).join('');
+  var extra=groups.length>12?'<div class="hint">Mostrando os 12 primeiros grupos. Use a lista do dia para revisar os demais marcados em amarelo.</div>':'';
+  openModal('<h2>Possiveis duplicatas</h2>'+
+    '<div class="hint">Foram marcadas no mapa e na lista as cirurgias com mesma chave de atendimento, iniciais e idade. Quando nao ha atendimento, uso a regra antiga como apoio.</div>'+
+    htmlGroups+extra+
+    '<button class="gray" style="margin-top:10px" id="mCancel">Fechar</button>');
+  $('mCancel').onclick=closeModal;
+}
+function identifyDuplicateSurgeries(){
+  var groups=findDuplicateGroups();
+  setDuplicateReviewGroups(groups);
+  if(!groups.length){
+    status('Nenhuma duplicata encontrada no dia atual.','ok');
+    return groups;
+  }
+  var total=groups.reduce(function(sum,g){return sum+g.items.length},0);
+  openDuplicateModal(groups);
+  status('Possiveis duplicatas encontradas: '+total+' cirurgia(s) em '+groups.length+' grupo(s).','warn');
+  return groups;
 }
 
 
@@ -802,6 +938,11 @@ function suggestionsForItem(it,scheduled,limit,allowEscalador){
     .sort(function(a,b){return b.score-a.score || a.name.localeCompare(b.name,'pt-BR')})
     .slice(0,limit||5);
 }
+function bestSuggestionForItem(it,scheduled){
+  var sug=suggestionsForItem(it,scheduled||items,1,false);
+  if(!sug.length && isEasyCase(it))sug=suggestionsForItem(it,scheduled||items,1,true);
+  return sug[0]||null;
+}
 function analyzeSchedule(){
   var conflicts=[];
   items.forEach(function(it){
@@ -835,12 +976,12 @@ async function applySmartSuggestions(){
   var changed=[], skipped=[];
   targets.forEach(function(real){
     var ref=scheduled.find(function(x){return x.id===real.id});
-    var sug=suggestionsForItem(ref,scheduled,1,false);
-    if(!sug.length && isEasyCase(ref))sug=suggestionsForItem(ref,scheduled,1,true);
-    if(sug.length){
-      ref.anest=sug[0].name; ref.servico='SMA';
-      real.anest=sug[0].name; real.servico='SMA';
-      changed.push({it:real,candidate:sug[0]});
+    var candidate=bestSuggestionForItem(ref,scheduled);
+    if(candidate){
+      var previous=makeSuggestionUndoEntry(real,candidate);
+      ref.anest=candidate.name; ref.servico='SMA';
+      real.anest=candidate.name; real.servico='SMA';
+      changed.push({it:real,candidate:candidate,previous:previous});
     }else{
       skipped.push(real);
     }
@@ -849,16 +990,85 @@ async function applySmartSuggestions(){
     status('Nao encontrei sugestoes seguras para as cirurgias pendentes.','warn');
     return;
   }
-  var ok=0, errors=[];
+  var ok=0, errors=[], undoItems=[];
   for(var i=0;i<changed.length;i++){
-    try{await saveItemToDb(changed[i].it);ok++;storeValue('ccsama_anesthetists',changed[i].candidate.name)}
+    try{
+      await saveItemToDb(changed[i].it);
+      ok++;
+      undoItems.push(changed[i].previous);
+      storeValue('ccsama_anesthetists',changed[i].candidate.name);
+    }
     catch(err){errors.push(changed[i].it.name+': '+err.message)}
   }
+  if(undoItems.length)setSuggestionUndo(makeSuggestionUndoSnapshot(undoItems));
   await loadDay();
   var msg='Sugestoes inseridas: '+ok+' cirurgia(s).';
   if(skipped.length)msg+=' Sem sugestao segura: '+skipped.length+'.';
   if(errors.length)msg+='\nErros: '+errors.slice(0,4).join('\n');
   status(msg,errors.length?'warn':'ok');
+}
+async function undoSmartSuggestions(){
+  if(!requireEdit())return;
+  loadSuggestionUndo();
+  if(!lastSuggestionUndo || !lastSuggestionUndo.items || !lastSuggestionUndo.items.length){
+    status('Nao ha sugestoes recentes para desfazer neste dia.','warn');
+    return;
+  }
+  var count=lastSuggestionUndo.items.length;
+  if(!confirm('Desfazer a ultima insercao de sugestoes em '+count+' cirurgia(s)? Ajustes manuais posteriores serao mantidos.'))return;
+  var restored=0, skipped=0, errors=[], remaining=[];
+  for(var i=0;i<lastSuggestionUndo.items.length;i++){
+    var prev=lastSuggestionUndo.items[i];
+    var it=items.find(function(x){return x.id===prev.id});
+    if(!it){skipped++;continue}
+    if(prev.suggested && ((it.anest||'')!==prev.suggested || String(it.servico||'SMA')!=='SMA')){
+      skipped++;
+      continue;
+    }
+    it.anest=prev.anest||'';
+    it.servico=prev.servico||'SMA';
+    try{
+      await saveItemToDb(it);
+      restored++;
+    }catch(err){
+      errors.push((prev.name||it.name)+': '+err.message);
+      remaining.push(prev);
+    }
+  }
+  if(remaining.length)setSuggestionUndo(makeSuggestionUndoSnapshot(remaining));
+  else clearSuggestionUndo();
+  await loadDay();
+  var msg='Sugestoes desfeitas: '+restored+' cirurgia(s).';
+  if(skipped)msg+=' Mantidas por ajuste manual: '+skipped+'.';
+  if(errors.length)msg+='\nErros: '+errors.slice(0,4).join('\n');
+  status(msg,errors.length?'warn':'ok');
+}
+async function applySuggestionToOne(id){
+  if(!requireEdit())return;
+  if(!anesthetists.length){status('Cadastre ou importe a escala do dia antes de inserir sugestao.','warn');return}
+  var it=items.find(function(x){return x.id===id});
+  if(!it)return;
+  var candidate=bestSuggestionForItem(it,items);
+  if(!candidate){
+    status('Nao encontrei sugestao segura para esta cirurgia.','warn');
+    return;
+  }
+  if(!confirm('Inserir sugestao de '+candidate.name+' nesta cirurgia?'))return;
+  var previous=makeSuggestionUndoEntry(it,candidate);
+  it.anest=candidate.name;
+  it.servico='SMA';
+  try{
+    await saveItemToDb(it);
+    storeValue('ccsama_anesthetists',candidate.name);
+    setSuggestionUndo(makeSuggestionUndoSnapshot([previous]));
+    closeModal();
+    await loadDay();
+    status('Sugestao inserida: '+candidate.name+'.','ok');
+  }catch(err){
+    it.anest=previous.anest;
+    it.servico=previous.servico;
+    status('Erro ao inserir sugestao: '+err.message,'err');
+  }
 }
 function getBlockClass(it,idx){
   var cls='';
@@ -868,6 +1078,7 @@ function getBlockClass(it,idx){
   if(isFinished(it)) cls+=' finished';
   if(isPreFeito(it)) cls+=' preDone';
   if(conflictsForItem(it,items).length) cls+=' conflict';
+  if(duplicateReviewIds[it.id]) cls+=' duplicate';
   if(it.id===selectedId) cls+=' selected';
   return cls;
 }
@@ -1220,11 +1431,13 @@ function renderList(){
   list.innerHTML=items.map(function(it){
     var conflicts=conflictsForItem(it,items);
     var preDone=isPreFeito(it);
-    var caseCls=(isFinished(it)?' finished':'')+(it.row===0?' virtualCase':'')+(isExternalCase(it)?' externalCase':'')+(conflicts.length?' conflictCase':'')+(preDone?' preDone':'');
+    var duplicate=!!duplicateReviewIds[it.id];
+    var caseCls=(isFinished(it)?' finished':'')+(it.row===0?' virtualCase':'')+(isExternalCase(it)?' externalCase':'')+(conflicts.length?' conflictCase':'')+(preDone?' preDone':'')+(duplicate?' duplicateCase':'');
     var pillCls=conflicts.length?'conflict':(isFinished(it)?'fin':(isExternalCase(it)?'ext':(it.anest?'sma':'pend')));
     var pillText=conflicts.length?'Conflito':(isFinished(it)?'Finalizada':(isExternalCase(it)?'Externo':(it.anest?'SMA escalada':'Pendente')));
     var preHtml=preDone?'<span class="preMeta" title="'+html(it.preFeitoPor?'Marcado por '+it.preFeitoPor:'Pre feito marcado')+'">Pre ok</span>':'';
     var conflictHtml=conflicts.length?'<div class="conflictNote">'+html(conflicts.join(' | '))+'</div>':'';
+    var duplicateHtml=duplicate?'<div class="duplicateNote">Possivel duplicata: mesmo atendimento, iniciais e idade.</div>':'';
     var identityMeta=[
       it.room,
       durToText(it.duration),
@@ -1240,6 +1453,7 @@ function renderList(){
       preHtml+
       '<div class="caseMeta">Anest: <b>'+html(it.anest||'nao definido')+'</b> '+(it.obs?(' | '+html(it.obs)):'')+'</div>'+
       conflictHtml+
+      duplicateHtml+
       '<div class="tools"><button class="light" data-edit="'+it.id+'">Editar</button><button class="purple" data-assign="'+it.id+'">Escalar</button><button class="gray" data-unassign="'+it.id+'">Desescalar</button><button class="light" data-pre="'+it.id+'">'+(preDone?'Desfazer pre':'Pre feito')+'</button><button class="gray" data-finish="'+it.id+'">Finalizar</button><button class="red" data-del="'+it.id+'">Deletar</button></div>'+
     '</div>'
   }).join('');
@@ -1629,11 +1843,18 @@ async function saveImported(){
       msgs.push((i+1)+': '+err.message);
     }
   }
-  status("Importacao salva: "+ok+" cirurgia(s). Erros: "+errors+(msgs.length?'\n'+msgs.slice(0,5).join('\n'):''), errors?'warn':'ok');
-  status("Importacao salva: "+ok+" cirurgia(s). Novas: "+inserted+". Atualizadas: "+updated+". Duplicadas ignoradas: "+skipped+". Erros: "+errors+(msgs.length?'\n'+msgs.slice(0,5).join('\n'):''), errors?'warn':'ok');
   if(ok){parsedImport=[];$('surgeryText').value="";}
   await loadDay();
-  status("Importacao salva: "+ok+" cirurgia(s). Novas: "+inserted+". Atualizadas: "+updated+". Duplicadas ignoradas: "+skipped+". Erros: "+errors+(msgs.length?'\n'+msgs.slice(0,5).join('\n'):''), errors?'warn':'ok');
+  var groups=findDuplicateGroups();
+  setDuplicateReviewGroups(groups);
+  var summary="Importacao salva: "+ok+" cirurgia(s). Novas: "+inserted+". Atualizadas: "+updated+". Duplicadas ignoradas: "+skipped+". Erros: "+errors;
+  if(groups.length){
+    openDuplicateModal(groups);
+    summary+=". Possiveis duplicatas no mapa: "+groups.length+" grupo(s)";
+  }else{
+    summary+=". Duplicatas no mapa: nenhuma encontrada";
+  }
+  status(summary+(msgs.length?'\n'+msgs.slice(0,5).join('\n'):''), (errors||groups.length)?'warn':'ok');
   }finally{
     savingImport=false;
     if(btn){btn.disabled=false;btn.textContent='Salvar alteracoes no mapa'}
@@ -1717,6 +1938,7 @@ function openBlockActions(id){
     conflictHtml+
     '<div class="actionGrid">'+
       '<button class="purple" id="actAssign">Escalar / alterar</button>'+ 
+      '<button class="purple" id="actSuggestOne">Inserir sugestao</button>'+
       '<button class="gray" id="actUnassign">Desescalar</button>'+ 
       '<button class="green" id="actEdit">Editar cirurgia</button>'+ 
       '<button class="light" id="actPre">'+(preDone?'Desfazer pre feito':'Marcar pre feito')+'</button>'+ 
@@ -1726,6 +1948,7 @@ function openBlockActions(id){
     '</div>'+ 
     '<div class="hint" style="margin-top:10px">Para mover ou redimensionar no mapa: toque e segure o bloco/alca por um instante antes de arrastar.</div>');
   $('actAssign').onclick=function(){closeModal();openAssignModal(id)};
+  $('actSuggestOne').onclick=function(){applySuggestionToOne(id)};
   $('actUnassign').onclick=function(){closeModal();unassignSurgery(id)};
   $('actEdit').onclick=function(){closeModal();openSurgeryModal(id)};
   $('actPre').onclick=function(){closeModal();togglePreFeito(id)};
@@ -1923,6 +2146,10 @@ function bind(){
   if($('btnAnalyzeSchedule2'))$('btnAnalyzeSchedule2').onclick=analyzeSchedule;
   if($('btnAutoSuggest'))$('btnAutoSuggest').onclick=applySmartSuggestions;
   if($('btnAutoSuggest2'))$('btnAutoSuggest2').onclick=applySmartSuggestions;
+  if($('btnUndoSuggest'))$('btnUndoSuggest').onclick=undoSmartSuggestions;
+  if($('btnUndoSuggest2'))$('btnUndoSuggest2').onclick=undoSmartSuggestions;
+  if($('btnFindDuplicates'))$('btnFindDuplicates').onclick=identifyDuplicateSurgeries;
+  if($('btnFindDuplicates2'))$('btnFindDuplicates2').onclick=identifyDuplicateSurgeries;
   if($('btnExpandMap'))$('btnExpandMap').onclick=function(){setMapExpanded(!mapExpanded)};
   function goHour(h){var sh=$('mapShell');if(sh)sh.scrollLeft=Math.max(0,labelW+(h-startHour)*hourW-80)}
   $('btnGo7').onclick=function(){goHour(7)};

@@ -519,3 +519,9 @@ button:disabled{
   .photoPreview{max-width:100%;max-height:210px}
   .collapsedSummaryText{left:calc(var(--labelW,132px) + 100px);font-size:10.5px}
 }
+
+/* ===== PATCH v9: revisao de duplicatas ===== */
+.block.duplicate{outline:3px solid #d97706!important;box-shadow:0 0 0 2px rgba(251,191,36,.62),0 10px 22px rgba(45,61,54,.18)!important}
+.case.duplicateCase{background:linear-gradient(180deg,#fff9ea,#ffefbf)!important;border-color:#e5a93d!important}
+.duplicateNote{color:#7a4a06!important;border-left-color:#d97706!important}
+.legendDuplicate{background:#fff3cd!important;color:#7a4a06!important;border-color:#e5c36d!important}
