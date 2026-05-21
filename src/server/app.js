@@ -2294,6 +2294,14 @@ function mensagemErroResend(data) {
   return "Falha na API Resend.";
 }
 
+function resendErroChaveRestritaEnvio(err) {
+  const data = err && err.resend_response ? err.resend_response : {};
+  return err && err.code === 'RESEND_TEST_FAILED' && (
+    data.name === 'restricted_api_key' ||
+    /restricted to only send emails/i.test(String(data.message || err.message || ""))
+  );
+}
+
 async function fetchResendJson(endpoint, options = {}) {
   if(!resendConfigurado()) {
     const err = new Error('Resend nao configurado. Configure RESEND_API_KEY e RESEND_FROM no Railway.');
@@ -2333,9 +2341,23 @@ async function fetchResendJson(endpoint, options = {}) {
 }
 
 async function testarConexaoResend() {
-  const data = await fetchResendJson('/domains?limit=100', {errorCode:'RESEND_TEST_FAILED'});
-  const domains = Array.isArray(data.data) ? data.data : [];
   const fromDomain = dominioDoEmailComNome(RESEND_FROM);
+  let data;
+  try{
+    data = await fetchResendJson('/domains?limit=100', {errorCode:'RESEND_TEST_FAILED'});
+  }catch(err){
+    if(!resendErroChaveRestritaEnvio(err)) throw err;
+    return {
+      provider:'resend',
+      from:RESEND_FROM,
+      reply_to:RESEND_REPLY_TO,
+      from_domain:fromDomain,
+      api_key_restricted:true,
+      domain_check:'skipped',
+      warning:'API key do Resend e restrita a envio. Isso e valido para reset de senha, mas a rota de teste nao consegue listar dominios com essa chave.'
+    };
+  }
+  const domains = Array.isArray(data.data) ? data.data : [];
   const found = domains.find(d => String(d.name || '').toLowerCase() === fromDomain);
   return {
     provider:'resend',

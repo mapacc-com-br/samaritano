@@ -65,6 +65,8 @@ Para testar o provedor de e-mail ativo pelo proprio Railway, abra autenticado co
 https://SEU-DOMINIO.up.railway.app/api/admin-config/email/test
 ```
 
+Se aparecer `api_key_restricted:true`, a chave do Resend esta restrita apenas a envio. Isso e valido para reset de senha; a rota de teste apenas nao consegue listar dominios com essa chave.
+
 Para testar especificamente SMTP:
 
 ```text

@@ -57,6 +57,8 @@ Para testar o provedor atual pelo proprio Railway, entre como admin e abra:
 GET /api/admin-config/email/test
 ```
 
+Se a resposta indicar `api_key_restricted:true`, a chave do Resend esta restrita apenas a envio. Isso e aceitavel e mais seguro; a rota apenas nao consegue listar dominios com essa chave.
+
 Para testar especificamente SMTP:
 
 ```text
